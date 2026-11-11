@@ -1,0 +1,347 @@
+import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import type { LampSpec } from '../world/builder';
+
+export interface EnvPreset {
+  skyTop: number;
+  skyHorizon: number;
+  cloud: number;
+  cloudAmount: number;
+  fog: number;
+  fogDensity: number;
+  hemiSky: number;
+  hemiGround: number;
+  hemiIntensity: number;
+  sun: number;
+  sunIntensity: number;
+  sunDir: [number, number, number];
+  rain: number;
+  exposure: number;
+  bloom: number;
+  /** cor de tonalização das sombras e das altas luzes */
+  tintShadow: [number, number, number];
+  tintLight: [number, number, number];
+  envIntensity: number;
+  interior?: boolean;
+  moon?: boolean;
+}
+
+export type Quality = 'baixa' | 'media' | 'alta';
+
+const GradeShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+    uTime: { value: 0 },
+    uVignette: { value: 1 },
+    uGrain: { value: 1 },
+    uShadow: { value: new THREE.Vector3(0.96, 0.98, 1.06) },
+    uLight: { value: new THREE.Vector3(1.05, 1.0, 0.94) },
+    uContrast: { value: 1.08 },
+    uFlash: { value: 0 },
+    uDesat: { value: 0 },
+    uHighContrast: { value: 0 },
+  },
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform float uTime, uVignette, uGrain, uContrast, uFlash, uDesat, uHighContrast;
+    uniform vec3 uShadow, uLight; varying vec2 vUv;
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233))) * 43758.5453); }
+    void main(){
+      vec4 c = texture2D(tDiffuse, vUv);
+      float l = dot(c.rgb, vec3(0.299,0.587,0.114));
+      c.rgb *= mix(uShadow, uLight, smoothstep(0.0, 0.55, l));
+      c.rgb = (c.rgb - 0.18) * uContrast + 0.18;
+      c.rgb = mix(c.rgb, vec3(l), uDesat);
+      c.rgb = mix(c.rgb, c.rgb * 1.35 + 0.03, uHighContrast);
+      vec2 d = vUv - 0.5;
+      float v = smoothstep(0.85, 0.25, length(d * vec2(1.0, 0.82)));
+      c.rgb *= mix(1.0, mix(0.42, 1.0, v), uVignette);
+      c.rgb += (hash(vUv * 900.0 + uTime) - 0.5) * 0.035 * uGrain;
+      c.rgb = mix(c.rgb, vec3(0.95,0.9,0.85), uFlash);
+      gl_FragColor = vec4(max(c.rgb, 0.0), 1.0);
+    }`,
+};
+
+const SkyShader = {
+  uniforms: {
+    uTop: { value: new THREE.Color() },
+    uHorizon: { value: new THREE.Color() },
+    uCloud: { value: new THREE.Color() },
+    uAmount: { value: 0.6 },
+    uTime: { value: 0 },
+    uMoon: { value: new THREE.Vector3(0.3, 0.5, -0.8) },
+    uMoonOn: { value: 1 },
+  },
+  vertexShader: `varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); gl_Position.z = gl_Position.w; }`,
+  fragmentShader: `
+    uniform vec3 uTop, uHorizon, uCloud, uMoon; uniform float uAmount, uTime, uMoonOn; varying vec3 vDir;
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
+    float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
+      return mix(mix(hash(i),hash(i+vec2(1,0)),f.x), mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x), f.y); }
+    float fbm(vec2 p){ float s=0.0,a=0.5; for(int i=0;i<5;i++){ s+=a*noise(p); p*=2.03; a*=0.5; } return s; }
+    void main(){
+      vec3 d = normalize(vDir);
+      float h = clamp(d.y, -0.2, 1.0);
+      vec3 col = mix(uHorizon, uTop, pow(clamp(h,0.0,1.0), 0.55));
+      vec2 uv = d.xz / (abs(d.y) + 0.35);
+      float n = fbm(uv * 1.3 + vec2(uTime*0.006, uTime*0.003));
+      float n2 = fbm(uv * 3.1 - vec2(uTime*0.01, 0.0));
+      float c = smoothstep(1.0 - uAmount, 1.25 - uAmount * 0.6, n * 0.75 + n2 * 0.35);
+      float md = max(dot(d, normalize(uMoon)), 0.0);
+      float glow = pow(md, 24.0) * 0.55 + pow(md, 600.0) * 3.0;
+      vec3 lit = uCloud * (0.55 + 0.9 * pow(md, 6.0) * uMoonOn);
+      col = mix(col, lit * (0.5 + 0.7 * n2), c * smoothstep(-0.05, 0.25, d.y));
+      col += vec3(0.75,0.8,0.9) * glow * uMoonOn * (1.0 - c * 0.85);
+      gl_FragColor = vec4(col, 1.0);
+    }`,
+};
+
+const MAX_LAMPS = 6;
+
+export class Engine {
+  renderer: THREE.WebGLRenderer;
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(58, 16 / 9, 0.1, 600);
+  composer: EffectComposer;
+  bloom: UnrealBloomPass;
+  grade: ShaderPass;
+  hemi = new THREE.HemisphereLight(0xffffff, 0x222222, 0.5);
+  sun = new THREE.DirectionalLight(0xffffff, 1);
+  sky: THREE.Mesh;
+  private skyMat: THREE.ShaderMaterial;
+  private pmrem: THREE.PMREMGenerator;
+  private envTarget: THREE.WebGLRenderTarget | null = null;
+  private lampPool: THREE.PointLight[] = [];
+  private lampTargets: Array<LampSpec | null> = [];
+  lamps: LampSpec[] = [];
+  rain: THREE.LineSegments;
+  private rainMat: THREE.ShaderMaterial;
+  env!: EnvPreset;
+  quality: Quality = 'alta';
+  time = 0;
+  shake = 0;
+  flash = 0;
+  private fogAmount = 1;
+  settings = { vignette: true, grain: true, reduceMotion: false, highContrast: false, fov: 58 };
+
+  constructor(canvas: HTMLCanvasElement) {
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    this.scene.fog = new THREE.FogExp2(0x101418, 0.02);
+    this.scene.add(this.hemi);
+    this.sun.castShadow = true;
+    this.sun.shadow.mapSize.set(2048, 2048);
+    this.sun.shadow.bias = -0.0006;
+    this.sun.shadow.normalBias = 0.06;
+    const sc = this.sun.shadow.camera;
+    sc.left = -32;
+    sc.right = 32;
+    sc.top = 32;
+    sc.bottom = -32;
+    sc.near = 1;
+    sc.far = 160;
+    this.scene.add(this.sun, this.sun.target);
+
+    this.skyMat = new THREE.ShaderMaterial({ ...SkyShader, uniforms: THREE.UniformsUtils.clone(SkyShader.uniforms), side: THREE.BackSide, depthWrite: false, fog: false });
+    this.sky = new THREE.Mesh(new THREE.SphereGeometry(400, 24, 16), this.skyMat);
+    this.sky.frustumCulled = false;
+    this.sky.renderOrder = -10;
+    this.scene.add(this.sky);
+    this.pmrem = new THREE.PMREMGenerator(this.renderer);
+
+    for (let i = 0; i < MAX_LAMPS; i++) {
+      const l = new THREE.PointLight(0xffb060, 0, 14, 1.6);
+      this.lampPool.push(l);
+      this.lampTargets.push(null);
+      this.scene.add(l);
+    }
+
+    // chuva: riscos em volume ao redor da câmera, animados no vertex shader
+    const N = 2600;
+    const pos = new Float32Array(N * 6);
+    const seed = new Float32Array(N * 2);
+    for (let i = 0; i < N; i++) {
+      const x = (Math.random() - 0.5) * 44;
+      const y = Math.random() * 22;
+      const z = (Math.random() - 0.5) * 44;
+      pos.set([x, y, z, x, y, z], i * 6);
+      seed.set([0, 1], i * 2);
+    }
+    const rg = new THREE.BufferGeometry();
+    rg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    rg.setAttribute('end', new THREE.BufferAttribute(seed, 1));
+    this.rainMat = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 }, uCam: { value: new THREE.Vector3() }, uAmount: { value: 0 } },
+      vertexShader: `uniform float uTime; uniform vec3 uCam; attribute float end; varying float vA;
+        void main(){ vec3 p = position; float sp = 17.0 + fract(p.x * 7.13) * 6.0;
+          p.y = mod(p.y - uTime * sp, 22.0);
+          p.xz = mod(p.xz - uCam.xz + 22.0, 44.0) - 22.0 + uCam.xz; p.y += uCam.y - 7.0 + end * 0.55; p.x += end * 0.05;
+          vA = 1.0 - end * 0.6; gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0); }`,
+      fragmentShader: `uniform float uAmount; varying float vA; void main(){ gl_FragColor = vec4(0.72, 0.78, 0.88, 0.2 * vA * uAmount); }`,
+      transparent: true,
+      depthWrite: false,
+    });
+    this.rain = new THREE.LineSegments(rg, this.rainMat);
+    this.rain.frustumCulled = false;
+    this.scene.add(this.rain);
+
+    this.composer = new EffectComposer(this.renderer);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(640, 360), 0.6, 0.7, 0.82);
+    this.composer.addPass(this.bloom);
+    this.grade = new ShaderPass(GradeShader);
+    this.composer.addPass(new OutputPass());
+    this.composer.addPass(this.grade);
+    this.resize();
+    window.addEventListener('resize', () => this.resize());
+  }
+
+  resize(): void {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const scale = this.quality === 'baixa' ? 0.66 : this.quality === 'media' ? 0.85 : 1;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5) * scale);
+    this.renderer.setSize(w, h, false);
+    this.renderer.domElement.style.width = '100%';
+    this.renderer.domElement.style.height = '100%';
+    this.composer.setPixelRatio(this.renderer.getPixelRatio());
+    this.composer.setSize(w, h);
+    this.camera.aspect = w / h;
+    this.camera.fov = this.settings.fov;
+    this.camera.updateProjectionMatrix();
+  }
+
+  setQuality(q: Quality): void {
+    this.quality = q;
+    this.renderer.shadowMap.enabled = q !== 'baixa';
+    this.sun.castShadow = q !== 'baixa';
+    this.sun.shadow.mapSize.set(q === 'alta' ? 2048 : 1024, q === 'alta' ? 2048 : 1024);
+    this.sun.shadow.map?.dispose();
+    this.sun.shadow.map = null as unknown as THREE.WebGLRenderTarget;
+    this.bloom.enabled = q !== 'baixa';
+    this.scene.traverse((o) => {
+      const m = (o as THREE.Mesh).material as THREE.Material | undefined;
+      if (m) m.needsUpdate = true;
+    });
+    this.resize();
+  }
+
+  applyEnv(e: EnvPreset): void {
+    this.env = e;
+    const u = this.skyMat.uniforms;
+    u.uTop.value.set(e.skyTop);
+    u.uHorizon.value.set(e.skyHorizon);
+    u.uCloud.value.set(e.cloud);
+    u.uAmount.value = e.cloudAmount;
+    u.uMoonOn.value = e.moon === false ? 0 : 1;
+    u.uMoon.value.set(...e.sunDir).normalize();
+    (this.scene.fog as THREE.FogExp2).color.set(e.fog);
+    (this.scene.fog as THREE.FogExp2).density = e.fogDensity * this.fogAmount;
+    this.hemi.color.set(e.hemiSky);
+    this.hemi.groundColor.set(e.hemiGround);
+    this.hemi.intensity = e.hemiIntensity;
+    this.sun.color.set(e.sun);
+    this.sun.intensity = e.sunIntensity;
+    this.renderer.toneMappingExposure = e.exposure;
+    this.bloom.strength = e.bloom;
+    this.rainMat.uniforms.uAmount.value = e.rain;
+    this.rain.visible = e.rain > 0.01;
+    this.sky.visible = !e.interior;
+    this.scene.background = e.interior ? new THREE.Color(e.fog) : null;
+    (this.grade.uniforms.uShadow.value as THREE.Vector3).set(...e.tintShadow);
+    (this.grade.uniforms.uLight.value as THREE.Vector3).set(...e.tintLight);
+    // mapa de ambiente a partir do próprio céu: reflexos coerentes na pedra molhada
+    const envScene = new THREE.Scene();
+    const s2 = new THREE.Mesh(this.sky.geometry, this.skyMat);
+    envScene.add(s2);
+    if (e.interior) envScene.background = new THREE.Color(e.hemiSky).multiplyScalar(0.5);
+    this.envTarget?.dispose();
+    this.envTarget = this.pmrem.fromScene(envScene, 0.02, 1, 500);
+    this.scene.environment = this.envTarget.texture;
+    this.scene.environmentIntensity = e.envIntensity;
+  }
+
+  setFogAmount(a: number): void {
+    this.fogAmount = a;
+    if (this.env) (this.scene.fog as THREE.FogExp2).density = this.env.fogDensity * a;
+  }
+
+  setLamps(lamps: LampSpec[]): void {
+    this.lamps = lamps;
+    for (let i = 0; i < MAX_LAMPS; i++) {
+      this.lampTargets[i] = null;
+      this.lampPool[i].intensity = 0;
+    }
+  }
+
+  /** Distribui o pool de luzes pontuais pelas lamparinas mais próximas do foco. */
+  private updateLamps(focus: THREE.Vector3, dt: number): void {
+    const sorted = this.lamps
+      .map((l) => ({ l, d: l.pos.distanceToSquared(focus) }))
+      .sort((a, b) => a.d - b.d)
+      .slice(0, MAX_LAMPS)
+      .map((o) => o.l);
+    // mantém atribuições estáveis para evitar saltos
+    for (let i = 0; i < MAX_LAMPS; i++) {
+      const cur = this.lampTargets[i];
+      if (cur && !sorted.includes(cur)) {
+        this.lampPool[i].intensity = Math.max(0, this.lampPool[i].intensity - dt * 30);
+        if (this.lampPool[i].intensity <= 0.01) this.lampTargets[i] = null;
+      }
+    }
+    for (const l of sorted) {
+      if (this.lampTargets.includes(l)) continue;
+      const free = this.lampTargets.indexOf(null);
+      if (free < 0) break;
+      this.lampTargets[free] = l;
+      this.lampPool[free].position.copy(l.pos);
+      this.lampPool[free].color.set(l.color);
+      this.lampPool[free].distance = l.range;
+      this.lampPool[free].intensity = 0;
+    }
+    for (let i = 0; i < MAX_LAMPS; i++) {
+      const l = this.lampTargets[i];
+      if (!l || !sorted.includes(l)) continue;
+      const fl = 1 + Math.sin(this.time * 9 + i * 2.1) * l.flicker + Math.sin(this.time * 23 + i) * l.flicker * 0.5;
+      const target = l.intensity * 26 * fl;
+      const p = this.lampPool[i];
+      p.intensity += (target - p.intensity) * Math.min(1, dt * 6);
+    }
+  }
+
+  render(dt: number, focus: THREE.Vector3): void {
+    this.time += dt;
+    this.skyMat.uniforms.uTime.value = this.time;
+    this.rainMat.uniforms.uTime.value = this.time;
+    (this.rainMat.uniforms.uCam.value as THREE.Vector3).copy(this.camera.position);
+    this.sky.position.copy(this.camera.position);
+    this.updateLamps(focus, dt);
+    // a luz direcional acompanha o foco para manter a sombra nítida perto do jogador
+    const d = this.env.sunDir;
+    this.sun.position.set(focus.x + d[0] * 60, focus.y + d[1] * 60, focus.z + d[2] * 60);
+    this.sun.target.position.copy(focus);
+    const g = this.grade.uniforms;
+    g.uTime.value = this.time;
+    g.uVignette.value = this.settings.vignette ? 1 : 0;
+    g.uGrain.value = this.settings.grain ? 1 : 0;
+    g.uHighContrast.value = this.settings.highContrast ? 1 : 0;
+    this.flash = Math.max(0, this.flash - dt * 2.5);
+    g.uFlash.value = this.settings.reduceMotion ? 0 : this.flash;
+    if (this.shake > 0 && !this.settings.reduceMotion) {
+      this.camera.position.x += (Math.random() - 0.5) * this.shake * 0.25;
+      this.camera.position.y += (Math.random() - 0.5) * this.shake * 0.25;
+      this.shake = Math.max(0, this.shake - dt * 2.2);
+    } else this.shake = 0;
+    if (this.quality === 'baixa') this.renderer.render(this.scene, this.camera);
+    else this.composer.render(dt);
+  }
+}
