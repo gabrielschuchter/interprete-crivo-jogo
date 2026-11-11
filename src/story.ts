@@ -314,7 +314,6 @@ async function lia(g: G): Promise<void> {
   g.advance('lia', 1);
   const f = await g.openCase();
   if (!f) return;
-  D.unlockCodex(s, 'decisao');
   g.completeQuest('lia', { coins: 15 });
 }
 
@@ -476,6 +475,10 @@ export async function useProp(g: G, p: PropPlacement): Promise<void> {
     D.removeItem(s, 'selo_contexto');
     g.flag('ponte_estendida');
     g.region.actions.ponte?.();
+    if (!s.flags.includes('limpo:bosque:margem')) {
+      g.spawnEnemy('vulto', 50, -3, 'margem');
+      g.spawnEnemy('fiapo', 47, 6, 'margem');
+    }
     g.crivo.cheer();
     g.audio.sfx('crivoAlegre');
     await N('O selo assenta com um estalo. Do abismo sobem lajes de pedra, uma a uma, e a ponte se estende até a outra margem.');

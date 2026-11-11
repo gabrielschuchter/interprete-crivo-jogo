@@ -119,7 +119,7 @@ export function buildArquivo(ctx: RegionCtx): BuiltRegion {
       const [bx, bz] = pts[i + 1];
       const n = Math.ceil(Math.hypot(bx - ax, bz - az) / 0.7);
       for (let k = 0; k < n; k++) {
-        const h = K.halo(0.5, color, 0.85);
+        const h = K.halo(0.95, color, 1);
         h.position.set(ax + ((bx - ax) * k) / n + Math.sin(k * 2.3 + i) * 0.12, 0.12, az + ((bz - az) * k) / n + Math.cos(k * 1.7) * 0.12);
         g.add(h);
       }
@@ -171,7 +171,7 @@ export function buildArquivo(ctx: RegionCtx): BuiltRegion {
 
   b.finalize();
 
-  r.spawns = { de_atrio: { x: 0, z: 19.4, yaw: Math.PI } };
+  r.spawns = { de_atrio: { x: 0, z: 16.4, yaw: Math.PI } };
   r.enemies = [
     { kind: 'vulto', x: -11.4, z: 1, group: 'estantes' },
     { kind: 'vulto', x: 11.4, z: -7, group: 'estantes' },

@@ -45,3 +45,13 @@ Português do Brasil, "nós" e "você", frases curtas, jargão definido na prime
 ## Lacunas conhecidas
 
 Ícones: o design system usa Lucide como substituto, sem conjunto próprio aprovado. Não há tokens de estado de jogo (acerto, erro, nível, recompensa). Como o sistema não tem verde nem amarelo, feedback de acerto e erro deve ser resolvido com forma, texto e peso (marcação "gabarito", fio forte, rótulo mono), e não com semáforo. Cada decisão nova nessa área entra neste arquivo.
+
+## Extensão de jogo
+
+O design system não cobre luz, pedra e vegetação de uma cena 3D, nem estados de jogo. As decisões abaixo são novas, valem só para o Interprete RPG e têm como fonte `src/world/palette.ts` e `src/ui/game.css`.
+
+Cores de mundo, usadas em materiais e luz e nunca em texto de interface: âmbar `#E5A85F` e âmbar quente `#FFC27A` (fogo, janelas, lanternas), ouro envelhecido `#BD9A61` (metal, filetes de moldura), esmeralda `#183D35` e esmeralda iluminada `#3F8C74` (vegetação, névoa do Bosque), azul meia-noite `#182C48` (céu, sombra fria), marfim `#F0E5D3` (pergaminho), carvão `#16121C` (fundo de painéis sobre a cena) e névoa `#8FB5A6`. As cores de marca seguem vindo de `design/tokens.json`; o carmesim clássico fica reservado a dano, perigo e ação principal.
+
+A interface sobre a cena usa painéis escuros de carvão com fio de 1px em ouro envelhecido, sem blur e sem sombra projetada, com Source Serif 4 em títulos e falas, Inter em rótulos e IBM Plex Mono em números e teclas. Acerto e erro continuam sem semáforo: o jogo marca resultado com texto, peso e o comportamento do Crivo.
+
+Animação de gameplay é permitida e foi registrada aqui como exceção ao item de movimento: antecipação de golpes inimigos, pausa de impacto de até 90ms, tremor curto de câmera, faixas de título de região e de missão. Ajustes oferece redução de movimento, que desliga tremor e pausa de impacto. Ícones são glifos SVG próprios em `src/ui/icons.ts`, desenhados em traço de 1,5px; Lucide não é usado no jogo.

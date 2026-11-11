@@ -216,6 +216,7 @@ export class UI {
     const t = this.$['region-title'];
     (t.querySelector('.name') as HTMLElement).textContent = name;
     (t.querySelector('.sub') as HTMLElement).textContent = sub;
+    this.$.banner.classList.remove('on');
     t.classList.add('on');
     clearTimeout(this.titleTimer);
     this.titleTimer = window.setTimeout(() => t.classList.remove('on'), 3600);
@@ -225,6 +226,7 @@ export class UI {
     (b.querySelector('.k') as HTMLElement).textContent = kicker;
     (b.querySelector('.t') as HTMLElement).textContent = title;
     (b.querySelector('.d') as HTMLElement).textContent = desc;
+    this.$['region-title'].classList.remove('on');
     b.classList.add('on');
     clearTimeout(this.bannerTimer);
     this.bannerTimer = window.setTimeout(() => b.classList.remove('on'), 4200);

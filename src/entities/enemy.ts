@@ -35,7 +35,7 @@ export const ENEMY_CFG: Record<EnemyKind, Cfg> = {
   fiapo: { name: 'Fiapo da Névoa', hp: 46, speed: 2.7, scale: 1, sight: 12, meleeRange: 2.1, windup: 0.62, lunge: 2.8, dmg: 12, recover: 1.0, xp: 14, coins: [2, 5], tint: 0x5f7f78, eye: 0x7fffd0, poise: 1 },
   vulto: { name: 'Vulto', hp: 96, speed: 2.1, scale: 1.35, sight: 16, meleeRange: 2.3, windup: 0.8, lunge: 2.2, dmg: 16, recover: 1.2, xp: 32, coins: [6, 10], ranged: true, tint: 0x4a5f7a, eye: 0x9fd0ff, poise: 3 },
   eco: { name: 'O Eco', hp: 340, speed: 2.9, scale: 1.9, sight: 30, meleeRange: 2.9, windup: 0.7, lunge: 3.4, dmg: 18, recover: 1.0, xp: 130, coins: [30, 40], boss: true, tint: 0x7a6a4a, eye: 0xffd28a, poise: 99 },
-  veredito: { name: 'O Veredito', hp: 880, speed: 2.4, scale: 2.7, sight: 60, meleeRange: 3.9, windup: 0.85, lunge: 3.0, dmg: 20, recover: 1.1, xp: 320, coins: [60, 60], boss: true, ranged: true, tint: 0x4a3a5a, eye: 0xff5a6a, poise: 99 },
+  veredito: { name: 'O Veredito', hp: 760, speed: 2.4, scale: 2.7, sight: 60, meleeRange: 3.9, windup: 0.85, lunge: 3.0, dmg: 20, recover: 1.1, xp: 320, coins: [60, 60], boss: true, ranged: true, tint: 0x4a3a5a, eye: 0xff5a6a, poise: 99 },
 };
 
 export type EnemyState = 'idle' | 'chase' | 'windup' | 'strike' | 'recover' | 'stunned' | 'cast' | 'ring' | 'recite' | 'dying' | 'dead';
@@ -325,7 +325,7 @@ export class Enemy {
         }
         if (cfg.ranged && this.castCd <= 0 && dist > 4.5) {
           this.set('cast');
-          this.castCd = this.kind === 'veredito' ? 5.5 : 3.6;
+          this.castCd = this.kind === 'veredito' ? 7 : 3.6;
           c.sfx('fiapoAviso');
           break;
         }
@@ -394,7 +394,7 @@ export class Enemy {
           if (this.t >= at && this.t - dt < at) {
             const from = this.pos.clone().setY(this.pos.y + 1.4 * s);
             const aim = new THREE.Vector3().subVectors(c.playerPos.clone().setY(c.playerPos.y + 1.0), from).normalize();
-            c.shoot(from, aim, cfg.dmg * 0.8, this.kind === 'veredito' ? 9.5 : 7.5);
+            c.shoot(from, aim, cfg.dmg * (this.kind === 'veredito' ? 0.55 : 0.8), this.kind === 'veredito' ? 8 : 7.5);
             c.sfx('fiapo');
           }
         }

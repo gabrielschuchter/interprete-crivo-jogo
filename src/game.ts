@@ -1309,6 +1309,9 @@ export class Game {
       inCombat: this.inCombat,
     });
 
+    // o Crivo some quando a câmera encosta nele, para não tapar a cena
+    this.crivo.model.root.visible = cam.position.distanceTo(this.crivo.pos) > 1.25;
+
     // objetos: animação leve
     const t = this.engine.time;
     for (const x of this.props) {
