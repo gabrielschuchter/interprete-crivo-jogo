@@ -235,7 +235,7 @@ export function buildAtrio(ctx: RegionCtx): BuiltRegion {
   ];
   r.props = [
     { id: 'portal_bosque', kind: 'portal', x: 30.5, z: 0, label: 'Seguir para o Bosque da Confusão', radius: 3.4, data: { to: 'bosque', spawn: 'de_atrio' } },
-    { id: 'portal_arquivo', kind: 'portal', x: -30.4, z: 0, label: 'Entrar no Arquivo das Perguntas', radius: 2.6, data: { to: 'arquivo', spawn: 'de_atrio', requires: 'ponte_aberta', lockedMsg: 'A porta do Arquivo está trancada por dentro. Anselmo tem a chave.' } },
+    { id: 'portal_arquivo', kind: 'portal', x: -30.4, z: 0, label: 'Entrar no Arquivo das Perguntas', radius: 2.6, data: { to: 'arquivo', spawn: 'de_atrio', requires: 'chave_arquivo', lockedMsg: 'A porta do Arquivo está trancada por dentro. Anselmo tem a chave.' } },
     { id: 'portal_observatorio', kind: 'portal', x: 0, z: -28.6, y: TH, label: 'Subir ao Observatório do Acaso', radius: 2.4, data: { to: 'observatorio', spawn: 'de_atrio', requires: 'arquivo_concluido', lockedMsg: 'As portas da Academia não cedem. Algo lá em cima ainda não quer visita.' } },
     { id: 'quadro_atrio', kind: 'board', x: 7.0, z: 12.0, label: 'Ler o quadro de casos', radius: 2.2 },
     { id: 'descanso_atrio', kind: 'rest', x: -5.2, z: 5.2, label: 'Descansar e registrar o caminho', radius: 1.8 },
@@ -246,7 +246,9 @@ export function buildAtrio(ctx: RegionCtx): BuiltRegion {
     { id: 'pagina_3', kind: 'page', x: -12.6, z: -27.4, y: TH, label: 'Recolher a página solta', radius: 1.6, data: { page: 'absoluto' } },
     { id: 'moedas_atrio_1', kind: 'pickup', x: 19.0, z: 19.6, label: 'Pegar moedas', data: { item: 'moedas', qty: 12 } },
     { id: 'moedas_atrio_2', kind: 'pickup', x: 12.2, z: -27.2, y: TH, label: 'Pegar moedas', data: { item: 'moedas', qty: 15 } },
-    { id: 'cha_atrio', kind: 'pickup', x: -2.4, z: 40.2, label: 'Pegar infusão', data: { item: 'infusao', qty: 1 } },
+    { id: 'caldo_atrio', kind: 'pickup', x: -2.4, z: 40.2, label: 'Pegar o caldo', data: { item: 'caldo', qty: 1 } },
+    { id: 'vento_terraco', kind: 'examine', x: 13.4, z: -22.6, y: TH, label: 'Examinar os estandartes', radius: 2.2, data: { text: 'O canto leste do terraço fica à sombra da torre. Os estandartes daqui pendem parados, com poeira antiga nas dobras. Deste lado, o vento não chega.' } },
+    { id: 'vento_beco', kind: 'examine', x: -2.6, z: 41.2, label: 'Examinar as velas do beco', radius: 2.0, data: { text: 'O beco corre de norte a sul entre dois paredões. Mesmo agora passa uma corrente de ar constante, e a cera das velas escorreu toda para o lado sul.' } },
   ];
   r.mapPoints = [
     { x: 0, z: 0, label: 'Fonte armilar', kind: 'poi' },

@@ -68,6 +68,8 @@ export interface BuiltRegion {
   /** pontos de interesse desenhados no mapa */
   mapPoints: Array<{ x: number; z: number; label: string; kind: 'portal' | 'npc' | 'poi' }>;
   music: 'atrio' | 'bosque' | 'arquivo' | 'observatorio';
+  /** animações e mudanças de estado próprias da região (ponte, portas, braseiros) */
+  actions: Record<string, () => void>;
 }
 
 export interface RegionCtx {
@@ -95,6 +97,7 @@ export function emptyRegion(id: RegionId, name: string, subtitle: string, b: Reg
     handles: {},
     mapPoints: [],
     music: 'atrio',
+    actions: {},
   };
 }
 

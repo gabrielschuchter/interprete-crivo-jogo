@@ -137,7 +137,7 @@ export class CrivoModel {
       this.squash.add(mesh);
     }
     // topo claro e sem pelo
-    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.012, 24), new THREE.MeshStandardMaterial({ color: 0xf3e6e4, roughness: 0.55 }));
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.012, 24), new THREE.MeshStandardMaterial({ color: 0xb9a6a2, roughness: 0.9, envMapIntensity: 0.3 }));
     top.scale.set(1.2, 1, 0.78);
     top.position.set(0, 0.762 + FUR_LEN * 0.82, 0);
     this.squash.add(top);

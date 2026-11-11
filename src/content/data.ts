@@ -278,6 +278,12 @@ export interface QuestDef {
 }
 
 export const QUESTS: Record<string, QuestDef> = {
+  chegada: {
+    id: 'chegada', title: 'Chegada ao Átrio', kind: 'principal',
+    summary: 'Você chegou sob chuva, e um Crivo escolheu acompanhar você. A guardiã do Átrio espera junto à fonte.',
+    steps: [{ text: 'Fale com Heloísa, junto à fonte', region: 'atrio', target: 'npc:heloisa', hint: 'Ela está ao sul da fonte, de capa escura e cachecol dourado.' }],
+    done: 'Heloísa contou o que a Névoa das Conclusões fez com o Átrio.',
+  },
   ponte: {
     id: 'ponte', title: 'A Ponte das Conclusões', kind: 'principal',
     summary: 'A ponte do Bosque recolheu e não volta. Íris acha que ninguém mais sabe para quem ela foi feita.',
