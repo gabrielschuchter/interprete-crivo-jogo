@@ -10,6 +10,16 @@ import { emptyRegion, type BuiltRegion, type RegionCtx } from './region';
  * estantes altas, luminárias de latão e a Sala dos Originais ao fundo.
  * Três registros, três rastros de tinta: a lição é de procedência.
  */
+/** Seis estantes expositoras de obras. Autores vivos aparecem como obra citada, sem busto. */
+export const OBRAS_ARQUIVO: Array<{ id: string; placa: string; rotulo: string; x: number; z: number; texto: string }> = [
+  { id: 'obra_ebm', placa: 'EBM WORKING GROUP · 1992', rotulo: 'a nova abordagem de 1992', x: -14, z: -14, texto: 'Um periódico aberto em 1992: o grupo de trabalho propõe ensinar a prática por perguntas, busca e avaliação crítica, e não por decoreba.' },
+  { id: 'obra_chalmers', placa: 'ENKIN · KEIRSE · CHALMERS · 1989', rotulo: 'o guia de cuidado efetivo', x: -14, z: -6, texto: 'Um volume grosso de revisões sobre gravidez e parto. Cada capítulo diz o que ajuda, o que atrapalha e o que ainda ninguém testou.' },
+  { id: 'obra_greenhalgh', placa: 'GREENHALGH · COMO LER UM ARTIGO', rotulo: 'o manual de leitura crítica', x: -14, z: 2, texto: 'Uma série transformada em livro. A primeira pergunta é qual era a pergunta do estudo. Os números ficam para depois.' },
+  { id: 'obra_gigerenzer', placa: 'GIGERENZER · RISCO EM CEM PESSOAS', rotulo: 'o estudo sobre entender risco', x: 14, z: -14, texto: 'Dois cartões lado a lado: um diz "10%", o outro diz "10 em cada 100". Quase todo mundo entende melhor o segundo.' },
+  { id: 'obra_ioannidis', placa: 'IOANNIDIS · 2005', rotulo: 'o artigo de 2005', x: 14, z: 8, texto: 'Um artigo marcado de lápis por muitos leitores. Diz que estudos pequenos, flexíveis e com muito em jogo tendem a produzir achados que não se confirmam.' },
+  { id: 'obra_cochrane_br', placa: 'CENTRO COCHRANE DO BRASIL · 1996', rotulo: 'o registro do Centro Cochrane', x: 10, z: 18, texto: 'Uma placa de fundação: em 1996 o Centro Cochrane do Brasil começou a reunir e a traduzir revisões sistemáticas para o português.' },
+];
+
 export function buildArquivo(ctx: RegionCtx): BuiltRegion {
   const b = new RegionBuilder();
   const r = emptyRegion('arquivo', 'Arquivo das Perguntas', 'Os livros são guardados pela pergunta que respondem', b, ENV.arquivo);
@@ -20,7 +30,7 @@ export function buildArquivo(ctx: RegionCtx): BuiltRegion {
   // piso, tapete, teto
   b.add(new THREE.PlaneGeometry(34, 46), M.flag, trs(0, 0, 0, 0, -Math.PI / 2), false, false);
   b.add(new THREE.PlaneGeometry(26, 24), M.wood, trs(0, 0, -30, 0, -Math.PI / 2), false, false);
-  b.add(new THREE.PlaneGeometry(3.2, 36), M.wine, trs(0, 0.02, 2, 0, -Math.PI / 2), false, false);
+  b.add(new THREE.PlaneGeometry(3.2, 36), M.wine, trs(0, 0.03, 2, 0, -Math.PI / 2), false, false);
   b.add(new THREE.PlaneGeometry(34, 46), M.stoneDark, trs(0, H, 0, 0, Math.PI / 2), false, false);
   b.add(new THREE.PlaneGeometry(26, 24), M.stoneDark, trs(0, 9, -30, 0, Math.PI / 2), false, false);
   // paredes do salão
@@ -72,7 +82,7 @@ export function buildArquivo(ctx: RegionCtx): BuiltRegion {
   for (let i = 0; i < zs.length - 1; i++) K.ribVault(b, 0, (zs[i] + zs[i + 1]) / 2, 14, 8, 7.2, 3.6);
   for (const z of [12, 4, -4, -12]) {
     b.add(new THREE.CylinderGeometry(0.02, 0.02, 4.4, 4), M.iron, trs(0, 8.6, z));
-    b.add(new THREE.TorusGeometry(0.9, 0.04, 6, 20), M.bronze, trs(0, 6.4, z, 0, Math.PI / 2), false);
+    b.add(new THREE.TorusGeometry(0.9, 0.04, 10, 28), M.bronze, trs(0, 6.4, z, 0, Math.PI / 2), false);
     for (let k = 0; k < 6; k++) K.candle(b, Math.sin((k / 6) * Math.PI * 2) * 0.9, 6.42, z + Math.cos((k / 6) * Math.PI * 2) * 0.9, false);
     b.lamp(0, 6.1, z, 0xffa860, 1.1, 17, 0.1);
   }
@@ -135,7 +145,7 @@ export function buildArquivo(ctx: RegionCtx): BuiltRegion {
   // console das alavancas
   const lever = (x: number, name: string) => {
     b.box(M.stoneDark, 0.7, 1.0, 0.5, x, 0, -17.6, 0, true);
-    b.add(new THREE.CylinderGeometry(0.035, 0.035, 0.9, 6), M.iron, trs(x, 1.36, -17.5, 0, 0.5), false);
+    b.add(new THREE.CylinderGeometry(0.035, 0.035, 0.9, 16), M.iron, trs(x, 1.36, -17.5, 0, 0.5), false);
     b.add(new THREE.SphereGeometry(0.08, 8, 6), M.bronze, trs(x, 1.76, -17.28), false);
     K.plaque(b, name, x, 0.6, -17.34, 0, 0.62, 0.2, '#e7d8b4', '#2a1418', '500 150px "IBM Plex Mono", monospace');
   };
@@ -162,12 +172,29 @@ export function buildArquivo(ctx: RegionCtx): BuiltRegion {
   K.gothicWindow(b, 0, 2.6, -40.46, 0, 3, 5.6, true);
 
   // marco de descanso
-  b.add(new THREE.CylinderGeometry(0.34, 0.42, 1.0, 8), M.carved, trs(-5.4, 0.5, 18.6), false);
-  b.add(new THREE.CylinderGeometry(0.46, 0.34, 0.14, 8), M.bronze, trs(-5.4, 1.06, 18.6), false);
+  b.add(new THREE.CylinderGeometry(0.34, 0.42, 1.0, 22), M.carved, trs(-5.4, 0.5, 18.6), false);
+  b.add(new THREE.CylinderGeometry(0.46, 0.34, 0.14, 22), M.bronze, trs(-5.4, 1.06, 18.6), false);
   K.candle(b, -5.4, 1.13, 18.6, true);
   b.collideCircle(-5.4, 18.6, 0.45, -1, 1.3);
   K.crate(b, -13.6, 19.6, 0.8, 0.2);
   K.crate(b, 13.4, -15.6, 0.7, 0.5);
+
+  // estantes expositoras de obras (Passeio dos Mestres, parte do Arquivo)
+  for (const o of OBRAS_ARQUIVO) {
+    const rot = Math.abs(o.x) > 12 ? (o.x < 0 ? Math.PI / 2 : -Math.PI / 2) : Math.PI;
+    const c = Math.cos(rot);
+    const sn = Math.sin(rot);
+    const at = (lx: number, lz: number) => [o.x + lx * c + lz * sn, o.z - lx * sn + lz * c] as const;
+    b.box(M.woodDark, 0.7, 0.95, 0.5, o.x, 0, o.z, rot, true);
+    const [tx, tz] = at(0, 0.02);
+    b.add(new THREE.BoxGeometry(0.86, 0.06, 0.62), M.wood, trs(tx, 1.0, tz, rot, -0.38));
+    const [bx, bz] = at(0, 0.03);
+    b.add(new THREE.BoxGeometry(0.5, 0.025, 0.36), M.parchment, trs(bx, 1.045, bz, rot, -0.38));
+    const [px, pz] = at(0, 0.27);
+    K.plaque(b, o.placa, px, 0.48, pz, rot, 0.66, 0.14, '#e7d8b4', '#2a1418', '500 52px "IBM Plex Mono", monospace');
+    const [lx2, lz2] = at(0.3, -0.05);
+    K.candle(b, lx2, 1.1, lz2, false);
+  }
 
   b.finalize();
 
@@ -179,7 +206,8 @@ export function buildArquivo(ctx: RegionCtx): BuiltRegion {
     { kind: 'eco', x: 0, z: -31, group: 'eco', ifFlag: 'originais_aberta' },
   ];
   r.props = [
-    { id: 'portal_atrio', kind: 'portal', x: 0, z: 21.2, label: 'Voltar ao Átrio dos Caminhos', radius: 2.0, data: { to: 'atrio', spawn: 'de_arquivo' } },
+    ...OBRAS_ARQUIVO.map((o) => ({ id: 'obra_' + o.id, kind: 'examine' as const, x: o.x, z: o.z, label: `Ler ${o.rotulo}`, radius: 1.9, data: { text: o.texto, codex: o.id, xp: 10, obra: true } })),
+    { id: 'portal_atrio', kind: 'portal', x: 0, z: 21.2, label: 'Voltar ao Pátio dos Caminhos', radius: 2.0, data: { to: 'atrio', spawn: 'de_arquivo' } },
     { id: 'pulpito_a', kind: 'examine', x: -3.6, z: 5.4, label: 'Ler o Registro do Sino', radius: 1.7 },
     { id: 'pulpito_b', kind: 'examine', x: 3.6, z: 5.4, label: 'Ler o Registro da Maré', radius: 1.7 },
     { id: 'pulpito_c', kind: 'examine', x: 0, z: -5, label: 'Ler o Registro do Farol', radius: 1.7 },

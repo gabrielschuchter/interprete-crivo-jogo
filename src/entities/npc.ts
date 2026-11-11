@@ -10,7 +10,7 @@ export interface NpcDef {
 
 /** Personagens fictícios. Nenhum representa pessoa real. */
 export const NPCS: Record<string, NpcDef> = {
-  heloisa: { id: 'heloisa', name: 'Heloísa Vértice', role: 'Guardiã do Átrio', fig: { skin: SKINS[2], hair: HAIRS[3], hairStyle: 'coque', coat: 0x3a1226, cape: 0x1a1418, scarf: 0xbd9a61, height: 1.74 } },
+  heloisa: { id: 'heloisa', name: 'Heloísa Vértice', role: 'Guardiã do Pátio', fig: { skin: SKINS[2], hair: HAIRS[3], hairStyle: 'coque', coat: 0x3a1226, cape: 0x1a1418, scarf: 0xbd9a61, height: 1.74 } },
   iris: { id: 'iris', name: 'Íris', role: 'Mensageira', fig: { skin: SKINS[3], hair: HAIRS[0], hairStyle: 'curto', coat: 0x1f3d35, satchel: true, scarf: 0x8c1535, height: 1.66, build: 0.92 } },
   anselmo: { id: 'anselmo', name: 'Anselmo', role: 'Bibliotecário', fig: { skin: SKINS[1], hair: HAIRS[3], hairStyle: 'calvo', beard: true, coat: 0x4a3420, scarf: null, height: 1.78, build: 1.08 } },
   dalva: { id: 'dalva', name: 'Dalva', role: 'Artesã do beco', fig: { skin: SKINS[4], hair: HAIRS[0], hairStyle: 'coque', coat: 0x2b2b33, apron: 0x6b4a2a, height: 1.68, build: 1.06 } },

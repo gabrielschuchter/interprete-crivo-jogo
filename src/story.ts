@@ -6,7 +6,7 @@
  */
 import type { Game } from './game';
 import type { PropPlacement } from './world/region';
-import { CODEX, PAGES, PROFESSIONS } from './content/data';
+import { CODEX, MESTRES_IDS, OBRAS_IDS, PAGES, PROFESSIONS } from './content/data';
 import * as D from './domain/state';
 
 type G = Game;
@@ -32,7 +32,7 @@ async function ask(g: G, opts: Array<{ text: string; tag?: string; if?: boolean;
 
 // ---------- abertura ----------
 export async function opening(g: G): Promise<void> {
-  await g.say('', 'Chove no Átrio dos Caminhos. Você chegou tarde, com a carta de admissão dobrada no bolso e a impressão de que esqueceram de avisar que você vinha.');
+  await g.say('', 'Chove no Pátio dos Caminhos. Você chegou tarde, com a carta de admissão dobrada no bolso e a impressão de que esqueceram de avisar que você vinha.');
   await g.say('', 'Algo pequeno, cor de vinho, saltita entre as poças na sua direção. Tem um olho só, e olha para você como quem confere uma soma.');
   g.crivo.cheer();
   g.audio.sfx('crivoAlegre');
@@ -69,20 +69,95 @@ export async function talk(g: G, id: string): Promise<void> {
   D.unlockCodex(g.state!, id);
   switch (id) {
     case 'heloisa':
-      return heloisa(g);
+      await heloisa(g);
+      break;
     case 'iris':
-      return iris(g);
+      await iris(g);
+      break;
     case 'anselmo':
-      return anselmo(g);
+      await anselmo(g);
+      break;
     case 'dalva':
-      return dalva(g);
+      await dalva(g);
+      break;
     case 'lia':
-      return lia(g);
+      await lia(g);
+      break;
     case 'noemia':
-      return noemia(g);
+      await noemia(g);
+      break;
     case 'tome':
-      return tome(g);
+      await tome(g);
+      break;
   }
+  await conversaDeOficio(g, id);
+}
+
+/**
+ * Cada morador carrega um assunto de método que o ocupa. Só entra quando a pessoa não tem pendência de missão,
+ * para não atravessar o fio da história, e cada assunto rende uma só vez um verbete no códice.
+ */
+const OFICIO: Record<string, { pergunta: string; codex: string; linhas: string[] }> = {
+  heloisa: {
+    pergunta: 'Como você decide para onde mandar alguém?',
+    codex: 'pico',
+    linhas: [
+      'Quando chega alguém dizendo "tem um problema na ponte", eu pergunto quatro coisas. Quem é? O que se pretende fazer? Em comparação com quê? E o que, exatamente, você diria que deu certo?',
+      'Parece burocracia. Mas pergunta com os quatro campos preenchidos diz onde procurar e quando parar de procurar. Pergunta com um campo em branco me faz andar o dia inteiro.',
+    ],
+  },
+  iris: {
+    pergunta: 'O que você leva nas cartas?',
+    codex: 'vies_publicacao',
+    linhas: [
+      'Tudo que me entregam. O problema é o que não me entregam. Carta boa sai logo, com selo bonito. Carta ruim fica na gaveta, ou nem chega a ser escrita.',
+      'No fim do mês, quem lê só o que eu entreguei conclui que o mundo vai muito bem. Eu aprendi a perguntar na estrada: quem não mandou carta, e por quê?',
+    ],
+  },
+  anselmo: {
+    pergunta: 'Como você escolhe o que entra no Arquivo?',
+    codex: 'revisao_sistematica',
+    linhas: [
+      'Escrevo a pergunta primeiro. Depois escrevo o que vou aceitar e o que vou recusar, antes de abrir a primeira estante, para não ajustar o critério ao livro que me agradou.',
+      'Procuro em mais de um lugar e anoto o que descartei, com o motivo. A prova de que fiz direito é outra pessoa refazer e chegar ao mesmo lugar. Se só eu chego lá, é opinião com bibliografia.',
+    ],
+  },
+  dalva: {
+    pergunta: 'Você mede tudo duas vezes?',
+    codex: 'erro_medida',
+    linhas: [
+      'Duas vezes, sempre. A segunda diz se a minha mão é caprichosa. Mas tem um erro que a segunda medida não pega: a trena que mente sempre para o mesmo lado dá a mesma resposta nas duas.',
+      'Para isso eu tenho uma régua de bronze que era do meu pai e que eu confio. Medir de novo e conferir com um padrão são coisas diferentes.',
+    ],
+  },
+  noemia: {
+    pergunta: 'Você anota o frio todas as noites?',
+    codex: 'regressao_media',
+    linhas: [
+      'Todas. E reparei em uma coisa chata: depois da pior noite do mês vem quase sempre uma menos pior, mesmo quando ninguém fez nada.',
+      'Se eu acender um braseiro justo na pior noite, vou jurar que foi o braseiro. Por isso eu deixo algumas noites ruins sem braseiro, só para comparar. Dá peso na consciência e dá resposta.',
+    ],
+  },
+  tome: {
+    pergunta: 'Quantos lampiões fazem uma rua mais segura?',
+    codex: 'nnt',
+    linhas: [
+      'Fiz uma conta no caderno, com números que inventei para treinar. Em cem noites sem lampião, dez tropeços. Em cem com lampião, seis. Diferença de quatro em cem.',
+      'Para evitar um tropeço a mais eu preciso acender em 25 noites, porque cem dividido por quatro dá vinte e cinco. Se eu disser só que o lampião "reduz 40% dos tropeços", parece mais, e esconde de onde parti.',
+    ],
+  },
+};
+
+async function conversaDeOficio(g: G, id: string): Promise<void> {
+  const s = g.state!;
+  const o = OFICIO[id];
+  if (!o || s.codex.includes(o.codex) || npcHasBusiness(g, id)) return;
+  const c = await g.choose([{ text: o.pergunta }, { text: 'Até logo.' }], 1);
+  if (c !== 0) return;
+  for (const l of o.linhas) await g.say(id, l);
+  D.unlockCodex(s, o.codex);
+  g.toast(`Novo verbete no códice: ${CODEX[o.codex].title}`);
+  g.reward({ id: 'oficio:' + id, xp: 15, talk: true });
 }
 
 async function heloisa(g: G): Promise<void> {
@@ -90,7 +165,7 @@ async function heloisa(g: G): Promise<void> {
   const H = (t: string) => g.say('heloisa', t);
   if (g.step('chegada') === 0) {
     await H('Então é você. O Crivo desceu a escadaria faz uma hora e ficou aí, olhando para o arco sul. Eles sabem antes da gente.');
-    await H('Sou Heloísa. Cuido do Átrio, o que nos últimos tempos quer dizer: cuido do que sobrou dele fora da névoa.');
+    await H('Sou Heloísa. Cuido do Pátio, o que nos últimos tempos quer dizer: cuido do que sobrou dele fora da névoa.');
     await ask(
       g,
       [
@@ -139,7 +214,7 @@ async function heloisa(g: G): Promise<void> {
     g.flag('crivo_capa');
     g.showEnding([
       'A ponte voltou a responder a quem atravessa, o registro do cais está na estante certa e o Observatório tem, de novo, mais perguntas do que sentenças.',
-      'O Átrio amanhece na próxima vez que você entrar nele. As missões paralelas, as páginas soltas e os segredos de cada região continuam onde estavam.',
+      'O Pátio amanhece na próxima vez que você entrar nele. As missões paralelas, as páginas soltas e os segredos de cada região continuam onde estavam.',
       'Uma capa esmeralda para o Crivo espera você em Habilidades. Ele vai fingir que não gostou.',
     ]);
     return;
@@ -266,7 +341,7 @@ async function anselmo(g: G): Promise<void> {
   }
   if (g.step('paginas') === 0) {
     const n = PAGES.filter((p) => s.codex.includes(p)).length;
-    await A(n ? `Você já tem ${n} de seis páginas. Há três no Átrio, uma em cada região além dele.` : 'Páginas de um caderno antigo andam soltas por aí. Seis, ao todo. Se cruzar com alguma, eu gostaria de ver o caderno inteiro de novo.');
+    await A(n ? `Você já tem ${n} de seis páginas. Há três no Pátio, uma em cada região além dele.` : 'Páginas de um caderno antigo andam soltas por aí. Seis, ao todo. Se cruzar com alguma, eu gostaria de ver o caderno inteiro de novo.');
     return;
   }
   if (!D.questDone(s, 'ponte')) {
@@ -491,7 +566,7 @@ export async function useProp(g: G, p: PropPlacement): Promise<void> {
   }
 
   if (p.id === 'marco') {
-    if (s.flags.includes('ponte_aberta')) return void (await N('O marco arde baixo e constante. Dá para vê-lo do Átrio.'));
+    if (s.flags.includes('ponte_aberta')) return void (await N('O marco arde baixo e constante. Dá para vê-lo do Pátio.'));
     if (g.step('ponte') < 5) return void (await N('Um marco de pedra com um pavio seco. Parece esperar alguma coisa.'));
     g.flag('ponte_aberta');
     g.region.actions.marco?.();
@@ -595,6 +670,23 @@ export async function useProp(g: G, p: PropPlacement): Promise<void> {
   g.lastExamined = String(data.text ?? '');
   if (data.codex && D.unlockCodex(s, String(data.codex))) g.toast(`Novo verbete no códice: ${CODEX[String(data.codex)].title}`);
   if (first && data.xp) g.reward({ id: 'exame:' + p.id, xp: Number(data.xp) });
+  if (data.mestre) mestresProgresso(g);
+  if (data.obra) obrasProgresso(g);
+}
+
+function mestresProgresso(g: G): void {
+  const s = g.state!;
+  const n = MESTRES_IDS.filter((id) => s.codex.includes(id)).length;
+  if (g.step('mestres') < 0) g.startQuest('mestres');
+  g.toast(`${n} de ${MESTRES_IDS.length} bustos`, 'Passeio dos Mestres');
+  if (n >= MESTRES_IDS.length) g.completeQuest('mestres', { xp: 120, items: { anel_duplo_cego: 1 } });
+}
+
+function obrasProgresso(g: G): void {
+  const s = g.state!;
+  const n = OBRAS_IDS.filter((id) => s.codex.includes(id)).length;
+  g.toast(`${n} de ${OBRAS_IDS.length} obras`, 'Estantes do Arquivo');
+  if (n >= OBRAS_IDS.length) g.reward({ id: 'obras_completas', xp: 100, items: { bussola_cochrane: 1 } });
 }
 
 async function board(g: G): Promise<void> {
@@ -604,11 +696,11 @@ async function board(g: G): Promise<void> {
     { text: 'Uma decisão para Lia · caso simulado', if: g.step('lia') < 0, run: async () => void (g.startQuest('lia'), await g.say('', 'Lia, a sineira, costuma ficar no banco a oeste da fonte. O bilhete avisa: caso simulado, dados fictícios.')) },
     { text: 'Duas versões do vento', if: g.step('vento') < 0, run: async () => void (g.startQuest('vento'), await g.say('', 'Noêmia fica no banco a leste da fonte; Tomé, perto dos canteiros do sudoeste. Cada um conta a mesma noite de um jeito.')) },
     { text: 'Encomenda atrasada', if: g.step('encomenda') < 0 && g.step('ponte') >= 1, run: async () => void (g.startQuest('encomenda'), await g.say('', 'Dalva, do Beco dos Ofícios, perdeu uma caixa de ferragens do outro lado da ponte.')) },
-    { text: 'Páginas de método', if: g.step('paginas') < 0, run: async () => void (g.startQuest('paginas'), await g.say('', 'Seis páginas de um caderno antigo andam soltas. Três estão aqui no Átrio.')) },
+    { text: 'Páginas de método', if: g.step('paginas') < 0, run: async () => void (g.startQuest('paginas'), await g.say('', 'Seis páginas de um caderno antigo andam soltas. Três estão aqui no Pátio.')) },
   ];
   if (!opts.some((o) => o.if !== false)) {
     const open = Object.keys(s.quests).filter((q) => D.questActive(s, q)).length;
-    await g.say('', open ? 'Tudo o que está no quadro já consta no seu diário.' : 'O quadro está em dia. Por ora, o Átrio não pede nada.');
+    await g.say('', open ? 'Tudo o que está no quadro já consta no seu diário.' : 'O quadro está em dia. Por ora, o Pátio não pede nada.');
     return;
   }
   await ask(g, opts, 'Deixar o quadro');

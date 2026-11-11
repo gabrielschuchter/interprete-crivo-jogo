@@ -50,16 +50,45 @@ export function buildBosque(ctx: RegionCtx): BuiltRegion {
 
   // trilha
   const path: Array<[number, number]> = [[-44, 0], [-31, 3], [-19, -2], [-7, 2], [5, -1], [15, 0], [25, 0]];
-  const seg = (ax: number, az: number, bx: number, bz: number, w: number) => {
-    const len = Math.hypot(bx - ax, bz - az);
-    const rot = Math.atan2(bx - ax, bz - az);
-    b.add(new THREE.PlaneGeometry(w, len + 1.4), M.cobbleDry, trs((ax + bx) / 2, 0.03, (az + bz) / 2, rot, -Math.PI / 2), false, false);
+  // a trilha é uma fita contínua, sem retângulos sobrepostos no mesmo plano (causavam cintilação nas emendas)
+  const ribbon = (pts: Array<[number, number]>, w: number, y: number) => {
+    const pos: number[] = [];
+    const uv: number[] = [];
+    const idx: number[] = [];
+    let run = 0;
+    for (let i = 0; i < pts.length; i++) {
+      const prev = pts[Math.max(0, i - 1)];
+      const next = pts[Math.min(pts.length - 1, i + 1)];
+      const dx = next[0] - prev[0];
+      const dz = next[1] - prev[1];
+      const l = Math.hypot(dx, dz) || 1;
+      const nx = -dz / l;
+      const nz = dx / l;
+      if (i > 0) run += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+      for (const sgn of [-1, 1]) {
+        pos.push(pts[i][0] + nx * (w / 2) * sgn, y, pts[i][1] + nz * (w / 2) * sgn);
+        uv.push(sgn < 0 ? 0 : w / 3.3, run / 3.3);
+      }
+      if (i > 0) {
+        const a = (i - 1) * 2;
+        idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    // normais para cima, independentemente da ordem dos vértices
+    const nrm = g.getAttribute('normal') as THREE.BufferAttribute;
+    for (let i = 0; i < nrm.count; i++) nrm.setXYZ(i, 0, 1, 0);
+    b.add(g, M.cobbleDry, new THREE.Matrix4(), false, false);
   };
-  for (let i = 0; i < path.length - 1; i++) seg(path[i][0], path[i][1], path[i + 1][0], path[i + 1][1], 3.2);
-  seg(-7, 2, -4, -15, 2.4);
-  seg(40, 0, 52, 0, 3.2);
-  b.add(new THREE.CircleGeometry(5.5, 24), M.cobbleDry, trs(-4, 0.035, -18, 0, -Math.PI / 2), false, false);
-  b.add(new THREE.CircleGeometry(5, 24), M.flag, trs(20.5, 0.035, -1.5, 0, -Math.PI / 2), false, false);
+  ribbon(path, 3.2, 0.03);
+  ribbon([[-7, 2], [-5.5, -6], [-4, -13]], 2.4, 0.036);
+  ribbon([[40, 0], [46, 0], [52, 0]], 3.2, 0.03);
+  b.add(new THREE.CircleGeometry(5.5, 32), M.cobbleDry, trs(-4, 0.042, -18, 0, -Math.PI / 2), false, false);
+  b.add(new THREE.CircleGeometry(5, 32), M.flag, trs(20.5, 0.048, -1.5, 0, -Math.PI / 2), false, false);
   const distToPath = (x: number, z: number) => {
     let best = 1e9;
     const all: Array<[number, number, number, number]> = [];
@@ -72,7 +101,7 @@ export function buildBosque(ctx: RegionCtx): BuiltRegion {
     return best;
   };
 
-  // portal de volta ao Átrio
+  // portal de volta ao Pátio
   K.archWall(b, -46, 0, Math.PI / 2, 12, 10, 2.2, 4.6, 3.6, M.stone);
   K.ivy(b, -44.85, 0, -4.2, Math.PI / 2, 3, 7, 4);
   K.ivy(b, -44.85, 0, 4.4, Math.PI / 2, 2.6, 6, 7);
@@ -103,17 +132,17 @@ export function buildBosque(ctx: RegionCtx): BuiltRegion {
 
   // cabeceira da ponte: três mecanismos
   const mech = (x: number, z: number, kind: 'a' | 'b' | 'c') => {
-    b.add(new THREE.CylinderGeometry(0.42, 0.52, 1.1, 8), M.stone, trs(x, 0.55, z), false);
-    b.add(new THREE.CylinderGeometry(0.5, 0.42, 0.12, 8), M.bronze, trs(x, 1.16, z), false);
-    b.add(new THREE.TorusGeometry(0.2, 0.035, 6, 16), M.bronze, trs(x, 1.24, z, 0, Math.PI / 2), false);
+    b.add(new THREE.CylinderGeometry(0.42, 0.52, 1.1, 22), M.stone, trs(x, 0.55, z), false);
+    b.add(new THREE.CylinderGeometry(0.5, 0.42, 0.12, 22), M.bronze, trs(x, 1.16, z), false);
+    b.add(new THREE.TorusGeometry(0.2, 0.035, 10, 28), M.bronze, trs(x, 1.24, z, 0, Math.PI / 2), false);
     b.collideCircle(x, z, 0.55, -1, 1.4);
-    if (kind === 'a') b.add(new THREE.TorusGeometry(0.5, 0.06, 6, 18, Math.PI * 1.3), M.wood, trs(x + 0.9, 0.1, z + 0.5, 0.4, 1.2, 0.2), false);
+    if (kind === 'a') b.add(new THREE.TorusGeometry(0.5, 0.06, 10, 28, Math.PI * 1.3), M.wood, trs(x + 0.9, 0.1, z + 0.5, 0.4, 1.2, 0.2), false);
     if (kind === 'b') {
       K.lantern(b, x + 0.85, 0.24, z + 0.4, 0.3, 0, false);
       b.add(new THREE.BoxGeometry(0.14, 0.03, 0.34), M.woodDark, trs(x + 0.5, 0.03, z + 0.75, 0.3), false);
       b.add(new THREE.BoxGeometry(0.14, 0.03, 0.34), M.woodDark, trs(x + 0.72, 0.03, z + 0.82, -0.2), false);
     }
-    if (kind === 'c') b.add(new THREE.TorusGeometry(0.16, 0.035, 6, 14, Math.PI * 1.4), M.iron, trs(x + 0.8, 0.05, z + 0.5, 0.8, Math.PI / 2), false);
+    if (kind === 'c') b.add(new THREE.TorusGeometry(0.16, 0.035, 10, 28, Math.PI * 1.4), M.iron, trs(x + 0.8, 0.05, z + 0.5, 0.8, Math.PI / 2), false);
   };
   mech(17.5, -5, 'c');
   mech(20.5, -5.6, 'a');
@@ -168,9 +197,9 @@ export function buildBosque(ctx: RegionCtx): BuiltRegion {
   });
 
   // margem leste: marco, ruína com grade, caixa
-  b.add(new THREE.CylinderGeometry(0.5, 0.7, 0.5, 8), M.stoneDark, trs(43.5, 0.25, 0), false);
-  b.add(new THREE.CylinderGeometry(0.3, 0.42, 2.6, 8), M.stone, trs(43.5, 1.8, 0), false);
-  b.add(new THREE.CylinderGeometry(0.44, 0.3, 0.24, 8), M.bronze, trs(43.5, 3.2, 0), false);
+  b.add(new THREE.CylinderGeometry(0.5, 0.7, 0.5, 22), M.stoneDark, trs(43.5, 0.25, 0), false);
+  b.add(new THREE.CylinderGeometry(0.3, 0.42, 2.6, 22), M.stone, trs(43.5, 1.8, 0), false);
+  b.add(new THREE.CylinderGeometry(0.44, 0.3, 0.24, 22), M.bronze, trs(43.5, 3.2, 0), false);
   b.collideCircle(43.5, 0, 0.7, -1, 3.4);
   const flame = K.halo(3.4, 0xffc070, 0.9);
   flame.position.set(43.5, 3.7, 0);
@@ -196,7 +225,7 @@ export function buildBosque(ctx: RegionCtx): BuiltRegion {
   K.ivy(b, 54, 0, 21.95, Math.PI, 5, 3.6, 21);
   const gate = new THREE.Group();
   for (let i = -5; i <= 5; i++) {
-    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 3.2, 5), M.iron);
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 3.2, 14), M.iron);
     bar.position.set(54 + i * 0.27, 1.6, 13.5);
     gate.add(bar);
   }
@@ -214,8 +243,8 @@ export function buildBosque(ctx: RegionCtx): BuiltRegion {
   K.archWall(b, 57, -14, 0.5, 8, 7.5, 1.3, 3.6, 2.8, M.stoneDark);
 
   // marco de descanso
-  b.add(new THREE.CylinderGeometry(0.34, 0.42, 1.0, 8), M.carved, trs(13, 0.5, 5.6), false);
-  b.add(new THREE.CylinderGeometry(0.46, 0.34, 0.14, 8), M.bronze, trs(13, 1.06, 5.6), false);
+  b.add(new THREE.CylinderGeometry(0.34, 0.42, 1.0, 22), M.carved, trs(13, 0.5, 5.6), false);
+  b.add(new THREE.CylinderGeometry(0.46, 0.34, 0.14, 22), M.bronze, trs(13, 1.06, 5.6), false);
   K.candle(b, 13, 1.13, 5.6, true);
   b.collideCircle(13, 5.6, 0.45, -1, 1.3);
 
@@ -273,7 +302,7 @@ export function buildBosque(ctx: RegionCtx): BuiltRegion {
     { kind: 'fiapo', x: 47, z: 6, group: 'margem', ifFlag: 'ponte_estendida' },
   ];
   r.props = [
-    { id: 'portal_atrio', kind: 'portal', x: -44.4, z: 0, label: 'Voltar ao Átrio dos Caminhos', radius: 2.6, data: { to: 'atrio', spawn: 'de_bosque' } },
+    { id: 'portal_atrio', kind: 'portal', x: -44.4, z: 0, label: 'Voltar ao Pátio dos Caminhos', radius: 2.6, data: { to: 'atrio', spawn: 'de_bosque' } },
     { id: 'bau_selo', kind: 'chest', x: -4, z: -21, label: 'Abrir o baú', radius: 1.8, data: { item: 'selo_contexto', requiresGroup: 'clareira' } },
     { id: 'mec_c', kind: 'mechanism', x: 17.5, z: -5, label: 'Examinar o mecanismo', radius: 1.7 },
     { id: 'mec_a', kind: 'mechanism', x: 20.5, z: -5.6, label: 'Examinar o mecanismo', radius: 1.7 },
@@ -291,7 +320,7 @@ export function buildBosque(ctx: RegionCtx): BuiltRegion {
     { id: 'ruina_bosque', kind: 'examine', x: -25, z: 3.2, label: 'Examinar a ruína', radius: 2.2, data: { text: 'No lintel caído, quase apagado: "Passou sempre. Logo, passará." Alguém riscou a segunda frase com a ponta de uma faca.', xp: 10 } },
   ];
   r.mapPoints = [
-    { x: -44, z: 0, label: 'Arco do Átrio', kind: 'portal' },
+    { x: -44, z: 0, label: 'Arco do Pátio', kind: 'portal' },
     { x: -4, z: -18, label: 'Clareira', kind: 'poi' },
     { x: 32, z: 0, label: 'Ponte das Conclusões', kind: 'poi' },
     { x: 43.5, z: 0, label: 'Marco', kind: 'poi' },

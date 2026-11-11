@@ -233,8 +233,10 @@ export class Game {
   openCreate(): void {
     this.ui.closeAll();
     this.mode = 'create';
+    this.snapCreateCam = true;
     this.ui.createScreen(true);
   }
+  private snapCreateCam = false;
   private clearPreview(): void {
     if (this.preview) this.preview.removeFrom(this.engine.scene);
     this.preview = null;
@@ -542,6 +544,7 @@ export class Game {
     if (this.player) this.player.frozen = false;
     if (this.mode === 'dialogue') {
       this.mode = 'play';
+      this.wasLocked = false;
       if (!this.ui.instant) this.input.requestLock();
     }
     this.refreshProps();
@@ -693,6 +696,21 @@ export class Game {
       s.hp = Math.min(max, s.hp + 45);
       this.audio.sfx('curar');
       if (this.player) this.burst(this.player.pos.clone().setY(this.player.pos.y + 1.1), 0x9fe0c0, 10, 1.2);
+      return true;
+    }
+    if (id === 'limao_lind' || id === 'cha_fisher') {
+      const max = this.stats.maxHp;
+      if (id === 'limao_lind' && s.hp >= max && this.player && this.player.vigor >= this.stats.maxVigor) {
+        this.ui.toast('Você está inteiro. O limão fica para depois.');
+        return false;
+      }
+      D.removeItem(s, id);
+      if (id === 'limao_lind') {
+        s.hp = Math.min(max, s.hp + 30);
+        if (this.player) this.player.vigor = this.stats.maxVigor;
+      } else this.abilityCd = 0;
+      this.audio.sfx('curar');
+      if (this.player) this.burst(this.player.pos.clone().setY(this.player.pos.y + 1.1), id === 'limao_lind' ? 0xe8e070 : 0xf0e0c0, 10, 1.2);
       return true;
     }
     if (id === 'selo_pergunta') {
@@ -1100,6 +1118,8 @@ export class Game {
     const inp = this.input;
     inp.pollGamepad();
     const m = this.mode;
+    // uma sobreposição ou conversa solta o ponteiro de propósito: ao voltar ao jogo não é perda de foco
+    if (m !== 'play') this.wasLocked = false;
     this.ui.update(dt);
     this.audio.update();
 
@@ -1148,9 +1168,12 @@ export class Game {
   private updateTitle(dt: number, m: Mode): void {
     const cam = this.engine.camera;
     if (m === 'create' && this.preview) {
-      const t = new THREE.Vector3(0.7, 1.6, 16.5);
-      cam.position.lerp(t, Math.min(1, dt * 2.5));
-      cam.lookAt(-1.75, 1.1, 13.4);
+      const t = new THREE.Vector3(0.55, 1.45, 15.7);
+      if (this.snapCreateCam) {
+        cam.position.copy(t);
+        this.snapCreateCam = false;
+      } else cam.position.lerp(t, Math.min(1, dt * 2.5));
+      cam.lookAt(-1.05, 1.0, 13.4);
       this.preview.fig.speed = 0;
       this.preview.fig.update(dt);
       this.crivo.model.root.rotation.y = 0.25;

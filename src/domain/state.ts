@@ -361,6 +361,15 @@ export function computeStats(s: GameState): Stats {
     st.attackCost *= 0.8;
   }
   if (eq('pingente_intervalo')) st.defense += 0.12;
+  if (eq('jaleco_semmelweis')) st.defense += 0.1;
+  if (eq('anel_duplo_cego')) {
+    st.damage *= 1.1;
+    st.heavyDamage *= 1.1;
+  }
+  if (eq('bussola_cochrane')) {
+    st.coinBonus += 0.25;
+    st.pickupRadius = Math.max(st.pickupRadius, 2.4);
+  }
   if (countItem(s, 'ponteira_latao') > 0) {
     st.damage += 6;
     st.heavyDamage += 10;

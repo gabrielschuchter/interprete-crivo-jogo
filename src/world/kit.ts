@@ -225,12 +225,12 @@ export function building(b: RegionBuilder, x: number, z: number, rot: number, w:
 
 /** Torre cilíndrica com telhado cônico de ardósia. */
 export function tower(b: RegionBuilder, x: number, z: number, r: number, h: number, roofH: number, mat: THREE.Material = M.stoneDark, lit = true, y0 = 0): void {
-  const g = new THREE.CylinderGeometry(r, r * 1.06, h, 12, 1);
+  const g = new THREE.CylinderGeometry(r, r * 1.06, h, 24, 1);
   b.add(g, mat, trs(x, y0 + h / 2, z), false);
-  b.add(new THREE.CylinderGeometry(r * 1.14, r * 1.02, 0.5, 12), M.carved, trs(x, y0 + h - 0.1, z));
+  b.add(new THREE.CylinderGeometry(r * 1.14, r * 1.02, 0.5, 24), M.carved, trs(x, y0 + h - 0.1, z));
   b.add(new THREE.ConeGeometry(r * 1.2, roofH, 12), M.slate, trs(x, y0 + h + roofH / 2 + 0.1, z));
   b.add(new THREE.OctahedronGeometry(r * 0.16), M.bronze, trs(x, y0 + h + roofH + 0.25, z));
-  b.add(new THREE.CylinderGeometry(0.04, 0.04, 0.8, 5), M.bronze, trs(x, y0 + h + roofH + 0.6, z));
+  b.add(new THREE.CylinderGeometry(0.04, 0.04, 0.8, 14), M.bronze, trs(x, y0 + h + roofH + 0.6, z));
   if (lit) {
     for (let k = 0; k < 4; k++) {
       const a = (k / 4) * Math.PI * 2 + 0.4;
@@ -303,9 +303,9 @@ export function halo(size: number, color = 0xffb86a, opacity = 0.75): THREE.Spri
 
 /** Poste de ferro com lampião. */
 export function lampPost(b: RegionBuilder, x: number, z: number, h = 3.6, y0 = 0, intensity = 1): void {
-  b.add(new THREE.CylinderGeometry(0.16, 0.24, 0.5, 8), M.iron, trs(x, y0 + 0.25, z));
-  b.add(new THREE.CylinderGeometry(0.06, 0.09, h, 8), M.iron, trs(x, y0 + h / 2, z));
-  b.add(new THREE.CylinderGeometry(0.12, 0.06, 0.2, 8), M.iron, trs(x, y0 + h, z));
+  b.add(new THREE.CylinderGeometry(0.16, 0.24, 0.5, 22), M.iron, trs(x, y0 + 0.25, z));
+  b.add(new THREE.CylinderGeometry(0.06, 0.09, h, 22), M.iron, trs(x, y0 + h / 2, z));
+  b.add(new THREE.CylinderGeometry(0.12, 0.06, 0.2, 22), M.iron, trs(x, y0 + h, z));
   lantern(b, x, y0 + h + 0.36, z, 0.42, intensity);
   b.collideCircle(x, z, 0.2, y0 - 1, y0 + h);
 }
@@ -353,7 +353,7 @@ export function tree(b: RegionBuilder, x: number, z: number, h = 7, seed = 1, le
     const r1 = girth * (1 - (i + 1) / (segs + 1.5));
     const nx = px + Math.sin(dir) * lean * sh;
     const nz = pz + Math.cos(dir) * lean * sh;
-    const g = new THREE.CylinderGeometry(r1, r0 * (i === 0 ? 1.5 : 1), sh * 1.04, 7);
+    const g = new THREE.CylinderGeometry(r1, r0 * (i === 0 ? 1.5 : 1), sh * 1.04, 16);
     const m = new THREE.Matrix4().lookAt(new THREE.Vector3(px, py, pz), new THREE.Vector3(nx, py + sh, nz), new THREE.Vector3(0, 0, 1));
     const q = new THREE.Quaternion().setFromRotationMatrix(m).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2));
     b.add(g, M.bark, new THREE.Matrix4().compose(new THREE.Vector3((px + nx) / 2, py + sh / 2, (pz + nz) / 2), q, new THREE.Vector3(1, 1, 1)), false);
@@ -375,7 +375,7 @@ export function tree(b: RegionBuilder, x: number, z: number, h = 7, seed = 1, le
         const from = new THREE.Vector3(px, py - sh * 0.3, pz);
         const to = new THREE.Vector3(ex, ey, ez);
         const len = from.distanceTo(to);
-        const bg = new THREE.CylinderGeometry(r1 * 0.25, r1 * 0.75, len, 5);
+        const bg = new THREE.CylinderGeometry(r1 * 0.25, r1 * 0.75, len, 14);
         const bm = new THREE.Matrix4().lookAt(from, to, new THREE.Vector3(0, 1, 0));
         const bq = new THREE.Quaternion().setFromRotationMatrix(bm).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2));
         b.add(bg, M.bark, new THREE.Matrix4().compose(from.clone().lerp(to, 0.5), bq, new THREE.Vector3(1, 1, 1)), false);
@@ -499,7 +499,7 @@ export function banner(b: RegionBuilder, x: number, y: number, z: number, rot: n
   b.dynamic(mesh);
   const c = Math.cos(rot);
   const s = Math.sin(rot);
-  b.add(new THREE.CylinderGeometry(0.035, 0.035, w + 0.3, 6), M.bronze, trs(x, y + 0.02, z, rot, 0, Math.PI / 2));
+  b.add(new THREE.CylinderGeometry(0.035, 0.035, w + 0.3, 16), M.bronze, trs(x, y + 0.02, z, rot, 0, Math.PI / 2));
   void c;
   void s;
   return mesh;
@@ -520,8 +520,8 @@ export function crate(b: RegionBuilder, x: number, z: number, size = 0.8, rot = 
 }
 
 export function barrel(b: RegionBuilder, x: number, z: number, y0 = 0): void {
-  b.add(new THREE.CylinderGeometry(0.36, 0.34, 1.0, 12), M.wood, trs(x, y0 + 0.5, z), false);
-  for (const yy of [0.2, 0.8]) b.add(new THREE.CylinderGeometry(0.385, 0.385, 0.06, 12), M.iron, trs(x, y0 + yy, z));
+  b.add(new THREE.CylinderGeometry(0.36, 0.34, 1.0, 24), M.wood, trs(x, y0 + 0.5, z), false);
+  for (const yy of [0.2, 0.8]) b.add(new THREE.CylinderGeometry(0.385, 0.385, 0.06, 24), M.iron, trs(x, y0 + yy, z));
   b.collideCircle(x, z, 0.42, y0 - 1, y0 + 1.1);
 }
 
@@ -558,7 +558,7 @@ export function table(b: RegionBuilder, x: number, z: number, rot: number, w = 2
 
 /** Vela com chama e halo; luz opcional. */
 export function candle(b: RegionBuilder, x: number, y: number, z: number, light = false): void {
-  b.add(new THREE.CylinderGeometry(0.035, 0.04, 0.22, 6), M.parchment, trs(x, y + 0.11, z), false, false);
+  b.add(new THREE.CylinderGeometry(0.035, 0.04, 0.22, 16), M.parchment, trs(x, y + 0.11, z), false, false);
   b.add(new THREE.SphereGeometry(0.035, 6, 5), M.lampGlow, trs(x, y + 0.27, z, 0, 0, 0, 1, 1.8, 1), true, false);
   const hl = halo(0.9, 0xffb86a, 0.45);
   hl.position.set(x, y + 0.28, z);
@@ -568,10 +568,10 @@ export function candle(b: RegionBuilder, x: number, y: number, z: number, light 
 
 /** Luminária de leitura (latão com cúpula verde). */
 export function deskLamp(b: RegionBuilder, x: number, y: number, z: number, light = true): void {
-  b.add(new THREE.CylinderGeometry(0.1, 0.12, 0.04, 10), M.bronze, trs(x, y + 0.02, z), false);
-  b.add(new THREE.CylinderGeometry(0.015, 0.015, 0.36, 6), M.bronze, trs(x, y + 0.2, z), false);
+  b.add(new THREE.CylinderGeometry(0.1, 0.12, 0.04, 22), M.bronze, trs(x, y + 0.02, z), false);
+  b.add(new THREE.CylinderGeometry(0.015, 0.015, 0.36, 16), M.bronze, trs(x, y + 0.2, z), false);
   const shade = new THREE.MeshStandardMaterial({ color: 0x1f6b52, emissive: 0x2a8a66, emissiveIntensity: 0.9, roughness: 0.3 });
-  const sm = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.2, 0.14, 12, 1, true), shade);
+  const sm = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.2, 0.14, 24, 1, true), shade);
   sm.position.set(x, y + 0.42, z);
   b.dynamic(sm);
   const hl = halo(1.5, 0xffc880, 0.4);
@@ -613,15 +613,15 @@ export function fountain(b: RegionBuilder, x: number, z: number): THREE.Group {
   b.add(new THREE.CylinderGeometry(3.3, 3.5, 0.7, 24), M.stoneDark, trs(x, 0.35, z), false);
   b.add(new THREE.CylinderGeometry(3.45, 3.45, 0.14, 24), M.carved, trs(x, 0.72, z), false);
   b.add(new THREE.CylinderGeometry(3.0, 3.0, 0.06, 24), M.water, trs(x, 0.6, z), true, false);
-  b.add(new THREE.CylinderGeometry(0.75, 1.1, 1.6, 8), M.stoneDark, trs(x, 0.8, z), false);
+  b.add(new THREE.CylinderGeometry(0.75, 1.1, 1.6, 22), M.stoneDark, trs(x, 0.8, z), false);
   b.add(new THREE.CylinderGeometry(1.5, 0.5, 0.5, 16), M.carved, trs(x, 1.85, z), false);
   b.add(new THREE.CylinderGeometry(1.4, 1.4, 0.04, 16), M.water, trs(x, 2.08, z), true, false);
-  b.add(new THREE.CylinderGeometry(0.2, 0.3, 1.1, 8), M.bronze, trs(x, 2.6, z), false);
+  b.add(new THREE.CylinderGeometry(0.2, 0.3, 1.1, 22), M.bronze, trs(x, 2.6, z), false);
   // esfera armilar: anéis de bronze que giram devagar
   const arm = new THREE.Group();
   arm.position.set(x, 4.1, z);
   const mk = (r: number, rx: number, rz: number) => {
-    const m = new THREE.Mesh(new THREE.TorusGeometry(r, 0.045, 8, 48), M.bronze);
+    const m = new THREE.Mesh(new THREE.TorusGeometry(r, 0.045, 10, 48), M.bronze);
     m.rotation.set(rx, 0, rz);
     m.castShadow = true;
     return m;
@@ -646,11 +646,69 @@ export function fountain(b: RegionBuilder, x: number, z: number): THREE.Group {
 }
 
 /** Pedestal com busto abstrato (figura fictícia, sem retrato de pessoa real). */
-export function bust(b: RegionBuilder, x: number, z: number, rot = 0, y0 = 0): void {
-  b.box(M.stoneDark, 0.7, 1.2, 0.7, x, y0, z, rot, true);
-  b.add(new THREE.BoxGeometry(0.84, 0.1, 0.84), M.carved, trs(x, y0 + 1.25, z, rot));
-  b.add(new THREE.CylinderGeometry(0.2, 0.3, 0.3, 8), M.carved, trs(x, y0 + 1.45, z), false);
-  b.add(new THREE.SphereGeometry(0.24, 12, 10), M.carved, trs(x, y0 + 1.82, z, 0, 0, 0, 0.9, 1.15, 1), false);
+/** Placa de bronze com nome e anos, desenhada em canvas. */
+function plaqueTexture(line1: string, line2: string): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 512;
+  c.height = 192;
+  const g = c.getContext('2d')!;
+  const gr = g.createLinearGradient(0, 0, 512, 192);
+  gr.addColorStop(0, '#7a5c2e');
+  gr.addColorStop(0.5, '#a3814a');
+  gr.addColorStop(1, '#6b4f26');
+  g.fillStyle = gr;
+  g.fillRect(0, 0, 512, 192);
+  g.strokeStyle = 'rgba(30,18,6,0.7)';
+  g.lineWidth = 6;
+  g.strokeRect(12, 12, 488, 168);
+  g.fillStyle = '#1c1206';
+  g.textAlign = 'center';
+  g.font = '600 56px "Source Serif 4", Georgia, serif';
+  g.fillText(line1, 256, 94, 470);
+  g.font = '500 34px "IBM Plex Mono", monospace';
+  g.fillText(line2, 256, 148, 470);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
+/** Busto sobre pedestal, com rosto esculpido, ombros e placa. `rot` aponta a frente (+z local) para onde `rot` gira. */
+export function bust(b: RegionBuilder, x: number, z: number, rot = 0, y0 = 0, plate?: { name: string; years: string }, hair: 'curto' | 'longo' | 'touca' | 'calvo' = 'curto'): void {
+  const at = (lx: number, ly: number, lz: number) => {
+    const c = Math.cos(rot);
+    const s = Math.sin(rot);
+    return { x: x + lx * c + lz * s, y: y0 + ly, z: z - lx * s + lz * c };
+  };
+  const place = (geo: THREE.BufferGeometry, mat: THREE.Material, lx: number, ly: number, lz: number, sx = 1, sy = 1, sz = 1, rx = 0) => {
+    const p = at(lx, ly, lz);
+    b.add(geo, mat, trs(p.x, p.y, p.z, rot, rx, 0, sx, sy, sz), false);
+  };
+  b.box(M.stoneDark, 0.78, 1.15, 0.78, x, y0, z, rot, true);
+  place(new THREE.BoxGeometry(0.92, 0.1, 0.92), M.carved, 0, 1.2, 0);
+  place(new THREE.BoxGeometry(0.84, 0.06, 0.84), M.stoneDark, 0, 1.12, 0);
+  // ombros e peito cortados em lâmina
+  place(new THREE.SphereGeometry(0.34, 28, 16, 0, Math.PI * 2, 0, Math.PI / 2), M.carved, 0, 1.25, 0, 1.15, 0.9, 0.62);
+  place(new THREE.CylinderGeometry(0.1, 0.13, 0.2, 22), M.carved, 0, 1.58, 0);
+  // cabeça
+  place(new THREE.SphereGeometry(0.17, 28, 22), M.carved, 0, 1.82, 0, 0.88, 1.12, 1.0);
+  place(new THREE.SphereGeometry(0.12, 22, 16), M.carved, 0, 1.69, 0.025, 0.95, 0.85, 0.98);
+  place(new THREE.SphereGeometry(0.03, 14, 10), M.carved, 0, 1.78, 0.17, 0.85, 1.4, 1.2);
+  place(new THREE.BoxGeometry(0.2, 0.025, 0.05), M.carved, 0, 1.86, 0.155);
+  for (const sx of [-1, 1]) place(new THREE.SphereGeometry(0.035, 12, 10), M.carved, sx * 0.158, 1.8, -0.01, 0.5, 1, 0.8);
+  if (hair !== 'calvo') {
+    place(new THREE.SphereGeometry(0.18, 26, 18, 0, Math.PI * 2, 0, Math.PI * 0.52), M.stone, 0, 1.86, -0.02, 0.9, 1.1, 1.02, -0.25);
+    if (hair === 'longo') place(new THREE.CapsuleGeometry(0.13, 0.28, 6, 14), M.stone, 0, 1.62, -0.1, 1.05, 1, 0.6);
+    if (hair === 'touca') place(new THREE.SphereGeometry(0.19, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.62), M.stone, 0, 1.87, -0.01, 0.95, 1.1, 1.06, -0.2);
+  }
+  if (plate) {
+    const mat = new THREE.MeshStandardMaterial({ map: plaqueTexture(plate.name, plate.years), roughness: 0.45, metalness: 0.55 });
+    const pl = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.23), mat);
+    const p = at(0, 0.62, 0.395);
+    pl.position.set(p.x, p.y, p.z);
+    pl.rotation.y = rot;
+    b.dynamic(pl);
+  }
 }
 
 /** Abóbada de nervuras entre quatro pilares (interiores). */
@@ -676,7 +734,7 @@ export function ribVault(b: RegionBuilder, x: number, z: number, w: number, d: n
 
 export function column(b: RegionBuilder, x: number, z: number, h: number, r = 0.4, y0 = 0): void {
   b.add(new THREE.BoxGeometry(r * 3, 0.4, r * 3), M.stoneDark, trs(x, y0 + 0.2, z));
-  b.add(new THREE.CylinderGeometry(r, r * 1.08, h - 0.8, 10), M.stone, trs(x, y0 + h / 2, z), false);
-  b.add(new THREE.CylinderGeometry(r * 1.5, r, 0.4, 10), M.carved, trs(x, y0 + h - 0.2, z), false);
+  b.add(new THREE.CylinderGeometry(r, r * 1.08, h - 0.8, 22), M.stone, trs(x, y0 + h / 2, z), false);
+  b.add(new THREE.CylinderGeometry(r * 1.5, r, 0.4, 22), M.carved, trs(x, y0 + h - 0.2, z), false);
   b.collideCircle(x, z, r * 1.3, y0 - 1, y0 + h);
 }

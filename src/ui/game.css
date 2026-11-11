@@ -298,3 +298,9 @@ body.nohud #hud { display: none; }
   .detail { border-left: none; padding-left: 0; }
   #hud .objective { max-width: 46vw; }
 }
+
+.map-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.map-tools .btn { min-width: 40px; }
+.map-hint { font: 500 11px/1.2 var(--font-mono, 'IBM Plex Mono', monospace); color: var(--g-dim, #8a7b6e); margin-left: 6px; }
+#map-canvas { cursor: grab; touch-action: none; }
+#map-canvas.grab { cursor: grabbing; }

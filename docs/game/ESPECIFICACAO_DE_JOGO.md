@@ -8,9 +8,15 @@ Explorar uma região, conversar, observar com o Crivo, enfrentar a névoa e deci
 
 ## Campanha
 
-A chegada apresenta Heloísa, a mestra da Academia, e o Átrio. Em "Para quem é a ponte", no Bosque do Viés, dois mecanismos estendem a ponte: um calibrado com os viajantes que já atravessaram e outro com o passo de quem ainda precisa atravessar. É viés de seleção e validade externa em forma de engrenagem. Em "Três registros", no Arquivo das Vozes, a lupa do Crivo revela fichas de procedência e mostra que dois dos três registros concordantes são cópia um do outro; contar votos não é contar evidência independente. Em "O Veredito", no Observatório, há óleo para um braseiro só, e o chefe recita certezas que o pulso do Crivo interrompe.
+A chegada apresenta Heloísa, a mestra da Academia, e o Pátio. Em "A Ponte das Conclusões", no Bosque da Confusão, dois mecanismos estendem a ponte: um calibrado com os viajantes que já atravessaram e outro com o passo de quem ainda precisa atravessar. É viés de seleção e validade externa em forma de engrenagem. Em "O Registro Original", no Arquivo das Perguntas, a lupa do Crivo revela fichas de procedência e mostra que dois dos três registros concordantes são cópia um do outro; contar votos não é contar evidência independente. Em "O Veredito", no Observatório, há óleo para um braseiro só, e o chefe recita certezas que o pulso do Crivo interrompe.
 
 As paralelas são a encomenda de Dalva, as duas versões do vento (Noêmia e Tomé medem o mesmo vento em lugares diferentes e os dois têm razão), as seis páginas de método espalhadas pelas regiões e a decisão de Lia.
+
+## O universo da PBE no mundo
+
+O Pátio abriga o Passeio dos Mestres: oito bustos em arco ao redor da fonte (Lind, Nightingale, Semmelweis, Fisher, Bradford Hill, Cochrane, Sackett e Altman). Todos já faleceram, e a placa de cada um conta o que fez; o verbete do códice traz o contexto e o que ficou em aberto. Ler os oito conclui uma missão paralela e rende o Anel do Duplo-Cego. O Arquivo guarda seis estantes expositoras de obras, entre elas as de autores vivos, citados pela obra e sem busto; lê-las rende a Bússola de Cochrane. Cada morador tem um assunto de método que o ocupa (pergunta estruturada, viés de publicação, revisão sistemática, erro de medida, regressão à média e número necessário para tratar) e o conta em uma conversa opcional, que só aparece quando ele não tem pendência de missão. Os números das contas são inventados e dizem isso.
+
+Os fatos históricos dos verbetes foram escritos de memória, sem acesso a fontes durante o desenvolvimento, e precisam de conferência por quem tiver o material antes de qualquer divulgação.
 
 ## Caso simulado
 

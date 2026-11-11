@@ -75,9 +75,9 @@ try {
   await p.click('#create [data-a=go]');
   await waitMode('play');
   await E(fs.readFileSync(path.join(here, 'page-helpers.js'), 'utf8'));
-  ok((await step('chegada')) === 0, 'a abertura inicia a chegada ao Átrio');
+  ok((await step('chegada')) === 0, 'a abertura inicia a chegada ao Pátio');
 
-  console.log('Átrio e Bosque');
+  console.log('Pátio e Bosque');
   await E(async () => { await T.talk('heloisa'); await T.talk('iris'); });
   ok((await step('ponte')) === 1, 'Heloísa e Íris abrem a missão da ponte');
   await travel('bosque', 'de_atrio');
@@ -97,7 +97,7 @@ try {
   await E(async () => { await T.use('marco', 0, -1.2, 0); await T.use('caixa_dalva'); await T.use('pagina_4'); });
   ok((await step('ponte')) === 6, 'o marco aceso fecha a travessia');
 
-  console.log('Átrio, paralelas e caso simulado');
+  console.log('Pátio, paralelas e caso simulado');
   await travel('atrio', 'de_bosque');
   await E(async () => { await T.talk('iris'); await T.talk('dalva', 1); });
   ok((await step('ponte')) === 'ok' && (await step('encomenda')) === 'ok', 'ponte e encomenda concluídas');
@@ -149,6 +149,21 @@ try {
   await travel('atrio', 'de_arquivo');
   await E(async () => { await T.talk('anselmo'); await T.talk('heloisa'); });
   ok((await step('arquivo')) === 'ok' && (await step('veredito')) === 1, 'Arquivo concluído, Veredito iniciado');
+
+  console.log('Mestres, obras e conversas de ofício');
+  await travel('atrio', 'inicio');
+  await E(async () => { __game.wasLocked = true; await __game.runScript(async () => {}); await T.sim(0.5); });
+  ok((await mode()) === 'play', 'terminar uma conversa não abre a pausa (ponteiro solto de propósito)');
+  await E(async () => { for (const id of ['lind', 'nightingale', 'semmelweis', 'fisher', 'hill', 'cochrane', 'sackett', 'altman']) await T.use('mestre_' + id, undefined, 0, 1.6); });
+  ok((await step('mestres')) === 'ok' && (await E(() => __game.state.inventory.anel_duplo_cego === 1)), 'oito bustos lidos: Passeio dos Mestres concluído, anel recebido');
+  await E(async () => { await T.talk('iris', 0); });
+  ok(await E(() => __game.state.codex.includes('vies_publicacao')), 'conversa de ofício com Íris rende o verbete de viés de publicação');
+  await travel('arquivo', 'de_atrio');
+  await E(async () => { for (const id of ['obra_ebm', 'obra_chalmers', 'obra_greenhalgh', 'obra_gigerenzer', 'obra_ioannidis', 'obra_cochrane_br']) await T.use('obra_' + id, undefined, 1.4, 0); });
+  ok(await E(() => __game.state.inventory.bussola_cochrane === 1), 'seis obras lidas: Bússola de Cochrane recebida');
+  await E(() => { const g = __game; g.state.inventory.limao_lind = 1; g.state.hp = 40; g.useItem('limao_lind'); });
+  ok(await E(() => __game.state.hp === 70), 'o Limão de Lind recupera 30 de fôlego');
+  await travel('atrio', 'de_arquivo');
 
   console.log('Registro');
   const before = await E(() => { __game.checkpoint(); return JSON.stringify(__game.state.quests); });

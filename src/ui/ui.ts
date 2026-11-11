@@ -4,7 +4,7 @@
  */
 import type { Game } from '../game';
 import { ACTION_LABEL, keyLabel, type ActionName } from '../core/input';
-import { CODEX, CRIVO_SKILLS, ITEMS, PLAYER_SKILLS, PROFESSIONS, QUESTS, SHOP } from '../content/data';
+import { CODEX, COAT_COLORS, CRIVO_SKILLS, ITEMS, PLAYER_SKILLS, PROFESSIONS, QUESTS, SHOP } from '../content/data';
 import { canUnlock, countItem, isEquipped, xpForLevel, type ProfessionId, type SkillDef } from '../domain/state';
 import { HAIRS, SKINS } from '../entities/figure';
 import { icon } from './icons';
@@ -446,8 +446,8 @@ export class UI {
     const c = this.create;
     const render = () => {
       const prof = PROFESSIONS.find((p) => p.id === c.prof)!;
-      const coats = [prof.coat, 0x4a1830, 0x1c2f45, 0x1f3d35, 0x2b2b33, 0x4a3420];
-      this.$.create.innerHTML = `<div class="side"><div><div class="label">Novo caminho</div><h2>Quem chega ao Átrio?</h2></div>
+      const coats = COAT_COLORS;
+      this.$.create.innerHTML = `<div class="side"><div><div class="label">Novo caminho</div><h2>Quem chega ao Pátio?</h2></div>
         <div><div class="label" style="margin-bottom:8px">Ofício</div><div class="profs">${PROFESSIONS.map((p) => `<button class="chip" data-prof="${p.id}" aria-pressed="${p.id === c.prof}">${esc(p.name)}</button>`).join('')}</div></div>
         <div class="prof-line">${esc(prof.line)}<br><span class="label" style="font-style:normal">Objeto de ofício · ${esc(prof.tool)}</span></div>
         <div class="row"><span class="label">Nome</span><input type="text" maxlength="18" placeholder="Viajante" value="${esc(c.name)}" style="flex:1;width:auto" aria-label="Nome"></div>
@@ -455,7 +455,7 @@ export class UI {
         <div class="row"><span class="label">Cabelo</span>${HAIRS.map((s, i) => `<button class="swatch" data-hair="${i}" aria-pressed="${i === c.hair}" aria-label="Cor ${i + 1}" style="background:${hex(s)}"></button>`).join('')}</div>
         <div class="row"><span class="label">Corte</span>${['Curto', 'Coque', 'Longo', 'Capuz'].map((s, i) => `<button class="chip" data-style="${i}" aria-pressed="${i === c.style}">${s}</button>`).join('')}</div>
         <div class="row"><span class="label">Casaco</span>${coats.map((s, i) => `<button class="swatch" data-coat="${i}" aria-pressed="${i === c.coat}" aria-label="Casaco ${i + 1}" style="background:${hex(s)}"></button>`).join('')}</div>
-        <div class="row" style="margin-top:auto"><button class="btn" data-a="back">Voltar</button><button class="btn primary" data-a="go" style="margin-left:auto">Entrar no Átrio</button></div>
+        <div class="row" style="margin-top:auto"><button class="btn" data-a="back">Voltar</button><button class="btn primary" data-a="go" style="margin-left:auto">Entrar no Pátio</button></div>
         <div class="foot" style="color:var(--g-mute);font-size:12px">Nenhum ofício é melhor que outro. Mudam algumas falas e o que cabe a você fazer em cada caso.</div></div><div></div>`;
       const inp = this.$.create.querySelector('input') as HTMLInputElement;
       inp.addEventListener('input', () => (c.name = inp.value));
@@ -466,7 +466,10 @@ export class UI {
           this.sfx('ui');
           if (d.a === 'back') return this.g.openMenu();
           if (d.a === 'go') return this.g.startNew(c.name, c.prof, this.look());
-          if (d.prof) c.prof = d.prof as ProfessionId;
+          if (d.prof) {
+            c.prof = d.prof as ProfessionId;
+            c.coat = Math.max(0, COAT_COLORS.indexOf(PROFESSIONS.find((x) => x.id === c.prof)!.coat));
+          }
           if (d.skin) c.skin = Number(d.skin);
           if (d.hair) c.hair = Number(d.hair);
           if (d.style) c.style = Number(d.style);
@@ -489,7 +492,7 @@ export class UI {
     this.show('pause', on);
     if (!on) return;
     const p = this.$.pause;
-    p.innerHTML = `<div class="card"><div class="label">Pausa</div><h2>O Átrio espera.</h2><p>O caminho é registrado ao descansar, ao mudar de região e a cada objetivo cumprido.</p>
+    p.innerHTML = `<div class="card"><div class="label">Pausa</div><h2>O Pátio espera.</h2><p>O caminho é registrado ao descansar, ao mudar de região e a cada objetivo cumprido.</p>
       <button class="btn primary" data-a="resume" data-focus>Continuar</button><button class="btn" data-a="config">Configurações</button><button class="btn" data-a="title">Registrar e voltar ao título</button></div>`;
     p.querySelectorAll<HTMLElement>('button').forEach((b) =>
       b.addEventListener('click', () => {
@@ -515,7 +518,7 @@ export class UI {
     this.show('ending', on);
     if (!on) return;
     const p = this.$.ending;
-    p.innerHTML = `<div class="card" style="width:min(620px,92vw)"><div class="label">Fim do primeiro caminho</div><h2>A Névoa ficou do tamanho certo.</h2>${lines.map((l) => `<p>${esc(l)}</p>`).join('')}<button class="btn primary" data-focus>Continuar explorando o Átrio</button></div>`;
+    p.innerHTML = `<div class="card" style="width:min(620px,92vw)"><div class="label">Fim do primeiro caminho</div><h2>A Névoa ficou do tamanho certo.</h2>${lines.map((l) => `<p>${esc(l)}</p>`).join('')}<button class="btn primary" data-focus>Continuar explorando o Pátio</button></div>`;
     p.querySelector('button')!.addEventListener('click', () => {
       this.show('ending', false);
       this.g.closeOverlay();
@@ -662,7 +665,7 @@ export class UI {
     const s = this.g.state!;
     const ids = Object.keys(s.quests).sort((a, b) => Number(s.quests[a].status === 'concluida') - Number(s.quests[b].status === 'concluida'));
     if (!ids.length) {
-      page.innerHTML = `<div class="label">Diário</div><h2>Nada anotado ainda</h2><div class="empty-state">Converse com quem está no Átrio. O que você aceitar investigar fica registrado aqui, sem prazo.</div>`;
+      page.innerHTML = `<div class="label">Diário</div><h2>Nada anotado ainda</h2><div class="empty-state">Converse com quem está no Pátio. O que você aceitar investigar fica registrado aqui, sem prazo.</div>`;
       return;
     }
     const sel = this.sel.quest && s.quests[this.sel.quest] ? this.sel.quest : (this.g.trackedQuest()?.id ?? ids[0]);
@@ -692,7 +695,7 @@ export class UI {
 
   private pageCodex(page: HTMLElement): void {
     const s = this.g.state!;
-    const groups = ['Mundo', 'Pessoas', 'Criaturas', 'Método'] as const;
+    const groups = ['Mundo', 'Pessoas', 'Criaturas', 'Método', 'Mestres', 'Obras'] as const;
     const have = s.codex.filter((id) => CODEX[id]);
     const sel = this.sel.codex && have.includes(this.sel.codex) ? this.sel.codex : have[0];
     const e = CODEX[sel];
@@ -713,10 +716,70 @@ export class UI {
 
   private pageMap(page: HTMLElement): void {
     const r = this.g.region;
-    page.innerHTML = `<div class="label">${esc(r.subtitle)}</div><h2>${esc(r.name)}</h2><canvas id="map-canvas"></canvas>`;
+    page.innerHTML = `<div class="label">${esc(r.subtitle)}</div><h2>${esc(r.name)}</h2><div class="map-tools"><button class="btn" data-z="1" aria-label="Aproximar">+</button><button class="btn" data-z="-1" aria-label="Afastar">−</button><button class="btn" data-z="0">Centralizar em mim</button><span class="map-hint">Arraste para mover · roda do mouse para aproximar</span></div><canvas id="map-canvas" tabindex="0"></canvas>`;
     const cv = page.querySelector('canvas') as HTMLCanvasElement;
-    requestAnimationFrame(() => this.drawMap(cv));
+    const v = this.mapView;
+    const redraw = () => this.drawMap(cv);
+    const px = this.g.player?.pos;
+    v.zoom = 1;
+    v.x = 0;
+    v.z = 0;
+    const zoomBy = (f: number) => {
+      v.zoom = Math.min(5, Math.max(0.7, v.zoom * f));
+      redraw();
+    };
+    page.querySelectorAll<HTMLElement>('[data-z]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const d = Number(b.dataset.z);
+        if (d === 0) {
+          v.zoom = 1.8;
+          const bb = r.bounds;
+          v.x = (px?.x ?? 0) - (bb.minX + bb.maxX) / 2;
+          v.z = (px?.z ?? 0) - (bb.minZ + bb.maxZ) / 2;
+          redraw();
+        } else zoomBy(d > 0 ? 1.35 : 1 / 1.35);
+      }),
+    );
+    cv.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      zoomBy(e.deltaY < 0 ? 1.15 : 1 / 1.15);
+    }, { passive: false });
+    let drag: { x: number; y: number } | null = null;
+    cv.addEventListener('pointerdown', (e) => {
+      drag = { x: e.clientX, y: e.clientY };
+      cv.setPointerCapture(e.pointerId);
+      cv.classList.add('grab');
+    });
+    cv.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      const k = this.mapScale || 1;
+      v.x -= ((e.clientX - drag.x) * 2) / k;
+      v.z -= ((e.clientY - drag.y) * 2) / k;
+      drag = { x: e.clientX, y: e.clientY };
+      redraw();
+    });
+    const end = () => {
+      drag = null;
+      cv.classList.remove('grab');
+    };
+    cv.addEventListener('pointerup', end);
+    cv.addEventListener('pointercancel', end);
+    cv.addEventListener('keydown', (e) => {
+      const st = 40 / (this.mapScale || 1);
+      const m: Record<string, [number, number]> = { ArrowLeft: [-st, 0], ArrowRight: [st, 0], ArrowUp: [0, -st], ArrowDown: [0, st] };
+      if (m[e.code]) {
+        v.x += m[e.code][0] * 3;
+        v.z += m[e.code][1] * 3;
+        e.preventDefault();
+        e.stopPropagation();
+        redraw();
+      } else if (e.key === '+' || e.key === '=') zoomBy(1.35);
+      else if (e.key === '-') zoomBy(1 / 1.35);
+    });
+    requestAnimationFrame(redraw);
   }
+  private mapView = { zoom: 1, x: 0, z: 0 };
+  private mapScale = 1;
   private drawMap(cv: HTMLCanvasElement): void {
     const r = this.g.region;
     const w = (cv.width = cv.clientWidth * 2);
@@ -726,9 +789,10 @@ export class UI {
     const ink = css.getPropertyValue('--crimson-violet').trim() || '#43061e';
     const b = r.bounds;
     const pad = 60;
-    const sc = Math.min((w - pad * 2) / (b.maxX - b.minX), (h - pad * 2) / (b.maxZ - b.minZ));
-    const ox = w / 2 - ((b.minX + b.maxX) / 2) * sc;
-    const oz = h / 2 - ((b.minZ + b.maxZ) / 2) * sc;
+    const sc = Math.min((w - pad * 2) / (b.maxX - b.minX), (h - pad * 2) / (b.maxZ - b.minZ)) * this.mapView.zoom;
+    this.mapScale = sc;
+    const ox = w / 2 - ((b.minX + b.maxX) / 2 + this.mapView.x) * sc;
+    const oz = h / 2 - ((b.minZ + b.maxZ) / 2 + this.mapView.z) * sc;
     const X = (x: number) => ox + x * sc;
     const Z = (z: number) => oz + z * sc;
     c.fillStyle = '#f0e5d3';

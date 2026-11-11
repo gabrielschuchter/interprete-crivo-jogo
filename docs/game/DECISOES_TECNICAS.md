@@ -4,7 +4,7 @@ Registro das escolhas de arquitetura feitas em novembro de 2026, com o motivo de
 
 ## Pilha
 
-Vite 5, TypeScript em modo estrito e Three.js 0.170, sem framework de interface. A interface é DOM e CSS sobre `design/tokens.css`. A alternativa considerada foi React Three Fiber; foi descartada porque o jogo tem um laço de quadro único e pouca interface reativa, e a camada extra custaria tamanho de pacote e controle de alocação sem dar nada em troca. O pacote final tem 807 kB de JavaScript (232 kB em gzip), quase todo Three.js.
+Vite 5, TypeScript em modo estrito e Three.js 0.170, sem framework de interface. A interface é DOM e CSS sobre `design/tokens.css`. A alternativa considerada foi React Three Fiber; foi descartada porque o jogo tem um laço de quadro único e pouca interface reativa, e a camada extra custaria tamanho de pacote e controle de alocação sem dar nada em troca. O pacote final tem 838 kB de JavaScript (244 kB em gzip), quase todo Three.js.
 
 ## Assets gerados em código
 
@@ -28,7 +28,7 @@ Diálogos são funções assíncronas (`await g.say`, `await g.choose`) em `src/
 
 ## Testes
 
-Vitest cobre domínio, conteúdo e o caso simulado (27 testes). `tests/e2e/playthrough.mjs` joga a campanha inteira em Chromium com 24 verificações, usando as mesmas ações de entrada do jogador humano e um jogador automático simples para as lutas. O teste já pagou o próprio custo: encontrou que o caso de Lia destravava no códice a página que conta como sexta página solta, o que permitia concluir a missão das páginas com cinco.
+Vitest cobre domínio, conteúdo e o caso simulado (27 testes). `tests/e2e/playthrough.mjs` joga a campanha inteira em Chromium com 29 verificações, usando as mesmas ações de entrada do jogador humano e um jogador automático simples para as lutas. O teste já pagou o próprio custo: encontrou que o caso de Lia destravava no códice a página que conta como sexta página solta, o que permitia concluir a missão das páginas com cinco.
 
 ## Desempenho
 

@@ -27,11 +27,11 @@ export function buildObservatorio(ctx: RegionCtx): BuiltRegion {
   b.platform(0, 2.5, 6.3, 12.5, 0, 0);
   // arena circular
   b.add(new THREE.CylinderGeometry(R + 0.6, R - 1, 30, 40), M.stoneDark, trs(0, -15, AZ), false);
-  b.add(new THREE.CircleGeometry(R + 0.5, 48), M.flag, trs(0, 0.01, AZ, 0, -Math.PI / 2), false, false);
-  for (const rr of [4, 8.5, 12.5]) b.add(new THREE.RingGeometry(rr, rr + 0.16, 64), M.bronze, trs(0, 0.02, AZ, 0, -Math.PI / 2), false, false);
+  b.add(new THREE.CircleGeometry(R + 0.5, 48), M.flag, trs(0, 0.018, AZ, 0, -Math.PI / 2), false, false);
+  for (const rr of [4, 8.5, 12.5]) b.add(new THREE.RingGeometry(rr, rr + 0.16, 64), M.bronze, trs(0, 0.03, AZ, 0, -Math.PI / 2), false, false);
   for (let i = 0; i < 12; i++) {
     const a = (i / 12) * Math.PI * 2;
-    b.add(new THREE.PlaneGeometry(0.1, 8.5), M.bronze, trs(Math.sin(a) * 8.3, 0.02, AZ + Math.cos(a) * 8.3, a, -Math.PI / 2), false, false);
+    b.add(new THREE.PlaneGeometry(0.1, 8.5), M.bronze, trs(Math.sin(a) * 8.3, 0.03, AZ + Math.cos(a) * 8.3, a, -Math.PI / 2), false, false);
   }
   b.platform(0, AZ, R + 0.4, R + 0.4, 0, 0);
   // parapeito da arena (aberto ao sul, onde fica a grade)
@@ -63,8 +63,8 @@ export function buildObservatorio(ctx: RegionCtx): BuiltRegion {
 
   // braseiros
   const brazier = (x: number, z: number, lit: boolean): (() => void) => {
-    b.add(new THREE.CylinderGeometry(0.36, 0.5, 1.0, 8), M.stone, trs(x, 0.5, z), false);
-    b.add(new THREE.CylinderGeometry(0.72, 0.4, 0.42, 10), M.iron, trs(x, 1.2, z), false);
+    b.add(new THREE.CylinderGeometry(0.36, 0.5, 1.0, 22), M.stone, trs(x, 0.5, z), false);
+    b.add(new THREE.CylinderGeometry(0.72, 0.4, 0.42, 22), M.iron, trs(x, 1.2, z), false);
     b.collideCircle(x, z, 0.7, -1, 1.6);
     const fl = K.halo(4.2, 0xffb060, 0.95);
     fl.position.set(x, 1.9, z);
@@ -106,7 +106,7 @@ export function buildObservatorio(ctx: RegionCtx): BuiltRegion {
     const a = Math.PI / 4 + (i * Math.PI) / 2;
     const x = Math.sin(a) * (R - 1.4);
     const z = AZ + Math.cos(a) * (R - 1.4);
-    b.add(new THREE.CylinderGeometry(0.07, 0.1, 3.6, 6), M.iron, trs(x, 1.8, z));
+    b.add(new THREE.CylinderGeometry(0.07, 0.1, 3.6, 16), M.iron, trs(x, 1.8, z));
     b.add(new THREE.BoxGeometry(0.3, 0.4, 0.3), terraco ? M.lampGlow : M.glassDark, trs(x, 3.8, z), true, false);
     b.collideCircle(x, z, 0.2, -1, 3.6);
     arenaLamps.push([x, z]);
@@ -136,7 +136,7 @@ export function buildObservatorio(ctx: RegionCtx): BuiltRegion {
   }
   const gate = new THREE.Group();
   for (let i = -7; i <= 7; i++) {
-    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 3.6, 5), M.iron);
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 3.6, 14), M.iron);
     bar.position.set(i * 0.28, 1.8, -9.7);
     gate.add(bar);
   }
@@ -152,15 +152,15 @@ export function buildObservatorio(ctx: RegionCtx): BuiltRegion {
   b.add(new THREE.CylinderGeometry(9, 9.4, 7, 28), M.stone, trs(0, 3.5, -47), false);
   b.add(new THREE.SphereGeometry(9, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2), M.slate, trs(0, 7, -47), false);
   b.add(new THREE.BoxGeometry(1.6, 9, 9), M.glassDark, trs(0, 9.4, -42.4, 0, -0.5), false);
-  b.add(new THREE.CylinderGeometry(0.5, 0.75, 8, 12), M.bronze, trs(0, 12.6, -40.6, 0, -0.9), false);
-  b.add(new THREE.TorusGeometry(9.2, 0.2, 6, 40), M.bronze, trs(0, 7, -47, 0, Math.PI / 2), false);
+  b.add(new THREE.CylinderGeometry(0.5, 0.75, 8, 24), M.bronze, trs(0, 12.6, -40.6, 0, -0.9), false);
+  b.add(new THREE.TorusGeometry(9.2, 0.2, 10, 40), M.bronze, trs(0, 7, -47, 0, Math.PI / 2), false);
   K.gothicWindow(b, 0, 0.6, -37.9, 0, 2.6, 5, true);
   // esferas armilares nos cantos da arena
   for (const a of [Math.PI * 0.72, -Math.PI * 0.72]) {
     const x = Math.sin(a) * (R - 2.6);
     const z = AZ + Math.cos(a) * (R - 2.6);
-    b.add(new THREE.CylinderGeometry(0.4, 0.55, 1.2, 8), M.stone, trs(x, 0.6, z), false);
-    for (let k = 0; k < 3; k++) b.add(new THREE.TorusGeometry(0.75, 0.035, 6, 28), M.bronze, trs(x, 2.1, z, k * 1.05, k * 0.7), false);
+    b.add(new THREE.CylinderGeometry(0.4, 0.55, 1.2, 22), M.stone, trs(x, 0.6, z), false);
+    for (let k = 0; k < 3; k++) b.add(new THREE.TorusGeometry(0.75, 0.035, 10, 28), M.bronze, trs(x, 2.1, z, k * 1.05, k * 0.7), false);
     b.collideCircle(x, z, 0.7, -1, 3);
   }
   // a cidade lá embaixo: torres na bruma
@@ -170,8 +170,8 @@ export function buildObservatorio(ctx: RegionCtx): BuiltRegion {
     K.spireTower(b, x, z, w, h, sp, -32, x * 0.01, false);
 
   // marco de descanso
-  b.add(new THREE.CylinderGeometry(0.34, 0.42, 1.0, 8), M.carved, trs(-4.4, 0.5, 9.4), false);
-  b.add(new THREE.CylinderGeometry(0.46, 0.34, 0.14, 8), M.bronze, trs(-4.4, 1.06, 9.4), false);
+  b.add(new THREE.CylinderGeometry(0.34, 0.42, 1.0, 22), M.carved, trs(-4.4, 0.5, 9.4), false);
+  b.add(new THREE.CylinderGeometry(0.46, 0.34, 0.14, 22), M.bronze, trs(-4.4, 1.06, 9.4), false);
   K.candle(b, -4.4, 1.13, 9.4, true);
   b.collideCircle(-4.4, 9.4, 0.45, -1, 1.3);
   K.bench(b, 4.9, 4, Math.PI / 2);
@@ -182,7 +182,7 @@ export function buildObservatorio(ctx: RegionCtx): BuiltRegion {
   r.spawns = { de_atrio: { x: 0, z: 12.4, yaw: Math.PI } };
   r.enemies = [{ kind: 'veredito', x: 0, z: AZ - 3, group: 'veredito', ifFlag: 'grade_aberta' }];
   r.props = [
-    { id: 'portal_atrio', kind: 'portal', x: 0, z: 14, label: 'Descer ao Átrio dos Caminhos', radius: 1.9, data: { to: 'atrio', spawn: 'de_observatorio' } },
+    { id: 'portal_atrio', kind: 'portal', x: 0, z: 14, label: 'Descer ao Pátio dos Caminhos', radius: 1.9, data: { to: 'atrio', spawn: 'de_observatorio' } },
     { id: 'braseiro_vila', kind: 'brazier', x: -4.2, z: -4.4, label: 'Examinar o braseiro da estrada', radius: 1.9, data: { group: 'braseiros' } },
     { id: 'braseiro_terraco', kind: 'brazier', x: 4.2, z: -4.4, label: 'Examinar o braseiro do terraço', radius: 1.9, data: { group: 'braseiros' } },
     { id: 'pagina_6', kind: 'page', x: -4.6, z: 1.6, label: 'Recolher a página solta', radius: 1.6, data: { page: 'decisao' } },
@@ -194,7 +194,7 @@ export function buildObservatorio(ctx: RegionCtx): BuiltRegion {
     { id: 'rastro_obs', kind: 'pickup', x: 5, z: -1, label: 'Pegar o que o rastro escondia', data: { item: 'moedas', qty: 50, needsCrivo: 'rastro' } },
   ];
   r.mapPoints = [
-    { x: 0, z: 14, label: 'Escada do Átrio', kind: 'portal' },
+    { x: 0, z: 14, label: 'Escada do Pátio', kind: 'portal' },
     { x: 0, z: -4.4, label: 'Braseiros', kind: 'poi' },
     { x: 0, z: AZ, label: 'Terraço do Veredito', kind: 'poi' },
   ];

@@ -5,8 +5,24 @@ import * as K from './kit';
 import { ENV } from './envs';
 import { emptyRegion, type BuiltRegion, type RegionCtx } from './region';
 
+
+type Hair = 'curto' | 'longo' | 'touca' | 'calvo';
+/** Os oito bustos do Passeio dos Mestres. Todas as pessoas homenageadas já faleceram; o texto longo está no códice. */
+export const MESTRES_PATIO: Array<{ id: string; nome: string; anos: string; cabelo: Hair; texto: string }> = [
+  { id: 'lind', nome: 'JAMES LIND', anos: '1716 · 1794', cabelo: 'touca', texto: 'JAMES LIND. Em 1747, a bordo do Salisbury, separou doze marinheiros com escorbuto em seis duplas e deu um tratamento diferente a cada uma. Quem recebeu laranjas e limões melhorou. A comparação foi a ideia.' },
+  { id: 'nightingale', nome: 'FLORENCE NIGHTINGALE', anos: '1820 · 1910', cabelo: 'touca', texto: 'FLORENCE NIGHTINGALE. Contou as mortes dos hospitais da Crimeia e as desenhou em um diagrama que ninguém conseguia ignorar. A maior parte vinha de doença evitável, não de ferida.' },
+  { id: 'semmelweis', nome: 'IGNAZ SEMMELWEIS', anos: '1818 · 1865', cabelo: 'curto', texto: 'IGNAZ SEMMELWEIS. Em Viena, em 1847, ligou a febre das parturientes às mãos que vinham da autópsia. Mandou lavar com cloro e as mortes diminuíram. Os colegas pediram um porquê que ele ainda não tinha.' },
+  { id: 'fisher', nome: 'RONALD FISHER', anos: '1890 · 1962', cabelo: 'curto', texto: 'RONALD FISHER. Defendeu que a ordem dos tratamentos seja sorteada. O exemplo do livro era uma senhora que jurava saber se o chá fora posto antes do leite.' },
+  { id: 'hill', nome: 'A. BRADFORD HILL', anos: '1897 · 1991', cabelo: 'curto', texto: 'AUSTIN BRADFORD HILL. Estatístico de um dos primeiros ensaios randomizados modernos e autor de nove pontos de vista para pensar em causa. Ele mesmo dizia que não eram uma lista de verificação.' },
+  { id: 'cochrane', nome: 'ARCHIE COCHRANE', anos: '1909 · 1988', cabelo: 'curto', texto: 'ARCHIE COCHRANE. Pediu que os serviços de saúde fossem avaliados por ensaios e que alguém resumisse todos eles, por especialidade, de tempos em tempos. A Colaboração Cochrane leva o nome dele.' },
+  { id: 'sackett', nome: 'DAVID SACKETT', anos: '1934 · 2015', cabelo: 'calvo', texto: 'DAVID SACKETT. Definiu a medicina baseada em evidências como a melhor evidência atual, a perícia de quem cuida e a vontade de quem é cuidado, juntas. Nenhuma das três decide sozinha.' },
+  { id: 'altman', nome: 'DOUG ALTMAN', anos: '1948 · 2018', cabelo: 'curto', texto: 'DOUG ALTMAN. Chamou de escândalo o tanto de pesquisa mal feita e mal relatada, e ajudou a criar as listas que dizem o que um estudo precisa contar para ser julgado.' },
+];
+/** arco ao redor da fonte, com abertura nos corredores dos arcos leste e oeste */
+const MESTRES_POS: Array<[number, number]> = [[-10, -10], [-14, -6], [-14, 6], [-10, 10], [10, 10], [14, 6], [14, -6], [10, -10]];
+
 /**
- * Átrio dos Caminhos · hub (Atlas E-01, E-04, E-11, E-13, E-14).
+ * Pátio dos Caminhos · hub (Atlas E-01, E-04, E-11, E-13, E-14).
  * Fonte central, dois grandes arcos legíveis (oeste e leste), escadaria monumental
  * ao norte e a Academia como marco distante. O beco de tijolo fica ao sul.
  * x cresce para leste, z cresce para sul.
@@ -16,7 +32,7 @@ export function buildAtrio(ctx: RegionCtx): BuiltRegion {
   const dawn = ctx.flags.has('epilogo');
   const act2 = ctx.flags.has('ponte_aberta');
   const env = dawn ? ENV.atrioAmanhecer : act2 ? ENV.atrioEntardecer : ENV.atrioNoiteChuva;
-  const r = emptyRegion('atrio', 'Átrio dos Caminhos', 'Onde os caminhos se cruzam', b, env);
+  const r = emptyRegion('atrio', 'Pátio dos Caminhos', 'Onde os caminhos se cruzam', b, env);
   r.music = 'atrio';
   r.bounds = { minX: -34, maxX: 34, minZ: -34, maxZ: 46 };
 
@@ -109,7 +125,7 @@ export function buildAtrio(ctx: RegionCtx): BuiltRegion {
   K.building(b, 7.5, 37, -Math.PI / 2, 14, 12, 8, { floors: 2, bays: 3, lit: 0.6, mat: M.brick, seed: 24, roof: 'flat', windowH: 2.6 });
   K.archWall(b, 0, 44.6, 0, 7, 8, 1.2, 3.0, 2.6, M.brick, 0, true);
   // portão de ferro fechado: saída para a área de membros
-  for (let i = -5; i <= 5; i++) b.add(new THREE.CylinderGeometry(0.03, 0.03, 4.6, 5), M.iron, trs(i * 0.27, 2.3, 44.6));
+  for (let i = -5; i <= 5; i++) b.add(new THREE.CylinderGeometry(0.03, 0.03, 4.6, 14), M.iron, trs(i * 0.27, 2.3, 44.6));
   b.add(new THREE.BoxGeometry(3.0, 0.1, 0.1), M.iron, trs(0, 1.1, 44.6));
   b.add(new THREE.BoxGeometry(3.0, 0.1, 0.1), M.iron, trs(0, 3.4, 44.6));
   b.collideBox(0, 44.6, 1.6, 0.3, 0, -1, 6, 'portao_sul');
@@ -119,7 +135,7 @@ export function buildAtrio(ctx: RegionCtx): BuiltRegion {
   // banca da artesã
   b.box(M.woodDark, 2.6, 0.9, 1.0, 2.6, 0, 33.2, 0, true);
   b.add(new THREE.BoxGeometry(3.0, 0.08, 1.6), M.wine, trs(2.6, 2.5, 33.2, 0, 0.12));
-  for (const sx of [-1.3, 1.3]) b.add(new THREE.CylinderGeometry(0.04, 0.04, 2.5, 6), M.woodDark, trs(2.6 + sx, 1.25, 33.6));
+  for (const sx of [-1.3, 1.3]) b.add(new THREE.CylinderGeometry(0.04, 0.04, 2.5, 16), M.woodDark, trs(2.6 + sx, 1.25, 33.6));
   K.candle(b, 2.0, 0.9, 33.2, true);
   K.crate(b, 3.2, 31.6, 0.7, 0.3);
   K.barrel(b, -3.0, 34.5);
@@ -153,8 +169,8 @@ export function buildAtrio(ctx: RegionCtx): BuiltRegion {
   K.bench(b, 11.5, -6.5, Math.PI / 2);
   // canteiros com árvores
   const planter = (x: number, z: number, seed: number, autumn: boolean) => {
-    b.add(new THREE.CylinderGeometry(1.7, 1.8, 0.5, 10), M.stoneDark, trs(x, 0.25, z), false);
-    b.add(new THREE.CylinderGeometry(1.5, 1.5, 0.52, 10), M.ground, trs(x, 0.26, z), false);
+    b.add(new THREE.CylinderGeometry(1.7, 1.8, 0.5, 22), M.stoneDark, trs(x, 0.25, z), false);
+    b.add(new THREE.CylinderGeometry(1.5, 1.5, 0.52, 22), M.ground, trs(x, 0.26, z), false);
     K.tree(b, x, z, 8.5 + (seed % 3), seed, autumn ? M.leavesAutumn : M.leaves, 0.3);
     b.collideCircle(x, z, 1.8, -1, 1.2);
     K.bush(b, x + 0.9, z + 0.5, 0.9, M.ivy, 0.45);
@@ -180,8 +196,10 @@ export function buildAtrio(ctx: RegionCtx): BuiltRegion {
 
   // quadro de missões e casos (Atlas O-01)
   b.box(M.woodDark, 2.6, 2.0, 0.14, 7.4, 0.9, 12.6, -0.5, false);
-  b.box(M.woodDark, 0.14, 2.9, 0.14, 6.3, 0, 13.2, -0.5);
-  b.box(M.woodDark, 0.14, 2.9, 0.14, 8.5, 0, 12.0, -0.5);
+  // os postes ficam nas pontas da tábua, ao longo do eixo girado dela
+  b.box(M.woodDark, 0.16, 3.0, 0.16, 6.26, 0, 11.98, -0.5);
+  b.box(M.woodDark, 0.16, 3.0, 0.16, 8.54, 0, 13.22, -0.5);
+  b.box(M.woodDark, 2.9, 0.12, 0.22, 7.4, 2.9, 12.6, -0.5);
   for (const [px, py] of [
     [-0.7, 2.2],
     [0.1, 2.35],
@@ -196,9 +214,16 @@ export function buildAtrio(ctx: RegionCtx): BuiltRegion {
   b.collideBox(7.4, 12.6, 1.3, 0.2, -0.5, -1, 3);
   K.lantern(b, 7.4, 3.2, 12.6, 0.3, 0.6, true);
 
+  // Passeio dos Mestres: oito bustos em arco, com uma abertura em cada corredor dos arcos
+  const mestres = MESTRES_PATIO;
+  mestres.forEach((m, i) => {
+    const [mx, mz] = MESTRES_POS[i];
+    K.bust(b, mx, mz, Math.atan2(-mx, -mz), 0, { name: m.nome, years: m.anos }, m.cabelo);
+  });
+
   // marco de descanso junto à fonte (ponto de salvamento, Atlas E-21)
-  b.add(new THREE.CylinderGeometry(0.34, 0.42, 1.0, 8), M.carved, trs(-5.2, 0.5, 5.2), false);
-  b.add(new THREE.CylinderGeometry(0.46, 0.34, 0.14, 8), M.bronze, trs(-5.2, 1.06, 5.2), false);
+  b.add(new THREE.CylinderGeometry(0.34, 0.42, 1.0, 22), M.carved, trs(-5.2, 0.5, 5.2), false);
+  b.add(new THREE.CylinderGeometry(0.46, 0.34, 0.14, 22), M.bronze, trs(-5.2, 1.06, 5.2), false);
   K.candle(b, -5.2, 1.13, 5.2, false);
   b.collideCircle(-5.2, 5.2, 0.45, -1, 1.3);
 
@@ -248,6 +273,7 @@ export function buildAtrio(ctx: RegionCtx): BuiltRegion {
     { id: 'moedas_atrio_2', kind: 'pickup', x: 12.2, z: -27.2, y: TH, label: 'Pegar moedas', data: { item: 'moedas', qty: 15 } },
     { id: 'caldo_atrio', kind: 'pickup', x: -2.4, z: 40.2, label: 'Pegar o caldo', data: { item: 'caldo', qty: 1 } },
     { id: 'vento_terraco', kind: 'examine', x: 13.4, z: -22.6, y: TH, label: 'Examinar os estandartes', radius: 2.2, data: { text: 'O canto leste do terraço fica à sombra da torre. Os estandartes daqui pendem parados, com poeira antiga nas dobras. Deste lado, o vento não chega.' } },
+    ...mestres.map((m, i) => ({ id: 'mestre_' + m.id, kind: 'examine' as const, x: MESTRES_POS[i][0], z: MESTRES_POS[i][1], label: `Ler a placa de ${m.nome}`, radius: 2.0, data: { text: m.texto, codex: m.id, xp: 10, mestre: true } })),
     { id: 'vento_beco', kind: 'examine', x: -2.6, z: 41.2, label: 'Examinar as velas do beco', radius: 2.0, data: { text: 'O beco corre de norte a sul entre dois paredões. Mesmo agora passa uma corrente de ar constante, e a cera das velas escorreu toda para o lado sul.' } },
   ];
   r.mapPoints = [

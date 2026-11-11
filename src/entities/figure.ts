@@ -21,7 +21,10 @@ export interface FigureOpts {
   apron?: number | null;
   beard?: boolean;
   hat?: boolean;
+  emblem?: Emblem | null;
 }
+
+export type Emblem = 'caderno' | 'estetoscopio' | 'relogio' | 'oculos' | 'fita';
 
 export type Action = 'none' | 'attack1' | 'attack2' | 'heavy' | 'dodge' | 'hit' | 'die' | 'interact' | 'cast' | 'talk' | 'sit';
 
@@ -107,129 +110,227 @@ export class Figure {
     this.hips.position.y = 0.93;
     this.body.add(this.hips);
 
-    // pernas
+    const trimC = new THREE.Color(o.coat).multiplyScalar(0.5);
+    const trim = cloth(trimC.getHex(), 0.85);
+    const leather = new THREE.MeshStandardMaterial({ color: 0x2a1a12, roughness: 0.55, metalness: 0.05 });
+    const white = new THREE.MeshStandardMaterial({ color: 0xf2ece4, roughness: 0.4 });
+    this.mats.push(trim, leather, white);
+    const R = 16;
+
+    // pernas, botas de cano com cuff e sola
     for (const [leg, shin, sx] of [
       [this.legL, this.shinL, 1],
       [this.legR, this.shinR, -1],
     ] as Array<[THREE.Group, THREE.Group, number]>) {
       leg.position.set(sx * 0.095 * w, 0, 0);
       this.hips.add(leg);
-      add(leg, new THREE.CapsuleGeometry(0.075 * w, 0.32, 4, 8), trousers, 0, -0.225, 0);
+      add(leg, new THREE.CapsuleGeometry(0.078 * w, 0.3, 8, R), trousers, 0, -0.225, 0);
+      add(leg, new THREE.SphereGeometry(0.066 * w, R, 12), trousers, 0, -0.45, 0);
       shin.position.y = -0.45;
       leg.add(shin);
-      add(shin, new THREE.CapsuleGeometry(0.058 * w, 0.3, 4, 8), trousers, 0, -0.2, 0);
-      add(shin, new THREE.CapsuleGeometry(0.066 * w, 0.14, 4, 8), boot, 0, -0.33, 0);
-      const foot = add(shin, new THREE.BoxGeometry(0.1 * w, 0.07, 0.25), boot, 0, -0.445, 0.055);
-      foot.geometry.translate(0, 0, 0);
+      add(shin, new THREE.CapsuleGeometry(0.06 * w, 0.28, 8, R), trousers, 0, -0.19, 0);
+      const bootProfile = [new THREE.Vector2(0.001, -0.455), new THREE.Vector2(0.056 * w, -0.45), new THREE.Vector2(0.064 * w, -0.4), new THREE.Vector2(0.066 * w, -0.3), new THREE.Vector2(0.074 * w, -0.255), new THREE.Vector2(0.078 * w, -0.23), new THREE.Vector2(0.068 * w, -0.225)];
+      add(shin, new THREE.LatheGeometry(bootProfile, 20), boot);
+      const toe = add(shin, new THREE.CapsuleGeometry(0.05 * w, 0.1, 6, 14), boot, 0, -0.425, 0.075);
+      toe.rotation.x = Math.PI / 2;
+      toe.scale.set(1, 1, 0.78);
+      add(shin, new THREE.BoxGeometry(0.1 * w, 0.02, 0.27), M.woodDark, 0, -0.455, 0.06);
     }
 
-    // saia do casaco: tronco de cone aberto, achatado
+    // saia do casaco, com bainha de debrum
     const coatLen = 0.62;
-    const skirtProfile = [new THREE.Vector2(0.17 * w, 0.06), new THREE.Vector2(0.2 * w, -0.1), new THREE.Vector2(0.25 * w, -coatLen * 0.6), new THREE.Vector2(0.29 * w, -coatLen)];
-    this.skirt = add(this.hips, new THREE.LatheGeometry(skirtProfile, 14), coat);
+    const skirtProfile = [new THREE.Vector2(0.17 * w, 0.06), new THREE.Vector2(0.19 * w, -0.08), new THREE.Vector2(0.225 * w, -coatLen * 0.45), new THREE.Vector2(0.265 * w, -coatLen * 0.8), new THREE.Vector2(0.285 * w, -coatLen)];
+    this.skirt = add(this.hips, new THREE.LatheGeometry(skirtProfile, 40), coat);
     this.skirt.scale.z = 0.78;
+    const hem = add(this.skirt, new THREE.TorusGeometry(0.285 * w, 0.011, 8, 40), trim, 0, -coatLen, 0);
+    hem.rotation.x = Math.PI / 2;
+    // fenda traseira: duas abas sobrepostas
+    add(this.skirt, new THREE.BoxGeometry(0.012, coatLen * 0.8, 0.012), trim, 0, -coatLen * 0.62, -0.215 * w);
 
     // tronco
     this.torso.position.y = 0.02;
     this.hips.add(this.torso);
     const torsoProfile = [
       new THREE.Vector2(0.165 * w, 0),
-      new THREE.Vector2(0.18 * w, 0.12),
-      new THREE.Vector2(0.205 * w, 0.34),
-      new THREE.Vector2(0.21 * w, 0.44),
-      new THREE.Vector2(0.15 * w, 0.52),
-      new THREE.Vector2(0.065, 0.56),
+      new THREE.Vector2(0.178 * w, 0.1),
+      new THREE.Vector2(0.19 * w, 0.22),
+      new THREE.Vector2(0.21 * w, 0.37),
+      new THREE.Vector2(0.215 * w, 0.45),
+      new THREE.Vector2(0.17 * w, 0.51),
+      new THREE.Vector2(0.095, 0.545),
+      new THREE.Vector2(0.07, 0.56),
     ];
-    const tm = add(this.torso, new THREE.LatheGeometry(torsoProfile, 14), coat);
+    const tm = add(this.torso, new THREE.LatheGeometry(torsoProfile, 40), coat);
     tm.scale.z = 0.7;
-    // botões e gola
-    for (let i = 0; i < 4; i++) add(this.torso, new THREE.SphereGeometry(0.013, 6, 5), M.bronze, 0, 0.1 + i * 0.09, 0.132 + (i > 2 ? 0.006 : 0.012 * i * 0.5));
-    add(this.torso, new THREE.CylinderGeometry(0.05, 0.06, 0.1, 10), skin, 0, 0.59, 0);
+    // cinto, fivela, lapelas e botões
+    const belt = add(this.torso, new THREE.TorusGeometry(0.172 * w, 0.013, 8, 40), leather, 0, 0.03, 0);
+    belt.rotation.x = Math.PI / 2;
+    belt.scale.set(1, 0.7, 1);
+    add(this.torso, new THREE.BoxGeometry(0.03, 0.024, 0.01), M.bronze, 0, 0.03, 0.123 * w);
+    for (const sx of [-1, 1]) {
+      const lap = add(this.torso, new THREE.BoxGeometry(0.05, 0.27, 0.01), trim, sx * 0.05, 0.4, 0.147);
+      lap.rotation.z = sx * 0.3;
+    }
+    for (let i = 0; i < 3; i++) add(this.torso, new THREE.SphereGeometry(0.0125, 10, 8), M.bronze, 0, 0.09 + i * 0.09, 0.133 + i * 0.002);
+    // gola alta e pescoço
+    const collar = add(this.torso, new THREE.TorusGeometry(0.084, 0.026, 10, 28), trim, 0, 0.545, 0.0);
+    collar.rotation.x = Math.PI / 2;
+    collar.scale.set(1, 0.9, 1);
+    add(this.torso, new THREE.CylinderGeometry(0.048, 0.056, 0.13, 18), skin, 0, 0.6, 0);
     if (o.scarf != null) {
       const sm = cloth(o.scarf, 0.95);
       this.mats.push(sm);
-      const sc = add(this.torso, new THREE.TorusGeometry(0.085, 0.042, 8, 16), sm, 0, 0.555, 0.005);
+      const sc = add(this.torso, new THREE.TorusGeometry(0.088, 0.04, 10, 28), sm, 0, 0.57, 0.005);
       sc.rotation.x = Math.PI / 2;
-      sc.scale.set(1, 0.85, 1);
-      const tail = add(this.torso, new THREE.BoxGeometry(0.08, 0.34, 0.03), sm, 0.05, 0.38, 0.14);
-      tail.rotation.z = -0.08;
+      sc.scale.set(1, 0.85, 1.05);
+      // pontas caídas nas costas, longe da alça da bolsa
+      const tail = add(this.torso, new THREE.BoxGeometry(0.075, 0.36, 0.022), sm, -0.045, 0.38, -0.155);
+      tail.rotation.set(0.05, 0, 0.06);
+      add(this.torso, new THREE.SphereGeometry(0.036, 12, 10), sm, 0.075, 0.545, 0.085);
     }
     if (o.apron != null) {
       const am = cloth(o.apron, 0.9);
       this.mats.push(am);
       add(this.torso, new THREE.BoxGeometry(0.27 * w, 0.3, 0.02), am, 0, 0.22, 0.142);
       add(this.hips, new THREE.BoxGeometry(0.3 * w, 0.42, 0.02), am, 0, -0.2, 0.185).rotation.x = -0.1;
+      for (const sx of [-1, 1]) {
+        const band = add(this.torso, new THREE.BoxGeometry(0.02, 0.34, 0.012), am, sx * 0.095, 0.37, 0.138);
+        band.rotation.z = sx * -0.12;
+      }
     }
     if (o.cape != null) {
       const cm = cloth(o.cape, 0.9);
       this.mats.push(cm);
       const capeProfile = [new THREE.Vector2(0.1, 0.54), new THREE.Vector2(0.235 * w, 0.47), new THREE.Vector2(0.27 * w, 0.2), new THREE.Vector2(0.31 * w, -0.25), new THREE.Vector2(0.33 * w, -0.5)];
-      this.cape = add(this.torso, new THREE.LatheGeometry(capeProfile, 14, Math.PI * 0.42, Math.PI * 1.16), cm);
+      this.cape = add(this.torso, new THREE.LatheGeometry(capeProfile, 40, Math.PI * 0.42, Math.PI * 1.16), cm);
       this.cape.scale.z = 0.86;
     }
     if (o.satchel) {
-      add(this.hips, new THREE.BoxGeometry(0.2, 0.17, 0.08), M.wood, -0.24 * w, -0.02, -0.02);
-      const strap = add(this.torso, new THREE.BoxGeometry(0.035, 0.66, 0.02), M.wood, 0, 0.26, 0.135);
-      strap.rotation.z = 0.62;
+      // bolsa no quadril esquerdo; a alça desce do ombro direito, por cima do casaco
+      add(this.hips, new THREE.BoxGeometry(0.2, 0.16, 0.075), M.wood, -0.25 * w, -0.04, 0.0);
+      add(this.hips, new THREE.BoxGeometry(0.205, 0.07, 0.085), leather, -0.25 * w, 0.005, 0.0).rotation.x = 0.06;
+      add(this.hips, new THREE.BoxGeometry(0.024, 0.032, 0.012), M.bronze, -0.25 * w, -0.025, 0.045);
+      const strap = add(this.torso, new THREE.BoxGeometry(0.03, 0.7, 0.012), leather, -0.055, 0.22, 0.153);
+      strap.rotation.z = -0.52;
+    }
+    // objeto de ofício, visível no corpo
+    const emb = o.emblem ?? null;
+    if (emb === 'caderno') {
+      const nb = add(this.hips, new THREE.BoxGeometry(0.1, 0.14, 0.03), new THREE.MeshStandardMaterial({ color: 0x6b1e2c, roughness: 0.7 }), 0.2 * w, -0.04, 0.1);
+      nb.rotation.set(0, -0.35, 0.1);
+      add(nb, new THREE.BoxGeometry(0.104, 0.02, 0.034), M.bronze, 0, 0.03, 0);
+    } else if (emb === 'estetoscopio') {
+      const tube = add(this.torso, new THREE.TorusGeometry(0.1, 0.009, 8, 28), M.bronze, 0, 0.5, 0.065);
+      tube.rotation.x = Math.PI / 2.4;
+      tube.scale.set(1, 1.5, 1);
+      add(this.torso, new THREE.CylinderGeometry(0.026, 0.026, 0.012, 16), M.bronze, 0.0, 0.33, 0.154).rotation.x = Math.PI / 2;
+    } else if (emb === 'relogio') {
+      const ch = add(this.torso, new THREE.TorusGeometry(0.09, 0.004, 6, 24, Math.PI), M.bronze, 0.0, 0.47, 0.13);
+      ch.rotation.set(0.0, 0, Math.PI);
+      const wt = add(this.torso, new THREE.CylinderGeometry(0.03, 0.03, 0.014, 20), M.bronze, -0.07, 0.34, 0.154);
+      wt.rotation.x = Math.PI / 2;
+      add(wt, new THREE.CylinderGeometry(0.024, 0.024, 0.004, 20), white, 0, 0.008, 0);
+    } else if (emb === 'fita') {
+      const fm = new THREE.MeshStandardMaterial({ color: 0xe0b84a, roughness: 0.6 });
+      const f1 = add(this.torso, new THREE.TorusGeometry(0.15, 0.011, 6, 28), fm, 0, 0.47, 0);
+      f1.rotation.x = Math.PI / 2.6;
+      f1.scale.set(1.1, 1, 0.75);
     }
 
     // cabeça
     this.head.position.y = 0.7;
+    this.head.scale.setScalar(1.1);
     this.torso.add(this.head);
-    const hm = add(this.head, new THREE.SphereGeometry(0.108, 16, 14), skin);
-    hm.scale.set(0.92, 1.14, 1);
+    const hm = add(this.head, new THREE.SphereGeometry(0.106, 28, 22), skin);
+    hm.scale.set(0.9, 1.12, 1.02);
+    const jaw = add(this.head, new THREE.SphereGeometry(0.084, 24, 18), skin, 0, -0.045, 0.012);
+    jaw.scale.set(0.94, 0.86, 0.98);
+    for (const sx of [-1, 1]) add(this.head, new THREE.SphereGeometry(0.02, 10, 8), skin, sx * 0.096, -0.005, -0.004).scale.set(0.5, 1, 0.8);
     const eyeM = new THREE.MeshStandardMaterial({ color: 0x15100e, roughness: 0.3 });
     for (const sx of [-1, 1]) {
-      add(this.head, new THREE.SphereGeometry(0.013, 6, 5), eyeM, sx * 0.037, 0.012, 0.098);
-      const brow = add(this.head, new THREE.BoxGeometry(0.04, 0.008, 0.01), hairM, sx * 0.038, 0.04, 0.1);
-      brow.rotation.z = sx * -0.12;
+      add(this.head, new THREE.SphereGeometry(0.0155, 12, 10), white, sx * 0.038, 0.012, 0.094).scale.set(1, 0.7, 0.6);
+      add(this.head, new THREE.SphereGeometry(0.0085, 10, 8), eyeM, sx * 0.038, 0.012, 0.1);
+      const brow = add(this.head, new THREE.BoxGeometry(0.042, 0.009, 0.012), hairM, sx * 0.04, 0.04, 0.097);
+      brow.rotation.z = sx * -0.14;
     }
-    add(this.head, new THREE.ConeGeometry(0.017, 0.045, 5), skin, 0, -0.012, 0.108).rotation.x = Math.PI / 2.4;
+    const nose = add(this.head, new THREE.SphereGeometry(0.019, 12, 10), skin, 0, -0.016, 0.104);
+    nose.scale.set(0.8, 1.1, 1.1);
+    const lipM = new THREE.MeshStandardMaterial({ color: new THREE.Color(o.skin).multiplyScalar(0.72).getHex(), roughness: 0.6 });
+    this.mats.push(lipM);
+    add(this.head, new THREE.BoxGeometry(0.036, 0.006, 0.01), lipM, 0, -0.058, 0.092);
+    if (emb === 'oculos') {
+      for (const sx of [-1, 1]) add(this.head, new THREE.TorusGeometry(0.026, 0.0035, 8, 20), M.bronze, sx * 0.038, 0.012, 0.105);
+      add(this.head, new THREE.BoxGeometry(0.02, 0.004, 0.004), M.bronze, 0, 0.018, 0.106);
+    }
     const style = o.hairStyle ?? 'curto';
     if (style === 'capuz') {
-      const hood = add(this.head, new THREE.SphereGeometry(0.145, 14, 12, 0, Math.PI * 2, 0, Math.PI * 0.72), coat, 0, 0.0, -0.02);
-      hood.scale.set(1, 1.12, 1.1);
-      hood.rotation.x = -0.35;
+      // capuz: calota, bordas ao redor do rosto e gola caída nas costas
+      const hood = add(this.head, new THREE.SphereGeometry(0.142, 28, 20, 0, Math.PI * 2, 0, Math.PI * 0.78), coat, 0, 0.0, -0.025);
+      hood.scale.set(1, 1.1, 1.08);
+      hood.rotation.x = -0.28;
+      const rim = add(this.head, new THREE.TorusGeometry(0.108, 0.016, 8, 28), trim, 0, 0.01, 0.07);
+      rim.scale.set(0.95, 1.12, 1);
+      const drape = add(this.head, new THREE.CylinderGeometry(0.12, 0.15, 0.1, 24, 1, true), coat, 0, -0.1, -0.05);
+      drape.scale.set(1, 1, 1.05);
     } else if (style !== 'calvo') {
-      const cap = add(this.head, new THREE.SphereGeometry(0.115, 14, 12, 0, Math.PI * 2, 0, Math.PI * 0.55), hairM, 0, 0.012, -0.012);
-      cap.scale.set(0.98, 1.15, 1.06);
-      cap.rotation.x = -0.32;
-      if (style === 'coque') add(this.head, new THREE.SphereGeometry(0.05, 10, 8), hairM, 0, 0.09, -0.1);
+      const cap = add(this.head, new THREE.SphereGeometry(0.117, 28, 20, 0, Math.PI * 2, 0, Math.PI * 0.56), hairM, 0, 0.014, -0.014);
+      cap.scale.set(0.98, 1.14, 1.08);
+      cap.rotation.x = -0.22;
+      // franja e costeletas, para a linha do cabelo não parecer uma touca
+      for (let i = -2; i <= 2; i++) {
+        const fr = add(this.head, new THREE.SphereGeometry(0.03, 10, 8), hairM, i * 0.032, 0.088 - Math.abs(i) * 0.008, 0.07);
+        fr.scale.set(1, 0.7, 0.8);
+      }
+      for (const sx of [-1, 1]) add(this.head, new THREE.CapsuleGeometry(0.014, 0.05, 4, 8), hairM, sx * 0.093, 0.025, 0.02);
+      if (style === 'coque') {
+        add(this.head, new THREE.SphereGeometry(0.054, 16, 12), hairM, 0, 0.085, -0.108);
+        const tie = add(this.head, new THREE.TorusGeometry(0.05, 0.006, 6, 18), leather, 0, 0.085, -0.108);
+        tie.rotation.x = Math.PI / 2.5;
+      }
       if (style === 'longo') {
-        const back = add(this.head, new THREE.CapsuleGeometry(0.085, 0.16, 4, 8), hairM, 0, -0.1, -0.06);
-        back.scale.set(1.1, 1, 0.6);
+        const back = add(this.head, new THREE.CapsuleGeometry(0.09, 0.2, 6, 14), hairM, 0, -0.13, -0.07);
+        back.scale.set(1.15, 1, 0.62);
+        for (const sx of [-1, 1]) add(this.head, new THREE.CapsuleGeometry(0.02, 0.15, 4, 8), hairM, sx * 0.1, -0.06, 0.02);
       }
     }
     if (o.beard) {
-      const bd = add(this.head, new THREE.SphereGeometry(0.075, 10, 8), hairM, 0, -0.085, 0.045);
+      const bd = add(this.head, new THREE.SphereGeometry(0.078, 18, 14), hairM, 0, -0.082, 0.04);
       bd.scale.set(1, 1.1, 0.8);
+      add(this.head, new THREE.BoxGeometry(0.05, 0.012, 0.012), hairM, 0, -0.046, 0.1);
     }
     if (o.hat) {
-      add(this.head, new THREE.CylinderGeometry(0.2, 0.2, 0.012, 16), M.clothDark, 0, 0.1, 0);
-      add(this.head, new THREE.CylinderGeometry(0.1, 0.115, 0.1, 14), M.clothDark, 0, 0.15, 0);
+      add(this.head, new THREE.CylinderGeometry(0.2, 0.2, 0.012, 28), M.clothDark, 0, 0.1, 0);
+      add(this.head, new THREE.CylinderGeometry(0.1, 0.115, 0.1, 22), M.clothDark, 0, 0.15, 0);
+      add(this.head, new THREE.TorusGeometry(0.114, 0.008, 6, 24), leather, 0, 0.118, 0).rotation.x = Math.PI / 2;
     }
 
-    // braços
+    // braços com punho de manga e mão com polegar
     for (const [arm, fore, sx] of [
       [this.armL, this.foreL, 1],
       [this.armR, this.foreR, -1],
     ] as Array<[THREE.Group, THREE.Group, number]>) {
       arm.position.set(sx * 0.21 * w, 0.48, 0);
       this.torso.add(arm);
-      add(arm, new THREE.SphereGeometry(0.068 * w, 10, 8), coat, 0, 0, 0);
-      add(arm, new THREE.CapsuleGeometry(0.052 * w, 0.2, 4, 8), coat, 0, -0.145, 0);
+      add(arm, new THREE.SphereGeometry(0.066 * w, 18, 14), coat, 0, 0, 0);
+      add(arm, new THREE.CapsuleGeometry(0.053 * w, 0.2, 8, R), coat, 0, -0.145, 0);
       fore.position.y = -0.29;
       arm.add(fore);
-      add(fore, new THREE.CapsuleGeometry(0.045 * w, 0.2, 4, 8), coat, 0, -0.12, 0);
-      add(fore, new THREE.SphereGeometry(0.042, 8, 7), skin, 0, -0.275, 0);
+      add(fore, new THREE.SphereGeometry(0.05 * w, 14, 10), coat, 0, 0, 0);
+      add(fore, new THREE.CapsuleGeometry(0.046 * w, 0.18, 8, R), coat, 0, -0.11, 0);
+      const cuff = add(fore, new THREE.CylinderGeometry(0.052 * w, 0.056 * w, 0.045, 20), trim, 0, -0.225, 0);
+      cuff.scale.z = 1;
+      const hand = add(fore, new THREE.CapsuleGeometry(0.03, 0.06, 6, 12), skin, 0, -0.285, 0);
+      hand.scale.set(1.15, 1, 0.7);
+      const thumb = add(fore, new THREE.CapsuleGeometry(0.011, 0.03, 4, 8), skin, -sx * 0.03, -0.27, 0.014);
+      thumb.rotation.z = sx * 0.5;
     }
 
     if (o.staff) {
       const st = (this.staff = new THREE.Group());
       st.position.set(0, -0.275, 0);
       this.foreR.add(st);
-      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.02, 1.75, 7), M.woodDark);
-      shaft.position.y = -0.02;
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.021, 1.5, 12), M.woodDark);
+      shaft.position.y = -0.13;
       shaft.castShadow = true;
       st.add(shaft);
       const ferr = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.016, 0.07, 7), M.bronze);
@@ -237,12 +338,12 @@ export class Figure {
       st.add(ferr);
       // ponteira-lanterna
       const cage = new THREE.Mesh(new THREE.OctahedronGeometry(0.075, 0), new THREE.MeshStandardMaterial({ color: 0x7a5a2a, metalness: 0.8, roughness: 0.4, wireframe: true }));
-      cage.position.y = 0.95;
+      cage.position.y = 0.66;
       st.add(cage);
       const glow = (this.staffGlow = new THREE.Mesh(new THREE.SphereGeometry(0.042, 10, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffc27a).multiplyScalar(2.6) })));
-      glow.position.y = 0.95;
+      glow.position.y = 0.66;
       st.add(glow);
-      this.staffTip.position.y = 0.95;
+      this.staffTip.position.y = 0.66;
       st.add(this.staffTip);
     }
     this.pose(0);

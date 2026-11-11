@@ -13,6 +13,9 @@ export interface ProfessionDef {
   coat: number;
 }
 
+/** Seis casacos, os mesmos na criação, no jogo e no salvamento. O ofício só escolhe qual vem marcado. */
+export const COAT_COLORS = [0x4a1830, 0x1c2f45, 0x1f3d35, 0x3a2a4a, 0x4a3420, 0x2b2b33];
+
 /** Nenhuma profissão é superior às outras: mudam falas, casos e um objeto de ofício. */
 export const PROFESSIONS: ProfessionDef[] = [
   { id: 'nutricao', name: 'Nutrição', line: 'Você pesa o que as pessoas comem contra o que elas conseguem manter.', tool: 'Caderno de porções', coat: 0x4a1830 },
@@ -80,6 +83,31 @@ export const ITEMS: Record<string, ItemDef> = {
     desc: 'Duas hastes e um ponto no meio. O ponto chama atenção, mas quem conta a história são as hastes.',
     effect: 'Equipado: reduz em 12% o dano recebido.', ref: 'Imprecisão',
   },
+  anel_duplo_cego: {
+    id: 'anel_duplo_cego', name: 'Anel do Duplo-Cego', type: 'equipamento', slot: 'amuleto', glyph: 'pingente',
+    desc: 'Dois anéis idênticos, e nem o ourives lembra qual é qual. Serve para lembrar que quem avalia não deveria saber o que está avaliando.',
+    effect: 'Equipado: +10% de dano nos golpes.', ref: 'Mascaramento, ou cegamento, em ensaios clínicos',
+  },
+  jaleco_semmelweis: {
+    id: 'jaleco_semmelweis', name: 'Avental de Semmelweis', type: 'equipamento', slot: 'traje', glyph: 'capa', price: 120,
+    desc: 'Lavado antes e depois. A bacia vem junto, e a pergunta também: o que mudou de fato?',
+    effect: 'Equipado: reduz em 10% o dano recebido.', ref: 'Semmelweis, Viena, 1847',
+  },
+  bussola_cochrane: {
+    id: 'bussola_cochrane', name: 'Bússola de Cochrane', type: 'ferramenta', slot: 'ferramenta', glyph: 'lupa',
+    desc: 'Não aponta para o norte. Aponta para onde as provas já foram reunidas, e não para onde alguém gostaria que estivessem.',
+    effect: 'Equipada: +25% de moedas e alcance de coleta maior.', ref: 'Archie Cochrane e as revisões sistemáticas',
+  },
+  limao_lind: {
+    id: 'limao_lind', name: 'Limão de Lind', type: 'consumivel', glyph: 'caldo', price: 16,
+    desc: 'Um entre seis tratamentos testados no convés do Salisbury. Foi o que deu certo.',
+    effect: 'Recupera 30 de fôlego de aventura e todo o vigor.', ref: 'James Lind, 1747',
+  },
+  cha_fisher: {
+    id: 'cha_fisher', name: 'Xícara de Fisher', type: 'consumivel', glyph: 'caldo', price: 12,
+    desc: 'Chá antes do leite, ou leite antes do chá? Alguém sorteou a ordem antes de servir você.',
+    effect: 'O Crivo fica pronto para usar a habilidade de novo, sem esperar.', ref: 'Ronald Fisher e a randomização',
+  },
   ponteira_latao: {
     id: 'ponteira_latao', name: 'Ponteira de latão', type: 'melhoria', glyph: 'ponteira', price: 75,
     desc: 'Dalva torneou a peça para o seu cajado. Pesa pouco e decide muito.',
@@ -117,7 +145,7 @@ export const ITEMS: Record<string, ItemDef> = {
   },
 };
 
-export const SHOP: string[] = ['caldo', 'selo_pergunta', 'ponteira_latao', 'capa_parcimonia'];
+export const SHOP: string[] = ['caldo', 'limao_lind', 'cha_fisher', 'selo_pergunta', 'ponteira_latao', 'capa_parcimonia', 'jaleco_semmelweis'];
 
 // ---------- habilidades ----------
 
@@ -150,7 +178,7 @@ export const CRIVO_SKILLS: SkillDef[] = [
 export interface CodexEntry {
   id: string;
   title: string;
-  group: 'Mundo' | 'Método' | 'Pessoas' | 'Criaturas';
+  group: 'Mundo' | 'Método' | 'Pessoas' | 'Criaturas' | 'Mestres' | 'Obras';
   body: string[];
   /** leitura opcional para curiosos; não é pré-requisito de nada */
   note?: string;
@@ -160,7 +188,7 @@ export const CODEX: Record<string, CodexEntry> = {
   crivo: {
     id: 'crivo', title: 'O Crivo', group: 'Mundo',
     body: [
-      'Cada viajante do Átrio acaba escolhido por um. Ninguém sabe o critério, e os Crivos não explicam.',
+      'Cada viajante do Pátio acaba escolhido por um. Ninguém sabe o critério, e os Crivos não explicam.',
       'Tem um olho só, que serve para ver uma coisa de cada vez. Dizem que é por isso que erra menos.',
       'Não fala. Pisca, saltita, aponta. Quando duvida, inclina o corpo para o lado.',
     ],
@@ -175,7 +203,7 @@ export const CODEX: Record<string, CodexEntry> = {
     note: 'A névoa é uma figura do jogo. Fora dele, incerteza não some com esforço; aprende-se a decidir com ela.',
   },
   atrio: {
-    id: 'atrio', title: 'Átrio dos Caminhos', group: 'Mundo',
+    id: 'atrio', title: 'Pátio dos Caminhos', group: 'Mundo',
     body: [
       'Dois arcos, uma fonte, uma escadaria. O arco do oeste diz "conhece-te a ti mesmo" e leva ao Arquivo. O do leste diz "entre amigos, tudo é comum" e levava, até a ponte fechar, à estrada da Vila.',
       'A esfera armilar da fonte nunca se alinha por muito tempo. Os alunos antigos chamam isso de calibragem.',
@@ -257,13 +285,181 @@ export const CODEX: Record<string, CodexEntry> = {
     body: ['"A evidência dizia uma coisa. A senhora dizia outra. Demorei a entender que não estavam discutindo o mesmo assunto: uma falava de média, a outra da própria vida."'],
     note: 'Decisão compartilhada junta três coisas: o que os estudos sugerem, o que é viável naquele contexto e o que a pessoa valoriza. Nenhuma das três decide sozinha.',
   },
-  heloisa: { id: 'heloisa', title: 'Heloísa Vértice', group: 'Pessoas', body: ['Guardiã do Átrio. Recebe quem chega e não costuma dar respostas completas. Diz que é por respeito.'] },
+  heloisa: { id: 'heloisa', title: 'Heloísa Vértice', group: 'Pessoas', body: ['Guardiã do Pátio. Recebe quem chega e não costuma dar respostas completas. Diz que é por respeito.'] },
   iris: { id: 'iris', title: 'Íris', group: 'Pessoas', body: ['Mensageira. Atravessava a ponte duas vezes por dia até ela fechar. Conhece o Bosque pelos pés.'] },
   anselmo: { id: 'anselmo', title: 'Anselmo', group: 'Pessoas', body: ['Bibliotecário do Arquivo das Perguntas. Classifica os livros pela pergunta que respondem, não pelo assunto.'] },
   dalva: { id: 'dalva', title: 'Dalva', group: 'Pessoas', body: ['Artesã do Beco dos Ofícios. Conserta o que dá para consertar e avisa quando não dá.'] },
   lia: { id: 'lia', title: 'Lia', group: 'Pessoas', body: ['Sineira da Academia. Sobe a torre antes do sol. Personagem fictícia de um caso simulado.'] },
+  // ---------- método: conceitos que os moradores carregam ----------
+  pico: {
+    id: 'pico', title: 'Pergunta com quatro campos', group: 'Método',
+    body: [
+      'Quem? O que se pretende fazer? Em comparação com quê? E o que, exatamente, contaria como deu certo? Heloísa pergunta essas quatro coisas antes de mandar alguém a qualquer lugar.',
+      'Pergunta com os quatro campos preenchidos diz o que procurar, onde procurar e quando parar.',
+    ],
+    note: 'Em PBE isso aparece como PICO: população, intervenção, comparação e desfecho (outcome). É um jeito de formular perguntas clínicas respondíveis; não é a única estrutura possível, e perguntas sobre prognóstico ou experiência pedem outras.',
+  },
+  vies_publicacao: {
+    id: 'vies_publicacao', title: 'Cartas que chegam', group: 'Método',
+    body: [
+      'Íris só entrega as cartas que lhe dão. Carta boa chega rápido. Carta ruim se perde na estrada, ou ninguém chega a escrever.',
+      'Quem lê só as cartas entregues conclui que o mundo vai bem.',
+    ],
+    note: 'Estudos com resultado favorável tendem a ser publicados mais cedo e com mais frequência do que os neutros ou desfavoráveis. Isso se chama viés de publicação. Quem faz revisão sistemática procura também o que não foi publicado, e há métodos (como o gráfico de funil) que ajudam a suspeitar da falta, com limites conhecidos.',
+  },
+  revisao_sistematica: {
+    id: 'revisao_sistematica', title: 'A mesma estante, duas vezes', group: 'Método',
+    body: [
+      'Anselmo escreve a pergunta e o que vai aceitar ou recusar antes de abrir a primeira estante. Procura em mais de um lugar. Anota o que descartou e por quê.',
+      'A ideia é que outra pessoa, refazendo, chegue ao mesmo lugar.',
+    ],
+    note: 'É o que distingue uma revisão sistemática de uma revisão narrativa: pergunta e critérios definidos antes, busca ampla, avaliação do risco de viés de cada estudo e síntese explícita. O tamanho da revisão não é o que a define.',
+  },
+  erro_medida: {
+    id: 'erro_medida', title: 'A trena que mente sempre igual', group: 'Método',
+    body: [
+      'Dalva mede duas vezes. A segunda medida mostra se a trena é caprichosa. Se a trena mente sempre para o mesmo lado, só uma régua conhecida denuncia.',
+      'Repetir a medida e calibrar o instrumento resolvem problemas diferentes.',
+    ],
+    note: 'Precisão é o quanto medidas repetidas se parecem. Exatidão é o quanto elas se aproximam do valor verdadeiro. Um instrumento pode ser preciso e inexato, e só a comparação com um padrão mostra isso.',
+  },
+  regressao_media: {
+    id: 'regressao_media', title: 'Depois da pior noite', group: 'Método',
+    body: [
+      'Noêmia anota o frio do terraço. Percebeu que depois da pior noite do mês costuma vir uma menos ruim, mesmo quando ninguém fez nada.',
+      'Se ela acendesse um braseiro justo na pior noite, juraria que foi o braseiro.',
+    ],
+    note: 'Valores extremos tendem a ser seguidos por valores menos extremos por acaso. É a regressão à média. Quem trata no pior momento corre o risco de atribuir ao tratamento o que foi a volta ao habitual, e é por isso que se compara com um grupo sem a intervenção.',
+  },
+  nnt: {
+    id: 'nnt', title: 'Quantos lampiões por um tropeço', group: 'Método',
+    body: [
+      'Conta fictícia de Tomé: em cem noites sem lampião houve 10 tropeços na rua; em cem noites com lampião, 6. A diferença é de 4 em 100. Para evitar um tropeço a mais, ele precisa acender lampiões em 25 noites, porque 100 dividido por 4 dá 25.',
+      'Números inventados para o exemplo. Servem só para mostrar a conta.',
+    ],
+    note: 'É o número necessário para tratar (NNT): o inverso da diferença absoluta de risco. Só significa algo para um desfecho, um período e uma população definidos, e é mais fácil de entender que um risco relativo, que esconde o tamanho do ponto de partida.',
+  },
+
+  // ---------- mestres: bustos do Pátio (todas as pessoas já faleceram) ----------
+  lind: {
+    id: 'lind', title: 'James Lind · seis duplas, uma laranja', group: 'Mestres',
+    body: [
+      'Em 1747, a bordo do HMS Salisbury, o cirurgião escocês James Lind (1716–1794) separou doze marinheiros com escorbuto em seis duplas e deu um tratamento diferente a cada dupla. A dupla que recebeu laranjas e limões foi a que melhorou.',
+      'O desenho era novo: comparar tratamentos entre pessoas parecidas, no mesmo navio, ao mesmo tempo.',
+    ],
+    note: 'Doze homens não fecham a questão e hoje seria um estudo muito pequeno. A marinha britânica só passou a distribuir suco de limão de forma regular décadas depois, em 1795. Evidência e adoção andam em ritmos diferentes.',
+  },
+  nightingale: {
+    id: 'nightingale', title: 'Florence Nightingale · o diagrama que convenceu', group: 'Mestres',
+    body: [
+      'Florence Nightingale (1820–1910) reuniu os números de mortalidade dos hospitais militares na Guerra da Crimeia e os desenhou em diagramas de área polar. O desenho mostrava que a maior parte das mortes vinha de doenças evitáveis ligadas às condições dos hospitais, e não dos ferimentos de batalha.',
+      'Ela sabia que ninguém lê tabela, mas todo mundo olha para uma figura.',
+    ],
+    note: 'Foi eleita, em 1858, a primeira mulher membro da Royal Statistical Society. Comunicar o dado de um jeito que muda decisão faz parte do ofício, não é enfeite.',
+  },
+  semmelweis: {
+    id: 'semmelweis', title: 'Ignaz Semmelweis · mãos lavadas, ouvidos fechados', group: 'Mestres',
+    body: [
+      'Em 1847, na maternidade de Viena, Ignaz Semmelweis (1818–1865) notou que a mortalidade por febre puerperal era maior na clínica atendida por médicos e estudantes, que vinham das autópsias, do que na atendida por parteiras. Instituiu a lavagem das mãos com solução clorada e as mortes diminuíram.',
+      'Muitos colegas resistiram. Ele tinha o padrão e não tinha o mecanismo.',
+    ],
+    note: 'A teoria dos germes, que explicaria o porquê, só se firmaria depois, com Pasteur e Lister. A lição é dupla: observação cuidadosa pode antecipar a explicação, e a falta de explicação é a desculpa favorita para não mudar a prática.',
+  },
+  fisher: {
+    id: 'fisher', title: 'Ronald Fisher · a senhora do chá', group: 'Mestres',
+    body: [
+      'Ronald Fisher (1890–1962), estatístico britânico, defendeu que a ordem em que os tratamentos são aplicados seja decidida por sorteio. No livro de 1935 sobre planejamento de experimentos usou o exemplo de uma senhora que dizia distinguir se o leite fora posto na xícara antes ou depois do chá.',
+      'Sortear a ordem das xícaras impede que o experimentador, sem querer, escolha.',
+    ],
+    note: 'A randomização não garante grupos idênticos em uma amostra pequena. Garante que as diferenças entre eles não vieram de quem decidiu quem recebia o quê, e é isso que permite calcular a probabilidade do acaso.',
+  },
+  hill: {
+    id: 'hill', title: 'Austin Bradford Hill · nove pontos de vista', group: 'Mestres',
+    body: [
+      'Austin Bradford Hill (1897–1991) foi o estatístico do ensaio do Conselho de Pesquisa Médica sobre estreptomicina na tuberculose, em 1948, frequentemente citado como o primeiro ensaio randomizado moderno. Com Richard Doll, estudou a relação entre fumo e câncer de pulmão.',
+      'Em 1965 listou nove aspectos para pensar se uma associação é causal: força, consistência, especificidade, temporalidade, gradiente, plausibilidade, coerência, experimento e analogia.',
+    ],
+    note: 'O próprio Hill avisou que nenhum desses pontos prova causa, e que apenas a temporalidade (a causa vem antes do efeito) é indispensável. Não é uma lista de verificação. É um jeito de organizar a discussão.',
+  },
+  cochrane: {
+    id: 'cochrane', title: 'Archie Cochrane · efetividade e eficiência', group: 'Mestres',
+    body: [
+      'Archie Cochrane (1909–1988), médico e epidemiologista britânico, publicou em 1972 "Effectiveness and Efficiency", defendendo que os serviços de saúde fossem avaliados por ensaios randomizados.',
+      'Em 1979 escreveu que era uma crítica à profissão não haver um resumo crítico, por especialidade e atualizado, de todos os ensaios relevantes. A Colaboração Cochrane, criada em 1993, leva o nome dele.',
+    ],
+    note: 'Cochrane também era cético com a própria tese: pedia que se perguntasse o que um tratamento custa, além do que ele alcança.',
+  },
+  sackett: {
+    id: 'sackett', title: 'David Sackett · evidência, perícia e a pessoa', group: 'Mestres',
+    body: [
+      'David Sackett (1934–2015) fundou, em 1967, o departamento de epidemiologia clínica e bioestatística da Universidade McMaster, no Canadá. Em 1996, com colegas, definiu no BMJ a medicina baseada em evidências como o uso consciente, explícito e criterioso da melhor evidência atual nas decisões sobre o cuidado de cada pessoa.',
+      'No mesmo artigo explicou o que ela não é: nem um livro de receitas, nem uma regra que dispensa a perícia clínica e as preferências de quem é cuidado.',
+    ],
+    note: 'A frase de Sackett é a base de quase todo o resto: evidência externa, perícia clínica e valores da pessoa entram juntos na decisão, e nenhum dos três decide sozinho.',
+  },
+  altman: {
+    id: 'altman', title: 'Doug Altman · o escândalo da pesquisa ruim', group: 'Mestres',
+    body: [
+      'Doug Altman (1948–2018), estatístico britânico, publicou em 1994 no BMJ o artigo "The scandal of poor medical research", sobre o volume de pesquisa mal planejada e mal relatada.',
+      'Ajudou a criar o CONSORT, de 1996, uma lista do que um ensaio randomizado deve relatar, e depois a rede EQUATOR, que reúne guias de relato para outros tipos de estudo.',
+    ],
+    note: 'Relato claro não torna um estudo bom, mas sem ele não se consegue julgar se o estudo é bom.',
+  },
+
+  // ---------- obras: estantes do Arquivo (autores vivos, citados pelas obras) ----------
+  obra_ebm: {
+    id: 'obra_ebm', title: 'A expressão e o grupo de trabalho', group: 'Obras',
+    body: [
+      'A expressão "evidence-based medicine" apareceu em 1991, em um editorial de Gordon Guyatt no ACP Journal Club. Em 1992, o Evidence-Based Medicine Working Group publicou no JAMA uma proposta de nova abordagem para ensinar a prática da medicina.',
+      'Guyatt também integra o grupo que desenvolveu o GRADE, um sistema para classificar a certeza da evidência e a força das recomendações.',
+    ],
+    note: 'Obra citada, sem reprodução de texto. O GRADE parte do tipo de estudo e rebaixa ou eleva a certeza segundo risco de viés, inconsistência, evidência indireta, imprecisão e viés de publicação.',
+  },
+  obra_chalmers: {
+    id: 'obra_chalmers', title: 'Cuidado efetivo na gravidez e no parto', group: 'Obras',
+    body: [
+      '"Effective Care in Pregnancy and Childbirth", de Murray Enkin, Marc Keirse e Iain Chalmers (1989), reuniu revisões sistemáticas de ensaios em obstetrícia. Chalmers também foi um dos fundadores da Colaboração Cochrane.',
+      'Mostrou que reunir os ensaios de forma sistemática podia apontar práticas úteis ignoradas e práticas disseminadas sem prova.',
+    ],
+    note: 'A James Lind Library, editada por Chalmers e colegas, conta a história dos ensaios comparativos em tratamentos.',
+  },
+  obra_greenhalgh: {
+    id: 'obra_greenhalgh', title: 'Como ler um artigo', group: 'Obras',
+    body: [
+      '"How to Read a Paper", de Trisha Greenhalgh, nasceu como série no BMJ, em 1997, e virou livro. Ensina a ler um artigo perguntando primeiro qual era a pergunta, depois qual foi o desenho, e só no fim os números.',
+      'Em 2014, Greenhalgh e colegas publicaram no BMJ "Evidence based medicine: a movement in crisis?", um balanço crítico sobre o que a prática tem a corrigir.',
+    ],
+    note: 'Criticar a PBE por dentro é parte do método. Entre os pontos levantados estavam a influência de interesses comerciais, o excesso de diretrizes e a distância entre o resultado médio e a pessoa na consulta.',
+  },
+  obra_gigerenzer: {
+    id: 'obra_gigerenzer', title: 'Riscos em frequências naturais', group: 'Obras',
+    body: [
+      'Gerd Gigerenzer estuda como médicos e pacientes entendem risco. Mostrou que "10 em cada 100 pessoas" é mais fácil de entender do que "10%", e que probabilidades condicionais confundem quase todo mundo, inclusive profissionais.',
+      'É por isso que o dossiê de Lia mostra benefício e dano em pessoas de cada 100.',
+    ],
+    note: 'Obra citada, sem reprodução de texto. Apresentar o risco absoluto, e não apenas o relativo, ajuda a decidir com menos distorção.',
+  },
+  obra_ioannidis: {
+    id: 'obra_ioannidis', title: 'Por que tantos achados não se repetem', group: 'Obras',
+    body: [
+      'Em 2005, John Ioannidis publicou na PLoS Medicine "Why Most Published Research Findings Are False". Com um modelo, argumentou que estudos pequenos, com desenhos flexíveis, muitos testes e interesses em jogo tendem a produzir achados que não se confirmam.',
+      'O artigo é um argumento de modelagem, não uma medida direta. É muito citado e também muito debatido.',
+    ],
+    note: 'O recado prático é pedir replicação e pré-registro antes de tratar um achado novo como fato.',
+  },
+  obra_cochrane_br: {
+    id: 'obra_cochrane_br', title: 'Cochrane no Brasil', group: 'Obras',
+    body: [
+      'O Centro Cochrane do Brasil foi criado em 1996, em São Paulo, na Universidade Federal de São Paulo, por iniciativa de Álvaro Atallah, e integra a rede internacional da Colaboração Cochrane.',
+      'Ajuda a produzir e a traduzir revisões sistemáticas para a prática e para o ensino em português.',
+    ],
+    note: 'A evidência chega à prática pelas pessoas que a resumem, traduzem e ensinam, e não só pelas que a produzem.',
+  },
+
 };
 
+export const MESTRES_IDS = ['lind', 'nightingale', 'semmelweis', 'fisher', 'hill', 'cochrane', 'sackett', 'altman'];
+export const OBRAS_IDS = ['obra_ebm', 'obra_chalmers', 'obra_greenhalgh', 'obra_gigerenzer', 'obra_ioannidis', 'obra_cochrane_br'];
 export const PAGES = ['pergunta', 'acaso', 'absoluto', 'confundimento', 'desenho', 'decisao'];
 
 // ---------- missões ----------
@@ -279,10 +475,10 @@ export interface QuestDef {
 
 export const QUESTS: Record<string, QuestDef> = {
   chegada: {
-    id: 'chegada', title: 'Chegada ao Átrio', kind: 'principal',
-    summary: 'Você chegou sob chuva, e um Crivo escolheu acompanhar você. A guardiã do Átrio espera junto à fonte.',
+    id: 'chegada', title: 'Chegada ao Pátio', kind: 'principal',
+    summary: 'Você chegou sob chuva, e um Crivo escolheu acompanhar você. A guardiã do Pátio espera junto à fonte.',
     steps: [{ text: 'Fale com Heloísa, junto à fonte', region: 'atrio', target: 'npc:heloisa', hint: 'Ela está ao sul da fonte, de capa escura e cachecol dourado.' }],
-    done: 'Heloísa contou o que a Névoa das Conclusões fez com o Átrio.',
+    done: 'Heloísa contou o que a Névoa das Conclusões fez com o Pátio.',
   },
   ponte: {
     id: 'ponte', title: 'A Ponte das Conclusões', kind: 'principal',
@@ -294,9 +490,9 @@ export const QUESTS: Record<string, QuestDef> = {
       { text: 'Encontre o que os Fiapos guardavam na clareira', region: 'bosque', target: 'prop:bau_selo', hint: 'O Crivo olha para o que merece atenção.' },
       { text: 'Descubra em qual mecanismo o selo se encaixa', region: 'bosque', target: 'prop:mec_b', hint: 'Leia as inscrições e repare no que ficou largado ao pé de cada mecanismo.' },
       { text: 'Atravesse a ponte e acenda o marco do outro lado', region: 'bosque', target: 'prop:marco' },
-      { text: 'Volte ao Átrio e fale com Íris', region: 'atrio', target: 'npc:iris' },
+      { text: 'Volte ao Pátio e fale com Íris', region: 'atrio', target: 'npc:iris' },
     ],
-    done: 'A ponte voltou a responder a quem atravessa. O Átrio parece respirar melhor.',
+    done: 'A ponte voltou a responder a quem atravessa. O Pátio parece respirar melhor.',
   },
   arquivo: {
     id: 'arquivo', title: 'O Registro Original', kind: 'principal',
@@ -308,7 +504,7 @@ export const QUESTS: Record<string, QuestDef> = {
       { text: 'Na porta da Sala dos Originais, acione a alavanca do registro que não copiou de ninguém', region: 'arquivo', target: 'prop:alavanca_b', hint: 'Leia os carimbos das fichas no inventário.' },
       { text: 'Enfrente o que se esconde na Sala dos Originais', region: 'arquivo', target: 'group:eco' },
       { text: 'Recolha a lanterna no fundo da sala', region: 'arquivo', target: 'prop:bau_lanterna' },
-      { text: 'Volte ao Átrio e fale com Anselmo', region: 'atrio', target: 'npc:anselmo' },
+      { text: 'Volte ao Pátio e fale com Anselmo', region: 'atrio', target: 'npc:anselmo' },
     ],
     done: 'O registro do cais voltou para a estante certa. As cópias ganharam uma etiqueta honesta.',
   },
@@ -320,7 +516,7 @@ export const QUESTS: Record<string, QuestDef> = {
       { text: 'Suba a escadaria e entre na Academia', region: 'atrio', target: 'prop:portal_observatorio' },
       { text: 'Decida qual braseiro acender com o único frasco de óleo', region: 'observatorio', target: 'group:braseiros', hint: 'Um ilumina a estrada da Vila. O outro, o terraço onde o Veredito espera. Não há resposta certa.' },
       { text: 'Enfrente o Veredito', region: 'observatorio', target: 'group:veredito', hint: 'Quando ele começar a recitar, o pulso do Crivo interrompe.' },
-      { text: 'Volte ao Átrio e fale com Heloísa', region: 'atrio', target: 'npc:heloisa' },
+      { text: 'Volte ao Pátio e fale com Heloísa', region: 'atrio', target: 'npc:heloisa' },
     ],
     done: 'A Névoa não foi embora. Ficou do tamanho certo.',
   },
@@ -355,8 +551,14 @@ export const QUESTS: Record<string, QuestDef> = {
   paginas: {
     id: 'paginas', title: 'Páginas de Método', kind: 'paralela',
     summary: 'Páginas soltas de um caderno antigo andam espalhadas. Anselmo gostaria de ver todas juntas de novo.',
-    steps: [{ text: 'Recolha as seis páginas soltas', hint: 'Há três no Átrio, uma no Bosque, uma no Arquivo e uma no Observatório.' }, { text: 'Leve as páginas a Anselmo', region: 'atrio', target: 'npc:anselmo' }],
+    steps: [{ text: 'Recolha as seis páginas soltas', hint: 'Há três no Pátio, uma no Bosque, uma no Arquivo e uma no Observatório.' }, { text: 'Leve as páginas a Anselmo', region: 'atrio', target: 'npc:anselmo' }],
     done: 'O caderno está inteiro. Anselmo o deixou na mesa de entrada, aberto.',
+  },
+  mestres: {
+    id: 'mestres', title: 'Passeio dos Mestres', kind: 'paralela',
+    summary: 'Oito bustos em arco ao redor da fonte lembram quem inventou os jeitos de perguntar que a Academia ensina. Cada placa conta o que a pessoa fez e o que ficou em aberto.',
+    steps: [{ text: 'Leia as placas dos oito bustos do Pátio', hint: 'Estão em arco ao redor da fonte, quatro de cada lado.' }],
+    done: 'Você leu os oito. O ourives do Pátio deixou um anel para quem terminasse o passeio.',
   },
 };
 

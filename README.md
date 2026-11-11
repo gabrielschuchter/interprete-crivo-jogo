@@ -1,8 +1,8 @@
 # Interprete RPG
 
-RPG de ação em terceira pessoa, 3D, que roda no navegador. O jogador chega à Academia do Limiar com o Crivo, um companheiro de pelúcia e olho único, e atravessa quatro regiões (Átrio, Bosque do Viés, Arquivo das Vozes e Observatório) enquanto uma névoa de certezas apressadas avança sobre a vila. A prática baseada em evidências aparece como linguagem do mundo: mecanismos que perguntam para quem a ponte foi feita, registros que se copiam, um dossiê de decisão compartilhada. Não há quiz.
+RPG de ação em terceira pessoa, 3D, que roda no navegador. O jogador chega à Academia com o Crivo, um companheiro de pelúcia e olho único, e atravessa quatro regiões (Pátio, Bosque da Confusão, Arquivo das Perguntas e Observatório) enquanto uma névoa de certezas apressadas avança sobre a vila. A prática baseada em evidências aparece como linguagem do mundo: mecanismos que perguntam para quem a ponte foi feita, registros que se copiam, um dossiê de decisão compartilhada. Não há quiz.
 
-A campanha atual tem uma missão de chegada, três missões principais, quatro paralelas, dois chefes, um caso simulado e um epílogo com o Átrio ao amanhecer. Dura de 40 a 60 minutos numa primeira partida.
+A campanha atual tem uma missão de chegada, três missões principais, quatro paralelas, dois chefes, um caso simulado e um epílogo com o Pátio ao amanhecer. Dura de 40 a 60 minutos numa primeira partida.
 
 ## Rodar
 

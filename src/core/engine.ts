@@ -105,7 +105,7 @@ const MAX_LAMPS = 6;
 export class Engine {
   renderer: THREE.WebGLRenderer;
   scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(58, 16 / 9, 0.1, 600);
+  camera = new THREE.PerspectiveCamera(58, 16 / 9, 0.18, 600);
   composer: EffectComposer;
   bloom: UnrealBloomPass;
   grade: ShaderPass;

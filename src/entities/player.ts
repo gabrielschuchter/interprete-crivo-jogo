@@ -4,7 +4,10 @@ import type { Input } from '../core/input';
 import type { BuiltRegion } from '../world/region';
 import { groundAt, resolveCircle, pointBlocked } from '../world/region';
 import type { Stats, Look } from '../domain/state';
-import { PROFESSIONS } from '../content/data';
+import { PROFESSIONS, COAT_COLORS } from '../content/data';
+import type { Emblem } from './figure';
+
+const EMBLEM: Record<string, Emblem> = { nutricao: 'caderno', medicina: 'estetoscopio', enfermagem: 'relogio', psicologia: 'oculos', fisioterapia: 'fita' };
 import { BRAND } from '../world/palette';
 
 /** Rastro luminoso do cajado: leitura clara do golpe (Atlas H-06). */
@@ -109,14 +112,14 @@ export class Player {
 
   constructor(look: Look, profession: string) {
     const prof = PROFESSIONS.find((p) => p.id === profession) ?? PROFESSIONS[5];
-    const coats = [prof.coat, 0x4a1830, 0x1c2f45, 0x1f3d35, 0x2b2b33, 0x4a3420];
-    this.fig = new Figure({
+        this.fig = new Figure({
       skin: SKINS[look.skin % SKINS.length],
       hair: HAIRS[look.hair % HAIRS.length],
       hairStyle: (['curto', 'coque', 'longo', 'capuz'] as const)[Math.floor(look.hair / HAIRS.length) % 4] ?? 'curto',
-      coat: coats[look.coat % coats.length],
+      coat: COAT_COLORS[look.coat % COAT_COLORS.length],
+      emblem: EMBLEM[prof.id] ?? null,
       scarf: new THREE.Color(BRAND.darkAmaranth).getHex(),
-      cape: 0x17151c,
+      cape: new THREE.Color(COAT_COLORS[look.coat % COAT_COLORS.length]).lerp(new THREE.Color(BRAND.darkAmaranth), 0.45).multiplyScalar(0.95).getHex(),
       staff: true,
       satchel: true,
     });
