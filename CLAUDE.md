@@ -2,6 +2,8 @@
 
 Direção de arte (Gabriel, 12/11/2026): dark fantasy gótica de PS2 (2003 a 2006) com dark academia. Low-poly estilizado com proporção humana correta (personagens de 1,5 a 8 mil triângulos), texturas pequenas, granuladas e levemente borradas, névoa, luz baixa com poucos pontos quentes; paleta preto, vinho, cinza azulado, verde-musgo, marrom e dourado gasto. Nada de realismo AAA, escaneamento de pessoa real, cartoon ou cor vibrante. Personagens saem de `tools/pipeline/ps2_cast.py`.
 
+Documento completo da direção (identidade "Luz de estudo", leis visuais, paleta, tipografia, interface, som, técnica de render): `docs/game/DIRECAO_DE_ARTE_PS2.md`; tokens em `design/ps2/ps2.tokens.json`; o regime de render PS2 do protótipo liga com `?arte=ps2`.
+
 Ler `DESIGN.md` antes de tocar em interface e `docs/game/DECISOES_TECNICAS.md` antes de tocar em arquitetura.
 
 Comandos: `npm run dev`, `npm run build`, `npm run test`, `npm run e2e` (com o servidor de desenvolvimento no ar).
