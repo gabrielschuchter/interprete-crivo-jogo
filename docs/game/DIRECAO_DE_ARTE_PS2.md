@@ -217,7 +217,15 @@ O mapeamento afim, não implementado, é possível sem extensão: o shader de v�
 
 As capturas estão em `docs/game/capturas/ps2/`, geradas por `tools/ps2/capturar.mjs` em Chromium com renderização por software (SwiftShader). Elas servem para comparar linguagem de imagem, não desempenho, e nenhuma delas foi vista em placa de vídeo real.
 
-PLACEHOLDER_RESULTADOS
+Cinco leituras saem das capturas (Átrio nas cinco predefinições; Bosque, Observatório, menu e inventário na consolidada).
+
+A primeira é que o passe sozinho leva o jogo a mais ou menos metade do caminho. O Átrio em `ps2` já perde o aspecto de aplicativo: a imagem fica mais densa, a névoa corta o fundo, as lanternas ganham halo e as bandas de cor aparecem nas sombras. Mas as malhas continuam finas demais e as lajes de 1024 px continuam nítidas demais para o regime; o resto do caminho é de material e de modelo, não de pós-processamento.
+
+A segunda é que A, B e C se distinguem pouco no Átrio. As três diferem em saturação, resolução e filtro, e o olho lê as três como "o mesmo cenário com acabamento diferente". Isso é um achado sobre o método: a identidade de uma direção mora em luz, paleta de material e modelo, e um passe de imagem só a insinua. A comparação decisiva entre as direções, portanto, é a do documento (critérios da seção 4), não a das capturas.
+
+A terceira é a que mais muda o plano. No Bosque e no Observatório, o piso de paralelepípedo, de albedo quente e alaranjado, domina a imagem e anula a lei da matiz fria: o Bosque deveria ser verde-musgo e o Observatório azul-noite, e ambos leem marrom. A névoa e o céu têm a matiz certa, o chão não. O piloto de materiais da seção 16 começa, por isso, pelo chão: retexturizar o paralelepípedo nas rampas ardósia, musgo e madeira, com a poça quente pintada em vertex color ao redor das lanternas.
+
+A quarta é sobre o Observatório: a lua de olho único e a arquitetura distante em silhueta já funcionam como no desenho da referência 6 e 9, e a cena ganha com a resolução baixa porque as formas distantes viram massas. A quinta é sobre a interface: menu, inventário e HUD mudaram de caráter com poucas regras (Cinzel, fraktur no logotipo, tachas e moldura dupla, seleção por inversão, barras em degraus), e o logotipo com a brasa no lugar do ponto é o elemento de identidade mais forte do conjunto. Defeitos vistos: o fundo do inventário em casas vazias ficou quase preto e a casa sob o cursor destaca demais; o Crivo e os rostos continuam com luz estourada; e o contraste do texto de dica sobre a cena depende do painel sólido, que funcionou.
 
 ### Como reaproveitar os modelos existentes
 
