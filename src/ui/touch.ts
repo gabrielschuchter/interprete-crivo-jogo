@@ -25,6 +25,7 @@ const BUTTONS: Btn[] = [
   { id: 'ataque', action: 'ataque', label: 'Golpe', cls: 'a-main', repeat: 0.34 },
   { id: 'golpe', action: 'golpe', label: 'Firme', cls: 'a-heavy' },
   { id: 'esquiva', action: 'esquiva', label: 'Esquiva', cls: 'a-dodge' },
+  { id: 'pular', action: 'pular', label: 'Pulo', cls: 'a-jump' },
   { id: 'crivo', action: 'crivo', label: 'Pulso', cls: 'a-crivo', glyph: 'pulso' },
   { id: 'interagir', action: 'interagir', label: 'Agir', cls: 'a-act' },
   { id: 'item', action: 'item', label: 'Item', cls: 'a-item', glyph: 'caldo' },

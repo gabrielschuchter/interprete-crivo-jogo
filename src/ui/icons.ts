@@ -14,6 +14,9 @@ const P: Record<string, string> = {
   moedas: '<ellipse cx="12" cy="7" rx="6.5" ry="2.8"/><path d="M5.5 7v5c0 1.5 3 2.8 6.5 2.8s6.5-1.3 6.5-2.8V7M5.5 12v5c0 1.5 3 2.8 6.5 2.8s6.5-1.3 6.5-2.8v-5"/>',
   pulso: '<circle cx="12" cy="12" r="2.4"/><circle cx="12" cy="12" r="6"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22"/>',
   pagina: '<path d="M6 3h9l4 4v14H6Z"/><path d="M15 3v4h4M9 11h7M9 14.5h7M9 18h4"/>',
+  chave: '<circle cx="7.5" cy="12" r="3.5"/><path d="M11 12h10M17 12v3.5M20 12v2.5"/>',
+  espada: '<path d="M19 3 9.5 12.5M19 3h-3.5M19 3v3.5"/><path d="m7 10 7 7M9.5 14.5 5 19M4 18l2 2"/>',
+  escudo: '<path d="M12 3 5 6v6c0 4.5 3.2 7.5 7 9 3.8-1.5 7-4.5 7-9V6Z"/><path d="M12 7v10"/>',
   vazio: '<path d="M12 5v14M5 12h14" opacity=".35"/>',
 };
 

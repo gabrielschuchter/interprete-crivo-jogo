@@ -25,8 +25,9 @@ export function buildBosque(ctx: RegionCtx): BuiltRegion {
   b.platform(-10, 0, 36, 31, 0, 0);
   b.platform(50, 0, 12, 31, 0, 0);
   // paredões do abismo
-  b.box(M.stoneDark, 3, 26, 62, 24.5, -26, 0, 0);
-  b.box(M.stoneDark, 3, 26, 62, 39.5, -26, 0, 0);
+  // paredões do abismo: o topo fica 2 cm abaixo do chão das margens (topo e chão no mesmo plano cintilavam)
+  b.box(M.stoneDark, 3, 41.98, 62, 24.5, -42, 0, 0);
+  b.box(M.stoneDark, 3, 41.98, 62, 39.5, -42, 0, 0);
   for (let i = 0; i < 9; i++) {
     const z = -28 + i * 7;
     b.box(M.stone, 1.2 + (i % 3) * 0.5, 9, 3.5, 26.1, -9.2 - (i % 2), z, 0.1 * (i % 3));
@@ -35,11 +36,25 @@ export function buildBosque(ctx: RegionCtx): BuiltRegion {
   // faces de rocha escaneadas nas duas paredes do abismo, abaixo da borda
   b.place('coastal_cliff_01', 27.6, -10.2, 0, Math.PI / 2, { collide: false });
   b.place('coastal_cliff_01', 36.4, -10.6, 3, -Math.PI / 2, { collide: false });
-  b.place('coast_rocks_01', 32, -8.6, -4, 0.4, { size: 15, fit: 'w', collide: false });
-  // névoa no fundo do abismo
-  const mist = new THREE.Mesh(new THREE.PlaneGeometry(14, 62), new THREE.MeshBasicMaterial({ color: 0x1f5a4c, transparent: true, opacity: 0.85, fog: true }));
+  b.place('coastal_cliff_01', 27.6, -24, -14, Math.PI / 2, { collide: false });
+  b.place('coastal_cliff_01', 36.4, -25, 16, -Math.PI / 2, { collide: false });
+  // o abismo é vazio de verdade: a pedra solta que havia no vão sumiu. Lá embaixo, longe, corre um rio
+  // escuro com reflexos verdes, e a névoa fica entre ele e a borda.
+  const river = new THREE.Mesh(
+    new THREE.PlaneGeometry(12, 62, 1, 1),
+    new THREE.MeshStandardMaterial({ color: 0x0b1f1c, roughness: 0.08, metalness: 0.6, emissive: 0x0d3a30, emissiveIntensity: 0.5 }),
+  );
+  river.rotation.x = -Math.PI / 2;
+  river.position.set(32, -40, 0);
+  b.dynamic(river);
+  for (let i = 0; i < 6; i++) {
+    const glint = K.halo(5, 0x58d6b0, 0.22);
+    glint.position.set(29 + (i % 3) * 3, -39.2, -25 + i * 10);
+    b.dynamic(glint);
+  }
+  const mist = new THREE.Mesh(new THREE.PlaneGeometry(14, 62), new THREE.MeshBasicMaterial({ color: 0x1f5a4c, transparent: true, opacity: 0.45, fog: true, depthWrite: false }));
   mist.rotation.x = -Math.PI / 2;
-  mist.position.set(32, -7, 0);
+  mist.position.set(32, -16, 0);
   b.dynamic(mist);
   const puffs: THREE.Sprite[] = [];
   for (let i = 0; i < 16; i++) {
@@ -223,7 +238,21 @@ export function buildBosque(ctx: RegionCtx): BuiltRegion {
   // recinto em ruínas com grade (atalho)
   b.box(M.stoneDark, 9, 4.2, 1, 54, 0, 22.5, 0, true);
   b.box(M.stoneDark, 1, 4.2, 9, 49.5, 0, 18, 0, true);
-  b.box(M.stoneDark, 1, 3.2, 9, 58.5, 0, 18, 0, true);
+  // parede leste com um trecho desmoronado: dá para subir pelos caixotes e saltar para dentro
+  b.box(M.stoneDark, 1, 3.2, 4.3, 58.5, 0, 15.65, 0, true);
+  b.box(M.stoneDark, 1, 2.3, 2.4, 58.5, 0, 19.0, 0, true);
+  b.platform(58.5, 19.0, 0.5, 1.2, 0, 2.3);
+  b.box(M.stoneDark, 1, 3.2, 2.3, 58.5, 0, 21.35, 0, true);
+  for (const [x, y, z, rot] of [[58.3, 2.3, 18.3, 0.5], [58.7, 2.3, 19.8, 1.9], [59.6, 0, 20.8, 2.6]] as Array<[number, number, number, number]>) {
+    b.box(M.stone, 0.5, 0.28, 0.4, x, y - (y > 0 ? 0.08 : 0), z, rot);
+  }
+  // caixotes: 0,8 m e depois 1,6 m, cada um ao alcance de um pulo
+  K.crate(b, 60.6, 15.6, 0.8, 0.1);
+  b.platform(60.6, 15.6, 0.44, 0.44, 0.1, 0.8);
+  K.crate(b, 60.5, 17.6, 0.8, -0.2);
+  K.crate(b, 60.5, 17.6, 0.8, 0.25, 0.8, false);
+  b.collideBox(60.5, 17.6, 0.42, 0.42, -0.2, -1, 1.6);
+  b.platform(60.5, 17.6, 0.44, 0.44, -0.2, 1.6);
   b.box(M.stoneDark, 3, 4.2, 1, 51, 0, 13.5, 0, true);
   b.box(M.stoneDark, 3, 4.2, 1, 57, 0, 13.5, 0, true);
   K.ivy(b, 54, 0, 21.95, Math.PI, 5, 3.6, 21);
@@ -367,6 +396,12 @@ export function buildBosque(ctx: RegionCtx): BuiltRegion {
     { kind: 'vulto', x: -4, z: -21.5, group: 'clareira' },
     { kind: 'vulto', x: 50, z: -3, group: 'margem', ifFlag: 'ponte_estendida' },
     { kind: 'fiapo', x: 47, z: 6, group: 'margem', ifFlag: 'ponte_estendida' },
+    // depois do Veredito: o foco residual da clareira (missão Focos Residuais)
+    { kind: 'vulto', x: -6, z: -19, group: 'foco', ifFlag: 'epilogo' },
+    { kind: 'vulto', x: 2, z: -20, group: 'foco', ifFlag: 'epilogo' },
+    { kind: 'fiapo', x: -9, z: -14, group: 'foco', ifFlag: 'epilogo' },
+    { kind: 'fiapo', x: 0, z: -14.5, group: 'foco', ifFlag: 'epilogo' },
+    { kind: 'fiapo', x: -3, z: -23, group: 'foco', ifFlag: 'epilogo' },
   ];
   r.props = [
     { id: 'portal_atrio', kind: 'portal', x: -44.4, z: 0, label: 'Voltar ao Pátio dos Caminhos', radius: 2.6, data: { to: 'atrio', spawn: 'de_bosque' } },
@@ -377,7 +412,7 @@ export function buildBosque(ctx: RegionCtx): BuiltRegion {
     { id: 'marco', kind: 'examine', x: 43.5, z: 0, label: 'Acender o marco', radius: 2.0 },
     { id: 'caixa_dalva', kind: 'pickup', x: 47, z: -8.6, label: 'Pegar a caixa de ferragens', radius: 1.8, data: { item: 'encomenda_dalva' } },
     { id: 'grade_bosque', kind: 'door', x: 54, z: 12.8, label: 'Examinar a grade', radius: 1.8, data: { skill: 'atalhos', unlessFlag: 'aberta:grade_bosque' } },
-    { id: 'bau_botas', kind: 'chest', x: 54, z: 19.5, label: 'Abrir o baú', radius: 1.8, data: { item: 'botas_bradford', rot: Math.PI } },
+    { id: 'bau_botas', kind: 'chest', x: 54, z: 19.5, label: 'Abrir o baú', radius: 1.8, data: { item: 'botas_bradford', item2: 'maca_absoluta', rot: Math.PI } },
     { id: 'pagina_4', kind: 'page', x: 56.5, z: -17.5, label: 'Recolher a página solta', radius: 1.6, data: { page: 'confundimento' } },
     { id: 'descanso_bosque', kind: 'rest', x: 13, z: 5.6, label: 'Descansar e registrar o caminho', radius: 1.8 },
     { id: 'moedas_bosque_1', kind: 'pickup', x: -26, z: 15, label: 'Pegar moedas', data: { item: 'moedas', qty: 14 } },

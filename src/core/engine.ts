@@ -45,12 +45,16 @@ const GradeShader = {
     uFlash: { value: 0 },
     uDesat: { value: 0 },
     uHighContrast: { value: 0 },
+    uLevels: { value: 31 },
   },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
   fragmentShader: `
-    uniform sampler2D tDiffuse; uniform float uTime, uVignette, uGrain, uContrast, uFlash, uDesat, uHighContrast;
+    uniform sampler2D tDiffuse; uniform float uTime, uVignette, uGrain, uContrast, uFlash, uDesat, uHighContrast, uLevels;
     uniform vec3 uShadow, uLight; varying vec2 vUv;
     float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233))) * 43758.5453); }
+    // matriz de Bayer 4x4: o pontilhado ordenado dos quadros de 16 bits da era PS2
+    float b2(vec2 a){ a = floor(a); return fract(dot(a, vec2(0.5, a.y * 0.75))); }
+    float bayer4(vec2 a){ return b2(0.5 * a) * 0.25 + b2(a); }
     void main(){
       vec4 c = texture2D(tDiffuse, vUv);
       float l = dot(c.rgb, vec3(0.299,0.587,0.114));
@@ -63,6 +67,8 @@ const GradeShader = {
       c.rgb *= mix(1.0, mix(0.42, 1.0, v), uVignette);
       c.rgb += (hash(vUv * 900.0 + uTime) - 0.5) * 0.035 * uGrain;
       c.rgb = mix(c.rgb, vec3(0.95,0.9,0.85), uFlash);
+      // cor de 15 bits com pontilhado: degradês do céu e da névoa ganham a textura de tela antiga
+      if (uLevels > 0.5) c.rgb = floor(max(c.rgb, 0.0) * uLevels + bayer4(gl_FragCoord.xy)) / uLevels;
       gl_FragColor = vec4(max(c.rgb, 0.0), 1.0);
     }`,
 };
@@ -135,14 +141,15 @@ export class Engine {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // sombras de borda dura e mapa menor: mais perto do visual da época e mais barato
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     this.scene.fog = new THREE.FogExp2(0x101418, 0.02);
     this.scene.add(this.hemi);
     this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(2048, 2048);
+    this.sun.shadow.mapSize.set(1024, 1024);
     this.sun.shadow.bias = -0.0006;
     this.sun.shadow.normalBias = 0.06;
     const sc = this.sun.shadow.camera;
@@ -222,8 +229,10 @@ export class Engine {
   resize(): void {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    const scale = this.quality === 'baixa' ? 0.66 : this.quality === 'media' ? 0.85 : 1;
-    const ratio = this.ps2 ? this.ps2.pixelRatioFor(h) : Math.min(window.devicePixelRatio, 1.5) * scale;
+    // resolução interna de console antigo: 540, 480 ou 400 linhas, ampliadas com filtro suave (direção PS2 e o
+    // maior ganho de desempenho). Com ?arte=, a camada opcional de src/core/ps2.ts decide a proporção.
+    const lines = this.quality === 'baixa' ? 400 : this.quality === 'media' ? 480 : 540;
+    const ratio = this.ps2 ? this.ps2.pixelRatioFor(h) : Math.min(window.devicePixelRatio, lines / Math.max(1, h));
     this.renderer.setPixelRatio(ratio);
     this.renderer.setSize(w, h, false);
     this.ps2?.setSize(w, h, ratio);
@@ -240,7 +249,7 @@ export class Engine {
     this.quality = q;
     this.renderer.shadowMap.enabled = q !== 'baixa';
     this.sun.castShadow = q !== 'baixa';
-    this.sun.shadow.mapSize.set(q === 'alta' ? 2048 : 1024, q === 'alta' ? 2048 : 1024);
+    this.sun.shadow.mapSize.set(q === 'alta' ? 1024 : 512, q === 'alta' ? 1024 : 512);
     this.sun.shadow.map?.dispose();
     this.sun.shadow.map = null as unknown as THREE.WebGLRenderTarget;
     this.bloom.enabled = q !== 'baixa';

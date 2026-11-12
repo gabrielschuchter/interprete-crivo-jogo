@@ -4,10 +4,12 @@
  * validaria no futuro: recompensas idempotentes, save versionado, eventos.
  */
 
+import { GEAR, STARTING_WEAPON, type WeaponEffect } from './gear';
+
 export const SAVE_VERSION = 2;
 
 export type ProfessionId = 'nutricao' | 'medicina' | 'enfermagem' | 'psicologia' | 'fisioterapia' | 'aprendiz';
-export type EquipSlot = 'ferramenta' | 'traje' | 'calcado' | 'amuleto';
+export type EquipSlot = 'arma' | 'ferramenta' | 'traje' | 'calcado' | 'amuleto';
 export type QuestStatus = 'ativa' | 'concluida';
 export type CrivoActive = 'pulso' | 'lupa';
 
@@ -30,6 +32,8 @@ export interface Look {
   skin: number;
   hair: number;
   coat: number;
+  /** corpo escolhido na criação; registros antigos não têm e usam o modelo do corte */
+  body?: 'fem' | 'masc';
 }
 
 export interface GameState {
@@ -76,8 +80,8 @@ export function newGame(name: string, profession: ProfessionId, look: Look): Gam
     crivoPoints: 0,
     hp: 100,
     coins: 10,
-    inventory: { caldo: 1 },
-    equipment: {},
+    inventory: { caldo: 1, [STARTING_WEAPON]: 1 },
+    equipment: { arma: STARTING_WEAPON },
     skills: [],
     crivoSkills: ['farejar'],
     crivoActive: 'pulso',
@@ -312,6 +316,13 @@ export interface Stats {
   pulseCooldown: number;
   lupaCooldown: number;
   pulseRadius: number;
+  /** arma equipada: aparência, alcance e efeito especial */
+  weaponLook: string;
+  reach: number;
+  variance: number;
+  crit: number;
+  critMult: number;
+  special: WeaponEffect | null;
 }
 
 export function computeStats(s: GameState): Stats {
@@ -337,7 +348,34 @@ export function computeStats(s: GameState): Stats {
     pulseCooldown: 11,
     lupaCooldown: 14,
     pulseRadius: 6,
+    weaponLook: 'estoque',
+    reach: 2.5,
+    variance: 0.1,
+    crit: 0.05,
+    critMult: 1.6,
+    special: null,
   };
+  // arma: substitui o dano-base; o nível continua somando
+  const w = s.equipment.arma ? GEAR[s.equipment.arma] : undefined;
+  if (w && w.slot === 'arma' && countItem(s, w.id) > 0) {
+    st.damage = (w.dmg ?? 18) + lvl * 1.5;
+    st.heavyDamage = (w.heavy ?? 40) + lvl * 3;
+    st.weaponLook = w.look ?? 'estoque';
+    st.reach = w.reach ?? 2.5;
+    st.variance = w.variance ?? 0.1;
+    st.crit = w.crit ?? 0.05;
+    st.critMult = w.critMult ?? 1.6;
+    st.attackCost *= w.costMult ?? 1;
+    st.special = w.special ?? null;
+    if (w.special === 'absoluto') st.heavyStagger = true;
+  }
+  const a = s.equipment.traje ? GEAR[s.equipment.traje] : undefined;
+  if (a && a.slot === 'traje' && countItem(s, a.id) > 0) {
+    st.defense += a.defense ?? 0;
+    st.walkSpeed *= 1 + (a.speed ?? 0);
+    st.runSpeed *= 1 + (a.speed ?? 0);
+    st.dodgeCost *= a.dodgeMult ?? 1;
+  }
   if (has('passo_firme')) st.runSpeed *= 1.1;
   if (has('olho_coletor')) {
     st.coinBonus += 0.25;
@@ -384,7 +422,7 @@ export function computeStats(s: GameState): Stats {
 /** Dano recebido após defesa; nunca abaixo de 1. */
 export function damageTaken(raw: number, st: Stats, difficulty: 'historia' | 'padrao'): number {
   const mult = difficulty === 'historia' ? 0.45 : 1;
-  return Math.max(1, Math.round(raw * (1 - st.defense) * mult));
+  return Math.max(1, Math.round(raw * (1 - Math.min(0.6, st.defense)) * mult));
 }
 
 // ---------- save ----------
@@ -440,6 +478,7 @@ export function migrate(raw: unknown): GameState | null {
   }
   const lk = out.look as Partial<Look> | null;
   out.look = { skin: Math.round(num(lk?.skin, 0, 99, 1)), hair: Math.round(num(lk?.hair, 0, 99, 0)), coat: Math.round(num(lk?.coat, 0, 99, 0)) };
+  if (lk?.body === 'fem' || lk?.body === 'masc') out.look.body = lk.body;
   if (out.crivoActive !== 'pulso' && out.crivoActive !== 'lupa') out.crivoActive = 'pulso';
   if (!out.crivoLook || typeof out.crivoLook !== 'object') out.crivoLook = base.crivoLook;
   if (typeof out.equipment !== 'object' || !out.equipment) out.equipment = {};
@@ -448,6 +487,9 @@ export function migrate(raw: unknown): GameState | null {
   if (typeof out.inventory !== 'object' || !out.inventory) out.inventory = {};
   if (typeof out.quests !== 'object' || !out.quests) out.quests = {};
   for (const [k, v] of Object.entries(out.inventory)) if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0) delete out.inventory[k];
+  // registros de antes das armas: quem não tem nenhuma recebe a inicial, já empunhada
+  if (!Object.keys(out.inventory).some((id) => GEAR[id]?.slot === 'arma')) out.inventory[STARTING_WEAPON] = 1;
+  if (!out.equipment.arma || !out.inventory[out.equipment.arma]) out.equipment.arma = Object.keys(out.inventory).find((id) => GEAR[id]?.slot === 'arma');
   for (const [k, q] of Object.entries(out.quests)) {
     if (!q || typeof q !== 'object' || (q.status !== 'ativa' && q.status !== 'concluida')) delete out.quests[k];
     else {

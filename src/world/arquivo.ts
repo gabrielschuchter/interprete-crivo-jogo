@@ -28,8 +28,10 @@ export function buildArquivo(ctx: RegionCtx): BuiltRegion {
   const H = 11;
 
   // piso, tapete, teto
-  b.add(new THREE.PlaneGeometry(34, 46), M.flag, trs(0, 0, 0, 0, -Math.PI / 2), false, false);
-  b.add(new THREE.PlaneGeometry(26, 24), M.wood, trs(0, 0, -30, 0, -Math.PI / 2), false, false);
+  // o piso de pedra termina na parede norte (z -18,5) e o de madeira começa nela: antes os dois se cruzavam
+  // por 4,5 m no mesmo plano, e era a cintilação logo na entrada da sala do chefe
+  b.add(new THREE.PlaneGeometry(34, 41.5), M.flag, trs(0, 0, 2.25, 0, -Math.PI / 2), false, false);
+  b.add(new THREE.PlaneGeometry(26, 22.5), M.wood, trs(0, 0, -29.75, 0, -Math.PI / 2), false, false);
   b.add(new THREE.PlaneGeometry(3.2, 36), M.wine, trs(0, 0.03, 2, 0, -Math.PI / 2), false, false);
   b.add(new THREE.PlaneGeometry(34, 46), M.stoneDark, trs(0, H, 0, 0, Math.PI / 2), false, false);
   b.add(new THREE.PlaneGeometry(26, 24), M.stoneDark, trs(0, 9, -30, 0, Math.PI / 2), false, false);
@@ -240,6 +242,11 @@ export function buildArquivo(ctx: RegionCtx): BuiltRegion {
     { kind: 'vulto', x: 11.4, z: -7, group: 'estantes' },
     { kind: 'fiapo', x: 0, z: -12.5, group: 'estantes' },
     { kind: 'eco', x: 0, z: -31, group: 'eco', ifFlag: 'originais_aberta' },
+    { kind: 'vulto', x: -6, z: -4, group: 'foco', ifFlag: 'epilogo' },
+    { kind: 'vulto', x: 6, z: -4, group: 'foco', ifFlag: 'epilogo' },
+    { kind: 'fiapo', x: 0, z: -8, group: 'foco', ifFlag: 'epilogo' },
+    { kind: 'fiapo', x: -3, z: 1.5, group: 'foco', ifFlag: 'epilogo' },
+    { kind: 'fiapo', x: 3, z: 1.5, group: 'foco', ifFlag: 'epilogo' },
   ];
   r.props = [
     ...OBRAS_ARQUIVO.map((o) => ({ id: 'obra_' + o.id, kind: 'examine' as const, x: o.x, z: o.z, label: `Ler ${o.rotulo}`, radius: 1.9, data: { text: o.texto, codex: o.id, xp: 10, obra: true } })),

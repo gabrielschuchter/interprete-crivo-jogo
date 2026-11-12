@@ -7,6 +7,7 @@ import { ACTION_LABEL, keyLabel, padLabel, type ActionName } from '../core/input
 import { CODEX, COAT_COLORS, CRIVO_SKILLS, ITEMS, PLAYER_SKILLS, PROFESSIONS, QUESTS, SHOP } from '../content/data';
 import { canUnlock, countItem, isEquipped, xpForLevel, type ProfessionId, type SkillDef } from '../domain/state';
 import { HAIRS, SKINS } from '../entities/figure';
+import { RARITY_LABEL } from '../domain/gear';
 import { icon } from './icons';
 import { problems } from '../core/diag';
 import { CaseView } from './caseview';
@@ -42,6 +43,9 @@ export interface HudData {
   /** pontos que faltam para o próximo nível; 0 no nível máximo */
   xpLeft: number;
   boss: { name: string; frac: number; recite: number } | null;
+  /** pontos de habilidade ainda não gastos (seus e do Crivo) */
+  points: number;
+  crivoPoints: number;
 }
 
 const SKIN_NAMES = ['muito clara', 'clara', 'média', 'escura', 'muito escura'];
@@ -72,7 +76,7 @@ export class UI {
   private skillTab: 'jogador' | 'crivo' = 'jogador';
   private rebinding: ActionName | null = null;
   private cache: Record<string, string> = {};
-  private create = { prof: 'nutricao' as ProfessionId, skin: 1, hair: 1, style: 1, coat: 0, name: '' };
+  private create = { prof: 'nutricao' as ProfessionId, body: 'fem' as 'fem' | 'masc', skin: 1, hair: 1, style: 1, coat: 0, name: '' };
   private hintTimer = 0;
   private bannerTimer = 0;
   private titleTimer = 0;
@@ -98,6 +102,7 @@ export class UI {
         </div>
         <div class="objective"><div class="label">Objetivo</div><div class="q" data-k="quest"></div><div class="s" data-k="step"></div></div>
         <div class="coins" data-k="coins"></div>
+        <div class="pending hidden" data-k="pending" role="status"></div>
         <div class="quick">
           <div class="slot"><span class="kbd key" data-k="kItem"></span><span data-k="iItem">${icon('caldo')}</span><span class="n" data-k="caldo"></span><span class="nm" data-k="itemNm">Caldo</span></div>
           <div class="slot big"><span class="kbd key" data-k="kCrivo"></span><span data-k="iCrivo">${icon('pulso')}</span><span class="cd" data-k="cd"></span><span class="nm" data-k="ability"></span></div>
@@ -113,7 +118,7 @@ export class UI {
       <div id="subtitle" class="hidden"></div>
       <div id="banner"><div class="label k"></div><div class="t"></div><div class="d"></div></div>
       <div id="region-title"><div class="sub"></div><div class="rule"></div><div class="name"></div></div>
-      <div id="dialogue" class="hidden" role="dialog" aria-label="Conversa" aria-live="polite"><div class="who"><span class="nm"></span><span class="label role"></span></div><div class="txt"></div><div class="choices"></div><div class="next"></div></div>
+      <div id="dialogue" class="hidden" role="dialog" aria-label="Conversa" aria-live="polite"><div class="who"><span class="nm"></span><span class="label role"></span></div><div class="txt"></div><div class="choices"></div><div class="next"></div><button class="dx" type="button" aria-label="Sair da conversa">Sair</button></div>
       <div id="splash" class="screen hidden"></div>
       <div id="menu" class="screen hidden" role="dialog" aria-modal="true" aria-label="Menu inicial"></div>
       <div id="create" class="screen hidden" role="dialog" aria-modal="true" aria-label="Criação de personagem"></div>
@@ -154,7 +159,9 @@ export class UI {
     );
     document.addEventListener('contextmenu', (e) => this.rebinding && e.preventDefault(), true);
     this.$.dialogue.addEventListener('click', (e) => {
-      if (!(e.target as HTMLElement).closest('.choices')) this.advance();
+      const t = e.target as HTMLElement;
+      if (t.closest('.dx')) return this.g.cancelScript();
+      if (!t.closest('.choices')) this.advance();
     });
   }
 
@@ -183,7 +190,7 @@ export class UI {
   }
   key(a: ActionName): string {
     if (this.touch.enabled && !this.g.input.usingPad) {
-      const t: Partial<Record<ActionName, string>> = { interagir: 'Toque', ataque: 'Golpe', golpe: 'Firme', esquiva: 'Esquiva', crivo: 'Pulso', travar: 'Mira', item: 'Item', dica: 'Dica', trocarCrivo: 'Trocar', habilidades: 'Caderno', inventario: 'Caderno', diario: 'Caderno', mapa: 'Caderno' };
+      const t: Partial<Record<ActionName, string>> = { interagir: 'Toque', ataque: 'Golpe', golpe: 'Firme', esquiva: 'Esquiva', pular: 'Pulo', crivo: 'Pulso', travar: 'Mira', item: 'Item', dica: 'Dica', trocarCrivo: 'Trocar', habilidades: 'Caderno', inventario: 'Caderno', diario: 'Caderno', mapa: 'Caderno' };
       if (t[a]) return t[a]!;
     }
     if (this.g.input.usingPad && this.g.input.pad[a] !== undefined) return padLabel(this.g.input.pad[a]);
@@ -221,6 +228,7 @@ export class UI {
   }
   /** botão B do controle fora do jogo: aciona o "voltar" da tela, se houver */
   back(): void {
+    if (this.dialogueOpen && !this.topScreenIsModal()) return this.g.cancelScript();
     const scr = this.topScreen();
     scr?.querySelector<HTMLElement>('[data-a=back], [data-a=no], [data-a=leave], [data-a=close]')?.click();
   }
@@ -251,6 +259,9 @@ export class UI {
       if (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyE') {
         e.preventDefault();
         this.advance();
+      } else if (e.code === 'Escape') {
+        e.preventDefault();
+        this.g.cancelScript();
       } else if (/^(Digit|Numpad)[1-9]$/.test(e.code)) this.pick(Number(e.code.slice(-1)) - 1);
       else if (e.code === 'ArrowDown') this.moveFocus(1);
       else if (e.code === 'ArrowUp') this.moveFocus(-1);
@@ -398,6 +409,12 @@ export class UI {
     if (low && !this.wasLow) this.announce(`Vida baixa: ${hp} de ${d.maxHp}.`);
     this.wasLow = low;
     this.set('coins', `${d.coins} moedas`);
+    // pontos esperando no caderno: o aviso fica até serem gastos, com a tecla que abre a página
+    const pend: string[] = [];
+    if (d.points > 0) pend.push(`${d.points} ponto${d.points > 1 ? 's' : ''} de habilidade`);
+    if (d.crivoPoints > 0) pend.push(`${d.crivoPoints} do Crivo`);
+    this.set('pending', pend.length ? `${pend.join(' · ')} · ${this.key('habilidades')}` : '');
+    this.$['k:pending'].classList.toggle('hidden', !pend.length);
     this.set('quest', d.quest);
     this.set('step', d.step);
     this.$['k:step'].style.display = d.step ? '' : 'none';
@@ -462,7 +479,7 @@ export class UI {
     (d.querySelector('.role') as HTMLElement).textContent = role;
     (d.querySelector('.who') as HTMLElement).style.display = who ? '' : 'none';
     (d.querySelector('.choices') as HTMLElement).innerHTML = '';
-    (d.querySelector('.next') as HTMLElement).textContent = `${this.key('interagir')} · continuar`;
+    (d.querySelector('.next') as HTMLElement).textContent = `${this.key('interagir')} · continuar   Esc · sair`;
     const txt = d.querySelector('.txt') as HTMLElement;
     txt.style.fontStyle = who ? '' : 'italic';
     if (this.instant) {
@@ -484,7 +501,7 @@ export class UI {
     const d = this.$.dialogue;
     this.show('dialogue', true);
     const box = d.querySelector('.choices') as HTMLElement;
-    (d.querySelector('.next') as HTMLElement).textContent = '';
+    (d.querySelector('.next') as HTMLElement).textContent = 'Esc · sair';
     box.innerHTML = options.map((o, i) => `<button class="btn" data-i="${i}"><span class="n">${i + 1}</span><span>${esc(o.text)}</span>${o.tag ? `<span class="tag">${esc(o.tag)}</span>` : ''}</button>`).join('');
     this.choiceCount = options.length;
     if (this.instant) {
@@ -522,6 +539,16 @@ export class UI {
       this.sfx('texto');
       r();
     }
+  }
+  /** solta qualquer fala ou escolha pendente: o roteiro percebe o cancelamento e se desfaz */
+  abortDialogue(): void {
+    this.typing = null;
+    const r = this.chooseResolve;
+    const q = this.sayResolve;
+    this.chooseResolve = null;
+    this.sayResolve = null;
+    r?.(-1);
+    q?.();
   }
   endDialogue(): void {
     this.show('dialogue', false);
@@ -617,6 +644,7 @@ export class UI {
         <div><div class="label" style="margin-bottom:8px">Ofício</div><div class="profs">${PROFESSIONS.map((p) => `<button class="chip" data-prof="${p.id}" aria-pressed="${p.id === c.prof}">${esc(p.name)}</button>`).join('')}</div></div>
         <div class="prof-line">${esc(prof.line)}<br><span class="label" style="font-style:normal">Objeto de ofício · ${esc(prof.tool)}</span></div>
         <div class="row"><span class="label">Nome</span><input type="text" maxlength="18" placeholder="Viajante" value="${esc(c.name)}" style="flex:1;width:auto" aria-label="Nome"></div>
+        <div class="row"><span class="label">Corpo</span>${(['fem', 'masc'] as const).map((b) => `<button class="chip" data-body="${b}" aria-pressed="${b === c.body}">${b === 'fem' ? 'Feminino' : 'Masculino'}</button>`).join('')}</div>
         <div class="row"><span class="label">Pele</span>${SKINS.map((s, i) => `<button class="swatch" data-skin="${i}" aria-pressed="${i === c.skin}" aria-label="Pele: ${SKIN_NAMES[i] ?? `tom ${i + 1}`}" title="${SKIN_NAMES[i] ?? ``}" style="background:${hex(s)}"></button>`).join('')}</div>
         <div class="row"><span class="label">Cabelo</span>${HAIRS.map((s, i) => `<button class="swatch" data-hair="${i}" aria-pressed="${i === c.hair}" aria-label="Cabelo: ${HAIR_NAMES[i] ?? `cor ${i + 1}`}" title="${HAIR_NAMES[i] ?? ``}" style="background:${hex(s)}"></button>`).join('')}</div>
         <div class="row"><span class="label">Corte</span>${['Curto', 'Coque', 'Longo', 'Capuz'].map((s, i) => `<button class="chip" data-style="${i}" aria-pressed="${i === c.style}">${s}</button>`).join('')}</div>
@@ -636,6 +664,7 @@ export class UI {
             c.prof = d.prof as ProfessionId;
             c.coat = Math.max(0, COAT_COLORS.indexOf(PROFESSIONS.find((x) => x.id === c.prof)!.coat));
           }
+          if (d.body === 'fem' || d.body === 'masc') c.body = d.body;
           if (d.skin) c.skin = Number(d.skin);
           if (d.hair) c.hair = Number(d.hair);
           if (d.style) c.style = Number(d.style);
@@ -650,7 +679,7 @@ export class UI {
   }
   private look() {
     const c = this.create;
-    return { skin: c.skin, hair: c.hair + c.style * HAIRS.length, coat: c.coat };
+    return { skin: c.skin, hair: c.hair + c.style * HAIRS.length, coat: c.coat, body: c.body };
   }
 
   // ---------- pausa, derrota, final ----------
@@ -665,7 +694,12 @@ export class UI {
         this.sfx('ui');
         if (b.dataset.a === 'full') {
           if (document.fullscreenElement) void document.exitFullscreen();
-          else void document.documentElement.requestFullscreen?.().catch(() => undefined);
+          else
+            void document.documentElement
+              .requestFullscreen?.()
+              // Esc fecha painéis sem derrubar a tela cheia; segurar Esc ainda sai dela (Chromium)
+              .then(() => (navigator as unknown as { keyboard?: { lock?: (k: string[]) => Promise<void> } }).keyboard?.lock?.(['Escape']))
+              .catch(() => undefined);
         } else if (b.dataset.a === 'export') this.downloadSave();
         else if (b.dataset.a === 'resume') this.g.closeOverlay();
         else if (b.dataset.a === 'config') {
@@ -777,12 +811,12 @@ export class UI {
     const s = this.g.state!;
     const ids = Object.keys(s.inventory);
     const sel = this.sel.item && s.inventory[this.sel.item] ? this.sel.item : ids[0];
-    const slots: Array<['ferramenta' | 'traje' | 'calcado' | 'amuleto', string]> = [['ferramenta', 'Ferramenta'], ['traje', 'Traje'], ['calcado', 'Calçado'], ['amuleto', 'Amuleto']];
+    const slots: Array<['arma' | 'ferramenta' | 'traje' | 'calcado' | 'amuleto', string]> = [['arma', 'Arma'], ['ferramenta', 'Ferramenta'], ['traje', 'Traje'], ['calcado', 'Calçado'], ['amuleto', 'Amuleto']];
     const cells: string[] = [];
     for (let i = 0; i < Math.max(20, Math.ceil(ids.length / 5) * 5); i++) {
       const id = ids[i];
       if (!id) cells.push('<div class="cell empty"></div>');
-      else cells.push(`<button class="cell" data-id="${id}" aria-pressed="${id === sel}" aria-label="${esc(ITEMS[id]?.name ?? id)}${s.inventory[id] > 1 ? `, ${s.inventory[id]} unidades` : ''}${isEquipped(s, id) ? ', em uso' : ''}">${icon(ITEMS[id]?.glyph ?? 'vazio')}${s.inventory[id] > 1 ? `<span class="n">${s.inventory[id]}</span>` : ''}${isEquipped(s, id) ? '<span class="eq">EM USO</span>' : ''}</button>`);
+      else cells.push(`<button class="cell${ITEMS[id]?.rarity ? ' r-' + ITEMS[id].rarity : ''}" data-id="${id}" aria-pressed="${id === sel}" aria-label="${esc(ITEMS[id]?.name ?? id)}${s.inventory[id] > 1 ? `, ${s.inventory[id]} unidades` : ''}${isEquipped(s, id) ? ', em uso' : ''}">${icon(ITEMS[id]?.glyph ?? 'vazio')}${s.inventory[id] > 1 ? `<span class="n">${s.inventory[id]}</span>` : ''}${isEquipped(s, id) ? '<span class="eq">EM USO</span>' : ''}</button>`);
     }
     let detail = '<div class="empty-state">A bolsa está vazia. O que você recolher pelo caminho aparece aqui, com o que faz e de onde veio.</div>';
     if (sel && ITEMS[sel]) {
@@ -791,7 +825,7 @@ export class UI {
       let action = '';
       if (it.slot) action = `<button class="btn primary" data-a="equip">${isEquipped(s, sel) ? 'Guardar' : 'Equipar'}</button>`;
       else if (it.type === 'consumivel') action = `<button class="btn primary" data-a="use">Usar</button>`;
-      detail = `<div class="big">${icon(it.glyph)}</div><div><div class="label">${typeName}</div><h3>${esc(it.name)}</h3></div><p>${esc(it.desc)}</p><p class="fx">${esc(it.effect)}</p>${it.ref ? `<p class="ref">Conceito · ${esc(it.ref)}</p>` : ''}<div style="margin-top:auto">${action}</div>`;
+      detail = `<div class="big">${icon(it.glyph)}</div><div><div class="label">${typeName}${it.rarity ? ` · <span class="rar r-${it.rarity}">${RARITY_LABEL[it.rarity]}</span>` : ''}</div><h3>${esc(it.name)}</h3></div><p>${esc(it.desc)}</p><p class="fx">${esc(it.effect)}</p>${it.ref ? `<p class="ref">Conceito · ${esc(it.ref)}</p>` : ''}<div style="margin-top:auto">${action}</div>`;
     }
     page.innerHTML = `<div class="label">${s.coins} moedas · ${esc(s.name)}, nível ${s.level}</div><h2>Inventário</h2><div class="cols"><div class="scroll"><div class="equip">${slots.map(([k, n]) => `<button class="cell" data-slot="${k}" ${s.equipment[k] ? '' : 'disabled'}>${icon(s.equipment[k] ? ITEMS[s.equipment[k]!].glyph : 'vazio')}<small>${n}</small></button>`).join('')}</div><div class="grid">${cells.join('')}</div></div><div class="detail">${detail}</div></div>`;
     page.querySelectorAll<HTMLElement>('button').forEach((x) =>

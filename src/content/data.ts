@@ -1,4 +1,5 @@
 import type { EquipSlot, ProfessionId, SkillDef } from '../domain/state';
+import { GEAR, RARITY_LABEL, type Rarity } from '../domain/gear';
 import type { ClinicalCase } from '../domain/clinical';
 
 export const CONTENT_VERSION = '0.1.0';
@@ -44,6 +45,7 @@ export interface ItemDef {
   ref?: string;
   price?: number;
   glyph: string;
+  rarity?: Rarity;
 }
 
 export const ITEMS: Record<string, ItemDef> = {
@@ -56,6 +58,11 @@ export const ITEMS: Record<string, ItemDef> = {
     id: 'selo_pergunta', name: 'Selo da Pergunta', type: 'consumivel', glyph: 'selo', price: 18,
     desc: 'Um lacre com quatro campos em branco. Quem pergunta direito já andou metade do caminho.',
     effect: 'O Crivo aponta o segredo ainda não encontrado mais próximo nesta região.', ref: 'Pergunta estruturada',
+  },
+  gazua: {
+    id: 'gazua', name: 'Gazua de conferência', type: 'missao', glyph: 'chave', price: 35,
+    desc: 'Duas hastes finas de aço. Não força nada: só confere, pino por pino, o que a tranca diz que é.',
+    effect: 'Abre grades e trancas antigas sem a habilidade Atalhos. Fica com você.', ref: 'Checagem de pressupostos',
   },
   lupa_contexto: {
     id: 'lupa_contexto', name: 'Lupa do Contexto', type: 'ferramenta', slot: 'ferramenta', glyph: 'lupa',
@@ -145,7 +152,15 @@ export const ITEMS: Record<string, ItemDef> = {
   },
 };
 
-export const SHOP: string[] = ['caldo', 'limao_lind', 'cha_fisher', 'selo_pergunta', 'ponteira_latao', 'capa_parcimonia', 'jaleco_semmelweis'];
+// armas e armaduras vêm do catálogo puro em src/domain/gear.ts
+for (const g of Object.values(GEAR)) {
+  ITEMS[g.id] = {
+    id: g.id, name: g.name, type: 'equipamento', slot: g.slot, glyph: g.slot === 'arma' ? 'espada' : 'escudo', price: g.price,
+    desc: g.desc, effect: `${RARITY_LABEL[g.rarity]}. ${g.effect}`, ref: g.ref, rarity: g.rarity,
+  };
+}
+
+export const SHOP: string[] = ['caldo', 'limao_lind', 'cha_fisher', 'selo_pergunta', 'gazua', 'facao_conveniencia', 'sabre_desfecho', 'gibao_sigilo', 'cota_amostra', 'ponteira_latao', 'capa_parcimonia', 'jaleco_semmelweis'];
 
 // ---------- habilidades ----------
 
@@ -534,6 +549,15 @@ export const QUESTS: Record<string, QuestDef> = {
       { text: 'Volte ao Pátio e fale com Heloísa', region: 'atrio', target: 'npc:heloisa' },
     ],
     done: 'A Névoa não foi embora. Ficou do tamanho certo.',
+  },
+  focos: {
+    id: 'focos', title: 'Focos Residuais', kind: 'principal',
+    summary: 'O Veredito cedeu, mas a Névoa deixou três focos para trás, um em cada região. Cada um se sustenta num erro de leitura diferente.',
+    steps: [
+      { text: 'Apague os três focos residuais: clareira do Bosque, salão do Arquivo e terraço do Observatório', hint: 'Cada foco é um grupo maior de inimigos. Ao apagar um, leia o que ele deixa para trás.' },
+      { text: 'Conte a Heloísa o que os focos tinham em comum', region: 'atrio', target: 'npc:heloisa' },
+    ],
+    done: 'Três focos, três erros de leitura. Nenhum deles era a Névoa sozinha.',
   },
   lia: {
     id: 'lia', title: 'Uma Decisão para Lia', kind: 'paralela',

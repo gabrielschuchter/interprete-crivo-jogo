@@ -3,7 +3,7 @@
  * remapeamento e para que o resto do jogo não conheça teclas.
  */
 export type ActionName =
-  | 'frente' | 'tras' | 'esquerda' | 'direita' | 'correr' | 'esquiva' | 'interagir' | 'ataque' | 'golpe'
+  | 'frente' | 'tras' | 'esquerda' | 'direita' | 'correr' | 'pular' | 'esquiva' | 'interagir' | 'ataque' | 'golpe'
   | 'crivo' | 'trocarCrivo' | 'dica' | 'item' | 'travar' | 'inventario' | 'diario' | 'mapa' | 'habilidades' | 'pausa' | 'camEsq' | 'camDir';
 
 export const DEFAULT_KEYS: Record<ActionName, string[]> = {
@@ -12,7 +12,8 @@ export const DEFAULT_KEYS: Record<ActionName, string[]> = {
   esquerda: ['KeyA', 'ArrowLeft'],
   direita: ['KeyD', 'ArrowRight'],
   correr: ['ShiftLeft', 'ShiftRight'],
-  esquiva: ['Space'],
+  pular: ['Space'],
+  esquiva: ['KeyX'],
   interagir: ['KeyE'],
   ataque: ['Mouse0', 'KeyJ'],
   golpe: ['Mouse2', 'KeyK'],
@@ -32,7 +33,7 @@ export const DEFAULT_KEYS: Record<ActionName, string[]> = {
 
 export const ACTION_LABEL: Record<ActionName, string> = {
   frente: 'Andar para a frente', tras: 'Andar para trás', esquerda: 'Andar para a esquerda', direita: 'Andar para a direita',
-  correr: 'Correr', esquiva: 'Esquiva', interagir: 'Interagir', ataque: 'Golpe leve', golpe: 'Golpe firme',
+  correr: 'Correr', pular: 'Pular', esquiva: 'Esquiva', interagir: 'Interagir', ataque: 'Golpe leve', golpe: 'Golpe firme',
   crivo: 'Habilidade do Crivo', trocarCrivo: 'Alternar habilidade do Crivo', dica: 'Pedir dica ao Crivo', item: 'Usar caldo ou limão',
   travar: 'Travar a mira', inventario: 'Inventário', diario: 'Diário', mapa: 'Mapa', habilidades: 'Habilidades', pausa: 'Pausa',
   camEsq: 'Girar a câmera à esquerda', camDir: 'Girar a câmera à direita',
@@ -41,7 +42,7 @@ export const ACTION_LABEL: Record<ActionName, string> = {
 /** Botões do gamepad no mapa padrão do navegador (W3C "standard"). */
 export const DEFAULT_PAD: Partial<Record<ActionName, number>> = {
   interagir: 0, esquiva: 1, ataque: 2, golpe: 3, trocarCrivo: 4, crivo: 5,
-  mapa: 8, pausa: 9, correr: 10, travar: 11, item: 12, dica: 13, diario: 14, inventario: 15,
+  pular: 6, mapa: 8, pausa: 9, correr: 10, travar: 11, item: 12, dica: 13, diario: 14, inventario: 15,
 };
 
 const PAD_NAMES = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'Voltar', 'Start', 'L3', 'R3', 'Direcional ↑', 'Direcional ↓', 'Direcional ←', 'Direcional →'];
@@ -123,8 +124,11 @@ export class Input {
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     window.addEventListener('mousemove', (e) => {
       if (this.locked) {
-        this.mouseDX += e.movementX;
-        this.mouseDY += e.movementY;
+        // saltos enormes de um único evento (retomada do ponteiro, bug conhecido) giravam a câmera sozinha
+        if (Math.abs(e.movementX) < 280 && Math.abs(e.movementY) < 280) {
+          this.mouseDX += e.movementX;
+          this.mouseDY += e.movementY;
+        }
         if (e.movementX || e.movementY) this.usingPad = false;
       }
     });
@@ -152,8 +156,13 @@ export class Input {
 
   requestLock(): void {
     try {
-      const p = this.canvas.requestPointerLock() as unknown as Promise<void> | undefined;
-      p?.catch?.(() => (this.lockFailed = true));
+      // movimento cru, sem a aceleração do sistema: em tela cheia a aceleração do Windows multiplicava os saltos
+      const req = this.canvas.requestPointerLock as unknown as (o?: { unadjustedMovement?: boolean }) => Promise<void> | undefined;
+      const p = req.call(this.canvas, { unadjustedMovement: true });
+      p?.catch?.(() => {
+        const q = this.canvas.requestPointerLock() as unknown as Promise<void> | undefined;
+        q?.catch?.(() => (this.lockFailed = true));
+      });
     } catch {
       /* navegadores sem pointer lock: a câmera segue pelas teclas Z e C */
       this.lockFailed = true;

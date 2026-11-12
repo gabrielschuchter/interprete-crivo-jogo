@@ -108,7 +108,7 @@ try {
   await p.keyboard.press('KeyK');
   await p.waitForTimeout(200);
   const k = await E(() => ({ e: __game.input.keys.esquiva, g: __game.input.keys.golpe, t: document.querySelector('#toasts').textContent }));
-  ok(k.e[0] === 'KeyK' && k.g.includes('Space') && !k.g.includes('KeyK'), 'tecla em conflito troca de ação, sem ficar perdida');
+  ok(k.e[0] === 'KeyK' && k.g.includes('KeyX') && !k.g.includes('KeyK'), 'tecla em conflito troca de ação, sem ficar perdida');
   ok(/Golpe firme/.test(k.t), 'o conflito é avisado na tela');
   await p.locator('[data-bind=dica]').click({ force: true, noWaitAfter: true });
   await p.mouse.click(450, 20, { button: 'middle' });
@@ -123,7 +123,7 @@ try {
   const pd = await E(() => ({ a: __game.input.pad.ataque, g: __game.input.pad.golpe }));
   ok(pd.a === 3 && pd.g === 2, 'botão do controle remapeado, com troca no conflito');
   await E(() => { __game.resetSettings(); __game.ui.renderBook(); });
-  ok(await E(() => __game.input.keys.esquiva[0] === 'Space' && __game.input.pad.ataque === 2), 'Restaurar padrões desfaz teclas e botões');
+  ok(await E(() => __game.input.keys.esquiva[0] === 'KeyX' && __game.input.pad.ataque === 2), 'Restaurar padrões desfaz teclas e botões');
 
   console.log('Controle: reconexão e zona morta');
   await E(() => __game.closeOverlay());

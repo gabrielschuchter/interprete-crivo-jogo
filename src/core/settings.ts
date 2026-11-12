@@ -85,6 +85,12 @@ export function sanitizeSettings(raw: unknown): Settings {
       if (a in DEFAULT_KEYS && Array.isArray(list)) s.keys[a as ActionName] = list.filter((c): c is string => typeof c === 'string' && c.length < 24).slice(0, 4);
     }
   }
+  // antes do pulo, Espaço era a esquiva: um remapeamento antigo não pode deixar as duas ações na mesma tecla
+  if (s.keys.esquiva?.includes('Space') && !s.keys.pular) {
+    const rest = s.keys.esquiva.filter((c) => c !== 'Space');
+    if (rest.length) s.keys.esquiva = rest;
+    else delete s.keys.esquiva;
+  }
   if (d.pad && typeof d.pad === 'object') {
     s.pad = {};
     for (const [a, b] of Object.entries(d.pad as Record<string, unknown>)) {
