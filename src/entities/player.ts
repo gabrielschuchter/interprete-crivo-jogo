@@ -177,6 +177,11 @@ export class Player {
       const sens = 0.0024 * this.sensitivity;
       this.camYaw -= input.mouseDX * sens;
       this.camPitch += input.mouseDY * sens * (this.invertY ? -1 : 1);
+      // toque: deslocamento em px CSS por quadro; o teto por quadro evita saltos de câmera após travamento
+      const tk = 0.0046 * this.sensitivity;
+      const lim = 0.6;
+      this.camYaw -= THREE.MathUtils.clamp(input.touchLookX * tk, -lim, lim);
+      this.camPitch += THREE.MathUtils.clamp(input.touchLookY * tk * 0.85, -lim, lim) * (this.invertY ? -1 : 1);
       this.camYaw -= input.padLook.x * dt * 2.6 * this.sensitivity;
       // sem pointer lock (touchpad, navegador embutido) a câmera ainda gira pelo teclado
       this.camYaw += ((input.held('camEsq') ? 1 : 0) - (input.held('camDir') ? 1 : 0)) * dt * 2.2 * this.sensitivity;
@@ -192,8 +197,8 @@ export class Player {
       if (input.held('tras')) mz -= 1;
       if (input.held('esquerda')) mx -= 1;
       if (input.held('direita')) mx += 1;
-      mx += input.padMove.x;
-      mz -= input.padMove.y;
+      mx += input.padMove.x + input.touchMove.x;
+      mz -= input.padMove.y + input.touchMove.y;
     }
     const ml = Math.hypot(mx, mz);
     const wish = new THREE.Vector3();
@@ -269,24 +274,26 @@ export class Player {
       const adv = fig.progress > 0.25 && fig.progress < 0.55 ? 2.4 : 0;
       this.vel.set(Math.sin(this.yaw) * adv, 0, Math.cos(this.yaw) * adv);
     } else if (this.hurtT > 0 || this.dead || fig.action === 'die') {
-      this.vel.multiplyScalar(Math.max(0, 1 - dt * 8));
+      this.vel.multiplyScalar(Math.exp(-dt * 8));
     } else if (wish.lengthSq() > 0.01) {
       const target = running ? stats.runSpeed : stats.walkSpeed + 1.2;
+      // magnitude analógica contínua (joystick): de 35% a 100% da velocidade, sem degrau; teclado vale 1
       const analog = Math.min(1, ml);
-      speed = target * (analog < 0.6 ? 0.55 : 1);
+      speed = target * (analog < 1 ? 0.35 + 0.65 * analog : 1);
       const tv = wish.clone().normalize().multiplyScalar(speed);
-      this.vel.lerp(tv, Math.min(1, dt * 12));
+      // amortecimento exponencial: a mesma resposta em 30 ou 144 quadros por segundo
+      this.vel.lerp(tv, 1 - Math.exp(-dt * 12));
       const wantYaw = Math.atan2(wish.x, wish.z);
       let d = wantYaw - this.yaw;
       while (d > Math.PI) d -= Math.PI * 2;
       while (d < -Math.PI) d += Math.PI * 2;
-      this.yaw += d * Math.min(1, dt * 12);
+      this.yaw += d * (1 - Math.exp(-dt * 12));
       if (running) {
         this.vigor = Math.max(0, this.vigor - dt * 7);
         this.vigorDelay = 0.35;
       }
     } else {
-      this.vel.multiplyScalar(Math.max(0, 1 - dt * 12));
+      this.vel.multiplyScalar(Math.exp(-dt * 12));
       if (this.lockTarget?.alive) {
         const wantYaw = Math.atan2(this.lockTarget.pos.x - this.pos.x, this.lockTarget.pos.z - this.pos.z);
         let d = wantYaw - this.yaw;

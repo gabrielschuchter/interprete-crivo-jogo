@@ -33,3 +33,7 @@ Vitest cobre domínio, conteúdo e o caso simulado (27 testes). `tests/e2e/playt
 ## Desempenho
 
 Medido apenas em renderização por software (SwiftShader), a 1280×720: de 10 a 17 quadros por segundo. Isso não diz nada sobre uma placa de vídeo real, e não houve teste em hardware. Há três níveis de qualidade em Ajustes que alteram sombras, densidade de vegetação, resolução interna e pós-processamento. A medição em máquinas reais é a primeira pendência.
+
+## Controles de toque (12/11/2026)
+
+`src/ui/touch.ts` escreve em `Input.touchMove` (eixo do joystick, y positivo para trás), `touchLookX/Y` (px CSS acumulados por quadro) e `touchRun`; o jogador soma esses valores aos do teclado e do gamepad, e os botões injetam as mesmas ações do teclado. Cálculos de movimento: o joystick tem zona morta de 14%, curva ligeira (expoente 1,15) e a base acompanha o dedo quando ele passa do raio, para o ponto neutro não se afastar. A velocidade analógica é contínua, de 35% a 100% do alvo, sem degrau; corrida liga em 94% de deflexão e só desliga abaixo de 80% (histerese). Amortecimento da velocidade, da guinada e da frenagem é exponencial (`1 - exp(-12 dt)`), logo a resposta é a mesma a 30 ou 144 quadros por segundo. O olhar usa 0,0046 rad por px vezes a sensibilidade, com teto de 0,6 rad por quadro contra saltos depois de travamentos. O toque que abre o menu a partir da abertura é engolido por 450 ms, para não virar clique no botão que surge sob o dedo.

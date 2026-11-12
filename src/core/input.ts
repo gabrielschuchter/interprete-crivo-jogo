@@ -58,6 +58,11 @@ export class Input {
   enabled = true;
   /** eixo analógico do gamepad */
   padMove = { x: 0, y: 0 };
+  /** controles de toque: eixo do joystick virtual (y positivo = para trás), olhar em px acumulados no quadro */
+  touchMove = { x: 0, y: 0 };
+  touchLookX = 0;
+  touchLookY = 0;
+  touchRun = false;
   padLook = { x: 0, y: 0 };
   usingPad = false;
   private padPrev: boolean[] = [];
@@ -167,6 +172,7 @@ export class Input {
   }
 
   padRun(): boolean {
+    if (this.touchRun) return true;
     const pads = navigator.getGamepads?.() ?? [];
     const p = pads.find((g) => g && g.connected);
     return !!p && (!!p.buttons[10]?.pressed || (p.buttons[7]?.value ?? 0) > 0.4);
@@ -175,6 +181,8 @@ export class Input {
   endFrame(): void {
     this.mouseDX = 0;
     this.mouseDY = 0;
+    this.touchLookX = 0;
+    this.touchLookY = 0;
     this.pressed.clear();
   }
 }

@@ -9,6 +9,7 @@ import { canUnlock, countItem, isEquipped, xpForLevel, type ProfessionId, type S
 import { HAIRS, SKINS } from '../entities/figure';
 import { icon } from './icons';
 import { CaseView } from './caseview';
+import { TouchControls, isTouchDevice } from './touch';
 
 export type BookTab = 'inventario' | 'habilidades' | 'mapa' | 'diario' | 'codice' | 'config';
 
@@ -67,6 +68,11 @@ export class UI {
   private bannerTimer = 0;
   private titleTimer = 0;
   caseView!: CaseView;
+  touch!: TouchControls;
+  private clickBlockedUntil = 0;
+  swallowClicks(ms: number): void {
+    this.clickBlockedUntil = performance.now() + ms;
+  }
   /** modo de teste: diálogos sem espera */
   instant = false;
 
@@ -109,8 +115,20 @@ export class UI {
       <div id="fade"></div>
       <div id="loading"><div class="word">Interprete<i>.</i></div><div class="bar"><b></b></div><div class="tip"></div></div>`;
     for (const e of Array.from(root.querySelectorAll<HTMLElement>('[id]'))) this.$[e.id] = e;
+    this.touch = new TouchControls(root);
+    if (isTouchDevice()) this.touch.enable();
     for (const e of Array.from(root.querySelectorAll<HTMLElement>('[data-k]'))) this.$['k:' + e.dataset.k] = e;
     document.addEventListener('keydown', (e) => this.onKey(e), true);
+    document.addEventListener(
+      'click',
+      (e) => {
+        if (performance.now() < this.clickBlockedUntil) {
+          e.stopPropagation();
+          e.preventDefault();
+        }
+      },
+      true,
+    );
     this.$.dialogue.addEventListener('click', (e) => {
       if (!(e.target as HTMLElement).closest('.choices')) this.advance();
     });
@@ -119,6 +137,7 @@ export class UI {
   bind(g: Game): void {
     this.g = g;
     this.caseView = new CaseView(this.$.case, g);
+    this.touch.bind(g);
   }
 
   // ---------- utilidades ----------
@@ -134,7 +153,15 @@ export class UI {
     else if (prop === 'html') e.innerHTML = text;
     else e.style[prop] = text;
   }
+  /** verdadeiro em aparelhos de toque: textos de ajuda falam de botões, não de teclas */
+  get isTouch(): boolean {
+    return this.touch.enabled;
+  }
   key(a: ActionName): string {
+    if (this.touch.enabled && !this.g.input.usingPad) {
+      const t: Partial<Record<ActionName, string>> = { interagir: 'Toque', ataque: 'Golpe', golpe: 'Firme', esquiva: 'Esquiva', crivo: 'Pulso', travar: 'Mira', item: 'Item', dica: 'Dica', trocarCrivo: 'Trocar', habilidades: 'Caderno', inventario: 'Caderno', diario: 'Caderno', mapa: 'Caderno' };
+      if (t[a]) return t[a]!;
+    }
     return keyLabel(this.g.input.keys[a][0] ?? '');
   }
   private sfx(n = 'ui'): void {
@@ -280,6 +307,7 @@ export class UI {
     this.set('step', d.step);
     this.$['k:step'].style.display = d.step ? '' : 'none';
     this.set('caldo', String(d.caldo));
+    this.touch.setHud(d);
     this.set('kItem', this.key('item'));
     this.set('kCrivo', this.key('crivo'));
     this.set('ability', d.ability === 'pulso' ? 'Pulso' : 'Lupa');
@@ -298,6 +326,7 @@ export class UI {
     if (this.cache.prompt === key) return;
     this.cache.prompt = key;
     this.show('prompt', !!text);
+    this.touch.setPrompt(text);
     if (text) this.$.prompt.innerHTML = `<span class="kbd">${esc(this.g.input.usingPad ? 'A' : this.key('interagir'))}</span><span>${esc(text)}</span>`;
   }
   marker(x: number, y: number, label: string, on: boolean): void {
@@ -390,6 +419,7 @@ export class UI {
     this.typing = null;
   }
   update(dt: number): void {
+    this.touch.update(dt, this.g.mode);
     if (this.typing) {
       const t = this.typing;
       const before = Math.floor(t.i);
@@ -406,7 +436,7 @@ export class UI {
   splash(on: boolean): void {
     this.show('splash', on);
     if (on)
-      this.$.splash.innerHTML = `<div class="title-block"><div class="label over">Uma aventura de método, dúvida e companhia</div><h1>Interprete<i>.</i></h1><div class="subtitle">O Crivo e a Névoa das Conclusões</div></div><div class="press">Pressione qualquer tecla</div>`;
+      this.$.splash.innerHTML = `<div class="title-block"><div class="label over">Uma aventura de método, dúvida e companhia</div><h1>Interprete<i>.</i></h1><div class="subtitle">O Crivo e a Névoa das Conclusões</div></div><div class="press">${this.touch.enabled ? 'Toque para começar' : 'Pressione qualquer tecla'}</div>`;
   }
   menu(on: boolean): void {
     this.show('menu', on);
@@ -495,11 +525,14 @@ export class UI {
     if (!on) return;
     const p = this.$.pause;
     p.innerHTML = `<div class="card"><div class="label">Pausa</div><h2>O Pátio espera.</h2><p>O caminho é registrado ao descansar, ao mudar de região e a cada objetivo cumprido.</p>
-      <button class="btn primary" data-a="resume" data-focus>Continuar</button><button class="btn" data-a="config">Configurações</button><button class="btn" data-a="title">Registrar e voltar ao título</button></div>`;
+      <button class="btn primary" data-a="resume" data-focus>Continuar</button><button class="btn" data-a="config">Configurações</button>${document.fullscreenEnabled ? '<button class="btn" data-a="full">Tela cheia</button>' : ''}<button class="btn" data-a="title">Registrar e voltar ao título</button></div>`;
     p.querySelectorAll<HTMLElement>('button').forEach((b) =>
       b.addEventListener('click', () => {
         this.sfx('ui');
-        if (b.dataset.a === 'resume') this.g.closeOverlay();
+        if (b.dataset.a === 'full') {
+          if (document.fullscreenElement) void document.exitFullscreen();
+          else void document.documentElement.requestFullscreen?.().catch(() => undefined);
+        } else if (b.dataset.a === 'resume') this.g.closeOverlay();
         else if (b.dataset.a === 'config') {
           this.show('pause', false);
           this.bookFromPause = true;
@@ -884,9 +917,9 @@ export class UI {
     page.innerHTML = `<div class="label">Valem para este navegador</div><h2>Configurações</h2><div class="scroll"><div class="settings">
       <h4>Imagem</h4>${select('quality', 'Qualidade', [['baixa', 'Baixa'], ['media', 'Média'], ['alta', 'Alta']], 'Baixa desliga sombras e brilho')}${range('fov', 'Campo de visão', 48, 75, 1)}${check('grain', 'Grão de filme')}${check('vignette', 'Vinheta')}
       <h4>Som</h4>${range('volGeral', 'Volume geral', 0, 1, 0.05)}${range('volMusica', 'Música', 0, 1, 0.05)}${range('volEfeitos', 'Efeitos', 0, 1, 0.05)}${range('volAmbiente', 'Ambiente', 0, 1, 0.05)}
-      <h4>Jogo</h4>${select('difficulty', 'Encontros', [['padrao', 'Padrão'], ['historia', 'História']], 'História reduz o dano recebido')}${range('sens', 'Sensibilidade da câmera', 0.3, 2.5, 0.1)}${check('invertY', 'Inverter eixo vertical')}${check('hud', 'Mostrar interface durante o jogo')}
+      <h4>Jogo</h4>${select('difficulty', 'Encontros', [['padrao', 'Padrão'], ['historia', 'História']], 'História reduz o dano recebido')}${range('sens', this.touch.enabled ? 'Sensibilidade da câmera e do toque' : 'Sensibilidade da câmera', 0.3, 2.5, 0.1)}${this.touch.enabled ? range('touchScale', 'Tamanho dos botões de toque', 0.8, 1.4, 0.05) : ''}${check('invertY', 'Inverter eixo vertical')}${check('hud', 'Mostrar interface durante o jogo')}
       <h4>Acessibilidade</h4>${select('textScale', 'Tamanho do texto', [['0.9', 'Menor'], ['1', 'Padrão'], ['1.15', 'Maior'], ['1.3', 'Muito maior']])}${check('highContrast', 'Alto contraste')}${check('reduceMotion', 'Reduzir movimento', 'Sem tremor de câmera, clarões e texto animado')}
-      <h4>Controles · clique para remapear</h4></div><div class="keys">${acts.map((a) => `<div class="set"><label>${ACTION_LABEL[a]}</label><button class="btn" data-bind="${a}">${this.rebinding === a ? 'Pressione uma tecla' : this.g.input.keys[a].map(keyLabel).join(' · ') || 'sem tecla'}</button></div>`).join('')}</div>
+      ${this.touch.enabled ? '' : '<h4>Controles · clique para remapear</h4>'}</div><div class="keys">${this.touch.enabled ? '' : acts.map((a) => `<div class="set"><label>${ACTION_LABEL[a]}</label><button class="btn" data-bind="${a}">${this.rebinding === a ? 'Pressione uma tecla' : this.g.input.keys[a].map(keyLabel).join(' · ') || 'sem tecla'}</button></div>`).join('')}</div>
       <div class="settings"><h4>Gamepad</h4><div class="set"><label>Analógicos movem e olham. A interage, B esquiva, X golpe leve, Y golpe firme, RB Crivo, LB alterna, Start pausa.</label></div><div class="set"><button class="btn" data-a="reset">Restaurar padrões</button></div></div></div>`;
     page.querySelectorAll<HTMLElement>('input, select').forEach((x) =>
       x.addEventListener('input', () => {

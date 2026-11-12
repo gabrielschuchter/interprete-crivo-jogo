@@ -89,6 +89,7 @@ export class Game {
   private pulseRing: THREE.Mesh;
   private pulseT = 0;
   private abilityCd = 0;
+  private viewShifted = false;
   private abrigoCd = 0;
   lupaT = 0;
   private tracked: string | null = null;
@@ -134,7 +135,11 @@ export class Game {
       if (this.mode === 'splash') this.openMenu();
     };
     window.addEventListener('keydown', wake);
-    window.addEventListener('pointerdown', wake);
+    window.addEventListener('pointerdown', () => {
+      // o toque que abre o menu não pode virar clique no botão que surge sob o dedo
+      if (this.mode === 'splash') this.ui.swallowClicks(450);
+      wake();
+    });
     this.input.onAnyKey = wake;
     window.addEventListener('error', (e) => this.errors.push(String(e.message)));
     window.addEventListener('unhandledrejection', (e) => this.errors.push(String(e.reason)));
@@ -183,6 +188,7 @@ export class Game {
     document.body.classList.toggle('rm', s.reduceMotion);
     document.body.classList.toggle('nohud', !s.hud);
     document.documentElement.style.setProperty('--ui-scale', String(s.textScale));
+    document.documentElement.style.setProperty('--touch-scale', String(s.touchScale ?? 1));
     for (const a of Object.keys(DEFAULT_KEYS) as ActionName[]) this.input.keys[a] = s.keys[a] ?? [...DEFAULT_KEYS[a]];
     this.applyAudio();
     storeSettings(s);
@@ -1138,6 +1144,14 @@ export class Game {
     const m = this.mode;
     // uma sobreposição ou conversa solta o ponteiro de propósito: ao voltar ao jogo não é perda de foco
     if (m !== 'play') this.wasLocked = false;
+    // retrato: o painel de criação ocupa a metade de baixo, então a cena sobe para o personagem aparecer acima dele
+    const shift = m === 'create' && window.innerHeight > window.innerWidth * 1.1;
+    if (shift !== this.viewShifted) {
+      this.viewShifted = shift;
+      const cam = this.engine.camera;
+      if (shift) cam.setViewOffset(window.innerWidth, window.innerHeight, 0, window.innerHeight * 0.2, window.innerWidth, window.innerHeight);
+      else cam.clearViewOffset();
+    }
     this.ui.update(dt);
     this.audio.update();
 
@@ -1186,12 +1200,13 @@ export class Game {
   private updateTitle(dt: number, m: Mode): void {
     const cam = this.engine.camera;
     if (m === 'create' && this.preview) {
-      const t = new THREE.Vector3(0.55, 1.45, 15.7);
+      const tall = window.innerHeight > window.innerWidth * 1.1;
+      const t = tall ? new THREE.Vector3(0.45, 1.4, 17.8) : new THREE.Vector3(0.55, 1.45, 15.7);
       if (this.snapCreateCam) {
         cam.position.copy(t);
         this.snapCreateCam = false;
       } else cam.position.lerp(t, Math.min(1, dt * 2.5));
-      cam.lookAt(-1.05, 1.0, 13.4);
+      cam.lookAt(tall ? 0.45 : -1.05, 1.0, 13.4);
       this.preview.fig.speed = 0;
       this.preview.fig.update(dt);
       this.crivo.model.root.rotation.y = 0.25;
@@ -1294,7 +1309,7 @@ export class Game {
       this.combatSeen = true;
       if (!s.flags.includes('tutorial_combate')) {
         D.setFlag(s, 'tutorial_combate');
-        this.ui.hint(`${this.ui.key('ataque')} golpe leve · ${this.ui.key('golpe')} golpe firme · ${this.ui.key('esquiva')} esquiva · ${this.ui.key('crivo')} pulso do Crivo · ${this.ui.key('travar')} trava a mira`, 'Encontro', 10);
+        this.ui.hint(this.ui.isTouch ? 'Golpe, Firme, Esquiva, Pulso e Mira ficam nos botões à direita. Esquive no instante em que o aviso vermelho aparece.' : `${this.ui.key('ataque')} golpe leve · ${this.ui.key('golpe')} golpe firme · ${this.ui.key('esquiva')} esquiva · ${this.ui.key('crivo')} pulso do Crivo · ${this.ui.key('travar')} trava a mira`, 'Encontro', 10);
       }
     }
     this.inCombat = fighting;
