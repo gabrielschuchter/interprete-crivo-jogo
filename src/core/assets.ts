@@ -56,7 +56,9 @@ export function fixMaterials(root: THREE.Object3D, character = false): void {
       if (m.transparent || m.alphaTest > 0) {
         m.transparent = false;
         m.depthWrite = true;
-        m.alphaTest = /leaves|leaf/.test(n) ? 0.3 : fino ? 0.45 : character ? 0 : 0.5;
+        // personagens PS2 trazem o recorte decidido no pipeline (extras.ps2_alpha): barra de roupa recortada fica recortada
+        const ps2Mask = m.userData.ps2_alpha === 'MASK';
+        m.alphaTest = /leaves|leaf/.test(n) ? 0.3 : fino ? 0.45 : character && !ps2Mask ? 0 : 0.5;
         if (fino) m.alphaToCoverage = true;
       }
       // kit do forte: no Blender a cor vem de uma mistura por máscara; o glTF só levou a máscara.
@@ -74,7 +76,7 @@ export function fixMaterials(root: THREE.Object3D, character = false): void {
       }
       // cores por vértice dos kits Poly Haven são máscaras de mistura, não cor final
       if (!character) m.vertexColors = false;
-      if (character) {
+      if (character && m.userData.ps2_alpha === undefined) {
         m.metalness = 0;
         m.roughness = /body|skin/.test(n) ? 0.55 : /high-poly|eye/.test(n) ? 0.12 : 0.86;
       }

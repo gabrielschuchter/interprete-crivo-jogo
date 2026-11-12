@@ -2,7 +2,7 @@
 
 Este catálogo foi escrito de memória, em 12/11/2026. O ambiente em nuvem em que foi produzido bloqueia por política de rede todos os hosts de assets testados (Poly Haven e sua API, ambientCG, Quaternius, Sketchfab, Mixamo, Kenney, Freesound, OpenGameArt, jsDelivr, three.js, Zenodo), de modo que nenhum link, licença ou tamanho foi conferido na fonte. Por isso o documento traz nomes de sites e licenças como o autor as conhece, sem URLs profundas nem identificadores de assets específicos, que seriam invenção. Cada linha marcada "conferir" precisa ser aberta por uma pessoa antes de o arquivo entrar no repositório, e só então ganha entrada em `REGISTRO_DE_ASSETS.md`.
 
-A regra do projeto continua valendo: low-poly é proibido. Isso elimina a maior parte do que circula como "assets grátis para jogos" (Kenney, a maioria dos pacotes Quaternius, os kits estilizados do OpenGameArt). Esses acervos só interessam como fonte de animações ou de ideias de organização, nunca como visual.
+Nota de 12/11/2026: este catálogo foi escrito para a meta de ultrarrealismo, que o Gabriel substituiu pela direção PS2 gótica (ver DECISOES_VISUAIS). A frase seguinte não vale mais. Texto original: a regra do projeto continua valendo: low-poly é proibido. Isso elimina a maior parte do que circula como "assets grátis para jogos" (Kenney, a maioria dos pacotes Quaternius, os kits estilizados do OpenGameArt). Esses acervos só interessam como fonte de animações ou de ideias de organização, nunca como visual.
 
 ## Resumo do que existe e do que não existe
 
