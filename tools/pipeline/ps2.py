@@ -306,7 +306,7 @@ def ps2_image(img, size, k):
     yy, xx = np.divmod(np.arange(w * h), w)
     rgb = np.floor(np.clip(rgb + bayer[yy % 4, xx % 4][:, None], 0, 1) * 31 + 0.5) / 31
     px[:, :3] = rgb
-    px[:, 3] = (px[:, 3] > 0.45).astype(np.float32)
+    px[:, 3] = (px[:, 3] > (0.9 if k == 'glasses' else 0.45)).astype(np.float32)  # lente some, armação fica
     img.pixels.foreach_set(px.ravel()); img.update()
 
 for o in sc.objects:
