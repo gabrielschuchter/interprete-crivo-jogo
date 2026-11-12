@@ -19,3 +19,9 @@ Ninguém jogou a campanha do começo ao fim com as mãos, em tempo real. Não ho
 ## Roteiro para a primeira sessão humana
 
 Jogar a chegada e o Bosque sem pressa, anotando onde o caminho não fica claro. Errar de propósito o mecanismo, a alavanca e o braseiro para sentir as consequências. Fazer o caso de Lia duas vezes com decisões diferentes. Enfrentar o Eco e o Veredito em Padrão. Fechar o navegador no meio do Arquivo e continuar. Conferir taxa de quadros nos três níveis de qualidade.
+
+## Auditoria de controles (12/11/2026)
+
+Teste funcional com cliques e teclas reais em Chromium headless (SwiftShader): 59 verificações de interface (atalhos Tab, L, M, P, I e Esc; equipar, guardar e usar itens; aprender habilidades do jogador e do Crivo; acompanhar missão; códice; zoom, arraste e roda do mapa; 15 ajustes e remapeamento com restauração; loja; derrota; pausa, título e continuar) e 15 verificações de ação (câmera pelo teclado, item rápido, esquiva, Pulso e Lupa, dica, descanso, queda, viagem, golpe). Todas passam, sem erro de página nem do jogo.
+
+Correções feitas na rodada: Configurações abertas pela pausa voltam para a pausa; F escolhe o limão de Lind quando o caldo não serve; Z e C giram a câmera quando o mouse não está capturado. Limite: não há teste em GPU real, com som, nem com gamepad físico; sensação de combate e desempenho continuam dependendo de jogo humano.
