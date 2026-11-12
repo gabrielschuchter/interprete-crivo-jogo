@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { M } from '../world/mats';
 
 /**
@@ -22,6 +23,8 @@ export interface FigureOpts {
   beard?: boolean;
   hat?: boolean;
   emblem?: Emblem | null;
+  /** chave em public/models/manifest.json; se existir, o modelo glTF substitui o procedural */
+  model?: string;
 }
 
 export type Emblem = 'caderno' | 'estetoscopio' | 'relogio' | 'oculos' | 'fita';
@@ -57,6 +60,30 @@ function seg(t: number, a: number, b: number): number {
   return ease((t - a) / (b - a));
 }
 
+interface ModelManifest { [key: string]: string }
+let manifest: Promise<ModelManifest> | null = null;
+const modelCache = new Map<string, Promise<GLTF | null>>();
+
+/** Carrega public/models/<arquivo>.glb listado em manifest.json. Sem manifesto ou sem a chave, devolve null e o corpo procedural fica. */
+export function loadExternalModel(key: string): Promise<GLTF | null> {
+  manifest ??= fetch(`${import.meta.env.BASE_URL}models/manifest.json`).then((r) => (r.ok ? (r.json() as Promise<ModelManifest>) : {})).catch(() => ({}));
+  if (!modelCache.has(key)) {
+    modelCache.set(
+      key,
+      manifest.then(async (mf) => {
+        const f = mf[key];
+        if (!f) return null;
+        try {
+          return await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/${f}`);
+        } catch {
+          return null;
+        }
+      }),
+    );
+  }
+  return modelCache.get(key)!;
+}
+
 export class Figure {
   root = new THREE.Group();
   private body = new THREE.Group();
@@ -86,6 +113,7 @@ export class Figure {
   height: number;
   alive = true;
   private mats: THREE.MeshStandardMaterial[] = [];
+  private ext: { mixer: THREE.AnimationMixer; clips: Map<string, THREE.AnimationAction>; cur: string } | null = null;
 
   constructor(o: FigureOpts) {
     const H = (this.height = o.height ?? 1.74);
@@ -106,6 +134,7 @@ export class Figure {
     };
 
     this.root.add(this.body);
+    if (o.model) void this.useModel(o.model);
     this.body.scale.setScalar(k);
     this.hips.position.y = 0.93;
     this.body.add(this.hips);
@@ -370,7 +399,54 @@ export class Figure {
     }
   }
 
+  /** Troca o corpo procedural por um glTF de alta resolução, quando o manifesto o lista. */
+  async useModel(key: string): Promise<boolean> {
+    const m = await loadExternalModel(key);
+    if (!m) return false;
+    const scene = m.scene;
+    const box = new THREE.Box3().setFromObject(scene);
+    const k = this.height / Math.max(0.01, box.max.y - box.min.y);
+    scene.scale.setScalar(k);
+    scene.position.y = -box.min.y * k;
+    scene.traverse((o) => {
+      const me = o as THREE.Mesh;
+      if (me.isMesh) me.castShadow = me.receiveShadow = true;
+    });
+    this.body.visible = false;
+    this.root.add(scene);
+    const mixer = new THREE.AnimationMixer(scene);
+    const clips = new Map<string, THREE.AnimationAction>();
+    for (const c of m.animations) clips.set(c.name.toLowerCase(), mixer.clipAction(c));
+    this.ext = { mixer, clips, cur: '' };
+    return true;
+  }
+
+  private updateExternal(dt: number): void {
+    const e = this.ext!;
+    const act: Record<string, string> = { attack1: 'attack', attack2: 'attack', heavy: 'heavy', dodge: 'dodge', hit: 'hit', die: 'die', interact: 'interact', cast: 'cast', talk: 'talk', sit: 'sit' };
+    let want = this.action !== 'none' ? act[this.action] : this.speed > 3.4 ? 'run' : this.speed > 0.3 ? 'walk' : 'idle';
+    if (!e.clips.has(want)) want = this.speed > 0.3 && e.clips.has('walk') ? 'walk' : 'idle';
+    if (e.cur !== want) {
+      const next = e.clips.get(want);
+      const prev = e.clips.get(e.cur);
+      if (next) {
+        next.reset().fadeIn(0.18).play();
+        if (want === 'die') (next.clampWhenFinished = true), next.setLoop(THREE.LoopOnce, 1);
+        prev?.fadeOut(0.18);
+        e.cur = want;
+      }
+    }
+    e.mixer.update(dt);
+  }
+
   update(dt: number): void {
+    if (this.ext) {
+      if (this.action !== 'none') {
+        this.actionT += dt;
+        if (this.actionT >= ACTION_TIME[this.action] && this.action !== 'die' && this.action !== 'sit') this.action = 'none';
+      }
+      return this.updateExternal(dt);
+    }
     this.phase += dt * (2.2 + this.speed * 1.55);
     this.breathe += dt;
     if (this.action !== 'none') {

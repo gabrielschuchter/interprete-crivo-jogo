@@ -15,3 +15,7 @@ Todo asset do jogo, com origem e licença. Um asset que não está aqui não ent
 As cinco imagens góticas e o atlas visual enviados ao projeto foram usados como referência de direção de arte. Nenhuma delas foi copiada para o repositório nem usada como textura.
 
 Nenhum personagem representa pessoa real. Heloísa, Íris, Anselmo, Dalva, Lia, Noêmia e Tomé são inventados, assim como a Academia.
+
+## Modelos glTF externos (opcional)
+
+O jogo carrega modelos de alta resolução de `public/models/`, listados em `manifest.json` por chave (`player` e o id de cada NPC). Sem entrada, vale o corpo procedural. Nenhum modelo externo está incluído; cada arquivo adicionado entra aqui com origem, autor e licença. Detalhes de formato e nomes de animação em `public/models/LEIA-ME.md`.

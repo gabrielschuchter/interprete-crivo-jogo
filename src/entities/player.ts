@@ -122,6 +122,7 @@ export class Player {
       cape: new THREE.Color(COAT_COLORS[look.coat % COAT_COLORS.length]).lerp(new THREE.Color(BRAND.darkAmaranth), 0.45).multiplyScalar(0.95).getHex(),
       staff: true,
       satchel: true,
+      model: 'player',
     });
     this.light.castShadow = false;
   }

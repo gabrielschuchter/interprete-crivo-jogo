@@ -32,7 +32,7 @@ export class Npc {
   private t = Math.random() * 6;
 
   constructor(public def: NpcDef, x: number, y: number, z: number, yaw: number) {
-    this.fig = new Figure(def.fig);
+    this.fig = new Figure({ ...def.fig, model: def.id });
     this.pos.set(x, y, z);
     this.yaw = this.homeYaw = yaw;
     this.fig.root.position.copy(this.pos);
