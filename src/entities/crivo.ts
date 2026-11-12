@@ -11,8 +11,9 @@ import { BRAND } from '../world/palette';
  */
 export type CrivoMood = 'neutro' | 'curioso' | 'alegre' | 'desconfiado' | 'assustado' | 'cansado' | 'descanso';
 
-const SHELLS = 14;
-const FUR_LEN = 0.05;
+// direção PS2: poucas cascas e tufos grossos, como o pelo dos jogos de 2003 a 2006
+const SHELLS = 8;
+const FUR_LEN = 0.045;
 
 const furVert = /* glsl */ `
   uniform float uShell; uniform float uLen; uniform vec3 uSway;
@@ -38,7 +39,7 @@ const furFrag = /* glsl */ `
   #include <fog_pars_fragment>
   float hash(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
   void main(){
-    vec3 q = vBase * 210.0;
+    vec3 q = vBase * 125.0;
     vec3 cell = floor(q);
     vec3 f = fract(q) - 0.5;
     float rnd = hash(cell);
@@ -85,9 +86,9 @@ export class CrivoModel {
 
   constructor() {
     this.root.add(this.squash);
-    const base = new RoundedBoxGeometry(0.42, 0.13, 0.3, 4, 0.06);
+    const base = new RoundedBoxGeometry(0.42, 0.13, 0.3, 2, 0.06);
     base.translate(0, 0.065, 0);
-    const stem = new THREE.CylinderGeometry(0.088, 0.105, 0.44, 14, 6);
+    const stem = new THREE.CylinderGeometry(0.088, 0.105, 0.44, 9, 4);
     // leve curva em S, como na referência
     const sp = stem.getAttribute('position');
     for (let i = 0; i < sp.count; i++) {
@@ -96,7 +97,7 @@ export class CrivoModel {
     }
     stem.translate(0.01, 0.33, 0);
     stem.computeVertexNormals();
-    const head = new RoundedBoxGeometry(0.46, 0.21, 0.32, 5, 0.085);
+    const head = new RoundedBoxGeometry(0.46, 0.21, 0.32, 2, 0.085);
     head.translate(0, 0.655, 0);
     const prep = (g: THREE.BufferGeometry) => {
       const n = g.index ? g.toNonIndexed() : g;
@@ -107,7 +108,7 @@ export class CrivoModel {
     };
     const body = mergeGeometries([prep(base), prep(stem), prep(head)])!;
     const root = new THREE.Color(BRAND.amaranthDark).multiplyScalar(0.4);
-    const tip = new THREE.Color(BRAND.darkAmaranth).multiplyScalar(0.9);
+    const tip = new THREE.Color(BRAND.darkAmaranth).multiplyScalar(0.55).lerp(new THREE.Color(0x2a2630), 0.3);
     for (let i = 0; i <= SHELLS; i++) {
       const m = new THREE.ShaderMaterial({
         vertexShader: furVert,
@@ -137,19 +138,19 @@ export class CrivoModel {
       this.squash.add(mesh);
     }
     // topo claro e sem pelo
-    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.012, 24), new THREE.MeshStandardMaterial({ color: 0x8c7b79, roughness: 1, envMapIntensity: 0.15 }));
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.012, 10), new THREE.MeshStandardMaterial({ color: 0x8c7b79, roughness: 1, envMapIntensity: 0.15 }));
     top.scale.set(1.2, 1, 0.78);
     top.position.set(0, 0.762 + FUR_LEN * 0.82, 0);
     this.squash.add(top);
     // olho: cápsula branca alongada, pupila vermelha brilhante
     const eyeMat = new THREE.MeshStandardMaterial({ color: 0xece4de, roughness: 0.28, emissive: 0xffffff, emissiveIntensity: 0.05 });
-    this.eye = new THREE.Mesh(new THREE.CapsuleGeometry(0.058, 0.2, 6, 16), eyeMat);
+    this.eye = new THREE.Mesh(new THREE.CapsuleGeometry(0.058, 0.2, 3, 10), eyeMat);
     this.eye.rotation.z = Math.PI / 2;
     this.eye.position.set(-0.035, 0.655, 0.165 + FUR_LEN * 0.4);
     this.eye.scale.set(1, 1, 0.62);
     this.squash.add(this.eye);
     const pupMat = new THREE.MeshStandardMaterial({ color: BRAND.classicCrimson, roughness: 0.12, emissive: BRAND.classicCrimson, emissiveIntensity: 0.55 });
-    this.pupil = new THREE.Mesh(new THREE.SphereGeometry(0.043, 16, 12), pupMat);
+    this.pupil = new THREE.Mesh(new THREE.SphereGeometry(0.043, 9, 7), pupMat);
     this.pupil.position.set(0, 0.655, 0.2 + FUR_LEN * 0.4);
     this.pupil.scale.z = 0.7;
     this.squash.add(this.pupil);
