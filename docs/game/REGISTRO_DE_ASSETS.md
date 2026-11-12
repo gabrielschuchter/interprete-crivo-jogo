@@ -10,6 +10,11 @@ Todo asset do jogo, com origem e licença. Um asset que não está aqui não ent
 | Trilha generativa e efeitos sintetizados (reserva de todo arquivo gravado) | `src/core/audio.ts` | Síntese em WebAudio escrita para este projeto | Autoral, do projeto |
 | Ícones da interface | `src/ui/icons.ts` | Glifos SVG desenhados para este projeto | Autoral, do projeto |
 | Source Serif 4, Inter, IBM Plex Mono | `design/fonts/` | Já presentes no repositório, vindas do design system do Interprete | SIL Open Font License 1.1 |
+| Cinzel 500 e 700 (subconjunto latino) | `design/fonts/cinzel-latin-*.woff2` | Pacote npm `@fontsource/cinzel` 5.3.0, de The Cinzel Project Authors | SIL Open Font License 1.1 |
+| IM Fell English 400, normal e itálico | `design/fonts/im-fell-english-latin-*.woff2` | Pacote npm `@fontsource/im-fell-english` 5.3.0 (tipos Fell digitalizados por Igino Marini) | SIL Open Font License 1.1 |
+| UnifrakturCook 700 | `design/fonts/unifrakturcook-latin-700-normal.woff2` | Pacote npm `@fontsource/unifrakturcook` 5.3.0 (j. 'mach' wust, Peter Wiegel) | SIL Open Font License 1.1 |
+| Textura de comparação PS2 | `public/direcao-de-arte/img/tex-*.webp` | Derivada de `public/textures/cobblestone_embedded_asphalt_diff.webp` (Poly Haven, CC0) por `tools/ps2/degradar-textura.py` | CC0 |
+| Capturas de comparação das predefinições de arte | `public/direcao-de-arte/img/*.jpg`, `docs/game/capturas/ps2/` | Capturas do próprio jogo por `tools/ps2/capturar.mjs` | Autoral, do projeto |
 | Three.js | dependência npm | three.js authors | MIT |
 
 As cinco imagens góticas e o atlas visual enviados ao projeto foram usados como referência de direção de arte. Nenhuma delas foi copiada para o repositório nem usada como textura.

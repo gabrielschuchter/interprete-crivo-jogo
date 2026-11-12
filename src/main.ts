@@ -1,5 +1,7 @@
 import '../design/tokens.css';
+import '../design/ps2/tokens-ps2.css';
 import './ui/game.css';
+import './ui/ps2-ui.css';
 import { Game } from './game';
 import { UI } from './ui/ui';
 

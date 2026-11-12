@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="pt-BR" data-arte="ps2">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Luz de estudo · direção de arte do Interprete RPG</title>
+<meta name="description" content="Direção de arte PS2 gótica e dark academia, design system e protótipo de render do Interprete RPG.">
+<link rel="stylesheet" href="/design/tokens.css">
+<link rel="stylesheet" href="/design/ps2/tokens-ps2.css">
+<link rel="stylesheet" href="/src/ui/arte-pagina.css">
+</head>
+<body>
+<header class="topo">
+  <div class="logo">Interprete<i>.</i></div>
+  <nav aria-label="Seções">
+    <a href="#tese">Tese</a><a href="#referencias">Referências</a><a href="#direcoes">Direções</a><a href="#paleta">Paleta</a><a href="#tipografia">Tipografia</a><a href="#interface">Interface</a><a href="#render">Render</a><a href="#decisoes">Decisões</a>
+  </nav>
+</header>
+
+<main>
+<section class="capa">
+  <p class="rotulo">Direção de arte e design system · 12/11/2026</p>
+  <h1>Luz de estudo</h1>
+  <p class="lead">O mundo é lido pela luz. Só o que está iluminado pode ser examinado, a névoa é tudo o que ainda não foi interpretado, e o jogo acontece na escuridão entre as duas. Estética de RPG sombrio de 2003 a 2006, com vínculo conceitual discreto com a Escola Interprete.</p>
+  <p class="nota">Texto completo em <code>docs/game/DIRECAO_DE_ARTE_PS2.md</code>. Tokens em <code>design/ps2/ps2.tokens.json</code>. O jogo liga o regime PS2 com <code>?arte=ps2</code> na URL.</p>
+</section>
+
+<section id="tese">
+  <h2>Sete leis visuais</h2>
+  <ol class="leis">
+    <li><b>Uma matiz fria por região, uma luz quente por foco.</b> O ambiente tem uma cor só, dessaturada. Lanterna, vela, tocha e janela são as únicas fontes que contam.</li>
+    <li><b>No máximo quatro pontos quentes por quadro.</b> É orçamento de luzes e é o que mantém a imagem escura e legível.</li>
+    <li><b>Só o que está iluminado é interagível.</b> Luz quer dizer examine.</li>
+    <li><b>A névoa é incerteza.</b> Recua por ação do jogador: lupa, mecanismo, missão resolvida.</li>
+    <li><b>Um acento metálico por quadro.</b> Latão ou ouro gasto, nunca os dois.</li>
+    <li><b>A escala se mede em figura humana.</b> Arquitetura maior que o necessário, figura pequena, câmera baixa em monumentos e alta em varandas.</li>
+    <li><b>O vinho é tecido e selo, não luz.</b> Estandarte, manto, capa de livro, lacre.</li>
+  </ol>
+</section>
+
+<section id="referencias">
+  <h2>As onze referências</h2>
+  <p class="sub">As imagens não estão no repositório. Cada cartão diz o que ela ensina e o que não deve ser copiado.</p>
+  <div class="cartoes">
+    <article><h3>1 · Catedral sob lua</h3><p>Monumentalidade por verticalidade e repetição; figura de costas fixa a escala. Não copiar a pedra branca, que apaga a decadência.</p></article>
+    <article><h3>2 · Farol e dois homens</h3><p>Grão, vinheta e um feixe de luz móvel fazem o trabalho da malha. Rosto sem detalhe quando a silhueta carrega. Não adotar o monocromo.</p></article>
+    <article><h3>3 · Rua nevada com lanterna</h3><p>Poça de luz quente em chão frio, duas figuras de costas rumo à profundidade. A regra dos dois acentos e o vínculo com o Crivo.</p></article>
+    <article><h3>4 · Viela de tijolo</h3><p>Arco enquadra profundidade acesa; texto no mundo (cartazes, letreiros) conta história. Fidelidade acima do regime PS2: serve de estudo, não de acabamento.</p></article>
+    <article><h3>5 · Caverna de cogumelos azuis</h3><p>Linhas de fuga para o vazio escuro, ruído de alta frequência nas texturas. A saturação contraria o briefing e precisa ser contida.</p></article>
+    <article><h3>6 · Rosto de pedra no céu</h3><p>Um símbolo único e estranho que domina o quadro. Base da proposta da lua de olho único no Observatório, pendente de aprovação do roteiro.</p></article>
+    <article><h3>7 · Vultos roxos e arco com fogo</h3><p>Figura sem rosto como inimigo legível; tochas de parede como pontos quentes. Violeta reservado ao que ainda não foi interpretado.</p></article>
+    <article><h3>8 · Rampa azul até o castelo</h3><p>Curva em S conduz o olho, tochas marcam o ritmo, a textura pequena ampliada dá o borrão que o briefing pede.</p></article>
+    <article><h3>9 · Pináculos e balaustrada</h3><p>A mais próxima do gótico de PS2: dither, compressão, varanda sobre floresta em bruma. Latão como único metal quente.</p></article>
+    <article><h3>10 · Cavaleiro sentado</h3><p>A pausa como imagem, linguagem dos pontos de descanso. Ruído de textura dá vida à pedra. Ouro só no punho.</p></article>
+    <article><h3>11 · Mulher de vestido preto</h3><p>Modelo de retrato de diálogo: uma luz-chave, expressão contida, fundo arquitetônico em desfoque.</p></article>
+  </div>
+</section>
+
+<section id="direcoes">
+  <h2>Três direções, uma consolidação</h2>
+  <div class="cartoes tres">
+    <article><h3>A · Necrópole fria</h3><p>Monumento abandonado, azul e cinza, acento mínimo. Mais coesa e mais barata, mas perde a marca e cai em monotonia.</p></article>
+    <article><h3>B · Sala de vela</h3><p>Interior de estudo à chama, madeira, papel, vinho. Mais próxima do dark academia e da marca, mas vira sépia genérica fora do Átrio.</p></article>
+    <article><h3>C · Vitral regional</h3><p>Uma cor por região. Memorável e orientadora, mas é o que o briefing pede para evitar e dilui o design system.</p></article>
+  </div>
+  <p class="sub">A consolidação toma de A a estrutura de imagem, de B o hub, as superfícies e a calidez, e de C a matiz por região, dessaturada e só no ambiente. A interface não muda de cor.</p>
+  <div class="comparativo" id="comparativo"></div>
+</section>
+
+<section id="paleta">
+  <h2>Paleta</h2>
+  <p class="sub">Rampas curtas porque a era usava paleta indexada. Cada material escolhe uma rampa e vive nela. Cores de marca preservadas: vinho-2, vinho-3, vinho-4, breu-2, ouro-4, brasa-3 e brasa-4.</p>
+  <div id="rampas"></div>
+  <h3>Assinatura de cada região</h3>
+  <div id="regioes" class="regioes"></div>
+  <h3>Contraste medido do texto sobre o painel</h3>
+  <div id="contrastes" class="contrastes"></div>
+</section>
+
+<section id="tipografia">
+  <h2>Tipografia</h2>
+  <div class="tipo">
+    <div><p class="rotulo">Logotipo · UnifrakturCook 700 · só em tamanho grande</p><p class="t-logo">Interprete<i>.</i></p></div>
+    <div><p class="rotulo">Título · Cinzel 500 e 700 · caixa alta, rastreio 0,06em</p><p class="t-titulo">Átrio dos Caminhos</p></div>
+    <div><p class="rotulo">Texto · Source Serif 4 (marca) · 17 px, entrelinha 1,5, 62 caracteres</p><p class="t-texto">A evidência sugere um efeito pequeno, com muita incerteza. Isso não permite concluir que o tratamento funciona para uma pessoa em particular, e é por isso que o Crivo pergunta de onde vieram os números.</p></div>
+    <div><p class="rotulo">Manuscrito · IM Fell English · epígrafes e margens, nunca em ação</p><p class="t-manu">Nota à margem: o segundo estudo usou outra definição de desfecho.</p></div>
+    <div><p class="rotulo">Dado · IBM Plex Mono (marca) · números, teclas, rótulos</p><p class="t-dado">RISCO ABSOLUTO 12% → 9% · IC 95% 4 a 14 · n = 412</p></div>
+  </div>
+  <p class="sub">Inter deixa de ser usada no jogo, porque um sans moderno em corpo de interface é o que mais denuncia aplicativo. Licenças: SIL OFL 1.1, registradas em REGISTRO_DE_ASSETS.md.</p>
+</section>
+
+<section id="interface">
+  <h2>Interface, componentes e estados</h2>
+  <p class="sub">Cantos retos, moldura dupla com tachas, painéis sólidos com grão, seleção por inversão e marcador, transições em degraus.</p>
+  <div class="kit">
+    <div class="painel">
+      <p class="rotulo">Menu</p>
+      <ul class="menu-lista">
+        <li>Continuar</li><li class="foco">Nova aventura</li><li>Ajustes</li><li>Sair</li>
+      </ul>
+    </div>
+    <div class="painel">
+      <p class="rotulo">Botões e estados</p>
+      <div class="linha"><button class="b">Normal</button><button class="b foco">Foco ou hover</button><button class="b primario">Primário</button><button class="b" disabled>Desabilitado</button></div>
+      <div class="linha"><button class="b">Examinar <span class="tecla">E</span></button><button class="b perigo">Confirmar abandono</button></div>
+      <p class="rotulo">Barras</p>
+      <div class="barra"><b style="width:72%"></b></div>
+      <div class="barra vigor"><b style="width:48%"></b></div>
+    </div>
+    <div class="painel">
+      <p class="rotulo">Inventário</p>
+      <div class="grade">
+        <div class="casa sel">◆</div><div class="casa">◇</div><div class="casa">◇</div><div class="casa vazia"></div><div class="casa vazia"></div>
+        <div class="casa vazia"></div><div class="casa vazia"></div><div class="casa vazia"></div><div class="casa vazia"></div><div class="casa vazia"></div>
+      </div>
+      <p class="legenda">Casa selecionada: contorno de 2 px em brasa. Casa vazia: afundada. Estado nunca só por cor.</p>
+    </div>
+    <div class="painel largo dialogo">
+      <span class="aba">Heloísa</span>
+      <p class="fala">Você chegou tarde. A ponte já recebeu três versões da mesma história, e nenhuma delas cita a fonte.</p>
+      <ul class="escolhas"><li><span class="n">1</span> Pergunto de onde vieram os números. <span class="tag">evidência</span></li><li class="foco"><span class="n">2</span> Prefiro ver a ponte com os meus olhos.</li><li><span class="n">3</span> Volto depois.</li></ul>
+    </div>
+    <div class="painel papel">
+      <p class="rotulo">Moldura de papel</p>
+      <p class="manu">Carta de Dalva, guardada no arquivo. Tinta ferrogálica sobre osso, marginália em itálico, borda em serrilhado de pixel.</p>
+    </div>
+  </div>
+</section>
+
+<section id="render">
+  <h2>Render PS2 no protótipo</h2>
+  <p class="sub">Capturas do jogo com cada predefinição (<code>?arte=off|a|b|c|ps2</code>), em renderização por software. Servem para comparar linguagem de imagem, não desempenho.</p>
+  <div class="abas" role="tablist" id="abas"></div>
+  <figure class="quadro"><img id="quadro" alt="Captura do jogo com a predefinição escolhida" loading="lazy"><figcaption id="legenda-quadro"></figcaption></figure>
+  <div class="tex">
+    <figure><img src="./direcao-de-arte/img/tex-original.webp" alt="Textura de paralelepípedo original" width="256" height="256"><figcaption>Original, 1024 px, WebP (14 kB aqui reduzida a 256)</figcaption></figure>
+    <figure><img src="./direcao-de-arte/img/tex-ps2.webp" alt="Mesma textura degradada para 128 px e 32 cores" width="256" height="256" class="pixel"><figcaption>PS2, 128 px, 32 cores, dither Floyd-Steinberg</figcaption></figure>
+  </div>
+  <table class="tabela">
+    <thead><tr><th>Traço</th><th>Origem</th><th>Decisão</th></tr></thead>
+    <tbody>
+      <tr><td>Resolução interna baixa</td><td>PS2</td><td>448 linhas por padrão</td></tr>
+      <tr><td>Texturas pequenas, filtro bilinear</td><td>PS2</td><td>128 a 256 px, linear</td></tr>
+      <tr><td>Névoa linear colorida</td><td>PS2 e PC</td><td>Adotada</td></tr>
+      <tr><td>Quantização com dither</td><td>PS1 e PS2</td><td>32 níveis, Bayer 4×4</td></tr>
+      <tr><td>Tremor de vértices</td><td>PS1</td><td>Só em meio pixel</td></tr>
+      <tr><td>Textura com distorção afim</td><td>PS1</td><td>Opcional por material</td></tr>
+      <tr><td>Normal, PBR, sombra suave</td><td>Posterior</td><td>Removidos no regime</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="decisoes">
+  <h2>Decisões que dependem do Gabriel</h2>
+  <ol class="leis">
+    <li>Ligar <code>?arte=ps2</code> como padrão (hoje é opt-in, para não alterar capturas e testes das outras frentes).</li>
+    <li>Oferecer em Ajustes "Aparência: Era PS2 ou Limpa", com intensidade ajustável.</li>
+    <li>Aprovar com o roteiro o motivo da lua de olho único no Observatório.</li>
+    <li>Aprovar as quatro famílias tipográficas (licenças já registradas).</li>
+    <li>Coordenar com a frente de personagens a passagem de decimação e de redução de textura.</li>
+  </ol>
+</section>
+</main>
+<footer class="rodape"><span class="rotulo">Interprete RPG · direção de arte v1.0 · tokens em design/ps2</span></footer>
+<script type="module" src="/src/arte-pagina.ts"></script>
+</body>
+</html>
