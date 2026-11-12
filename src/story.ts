@@ -431,7 +431,10 @@ async function tome(g: G): Promise<void> {
 
 function ventoHeard(g: G): void {
   const s = g.state!;
-  if (D.questVar(s, 'vento', 'n') && D.questVar(s, 'vento', 't')) g.advance('vento', 1);
+  if (D.questVar(s, 'vento', 'n') && D.questVar(s, 'vento', 't')) {
+    g.advance('vento', 1);
+    if (D.questVar(s, 'vento', 'vento_terraco') && D.questVar(s, 'vento', 'vento_beco')) g.advance('vento', 2);
+  }
 }
 
 // ---------- páginas ----------
@@ -567,7 +570,10 @@ export async function useProp(g: G, p: PropPlacement): Promise<void> {
 
   if (p.id === 'marco') {
     if (s.flags.includes('ponte_aberta')) return void (await N('O marco arde baixo e constante. Dá para vê-lo do Pátio.'));
-    if (g.step('ponte') < 5) return void (await N('Um marco de pedra com um pavio seco. Parece esperar alguma coisa.'));
+    if (g.step('ponte') < 5 && !s.flags.includes('ponte_estendida')) return void (await N('Um marco de pedra com um pavio seco. Parece esperar alguma coisa.'));
+    // quem atravessou sem a missão registrada não fica preso: ela é iniciada e posta em dia
+    if (g.step('ponte') < 0) g.startQuest('ponte');
+    g.advance('ponte', 5);
     g.flag('ponte_aberta');
     g.region.actions.marco?.();
     g.audio.sfx('sino');
@@ -656,9 +662,11 @@ export async function useProp(g: G, p: PropPlacement): Promise<void> {
 
   if (p.id === 'vento_terraco' || p.id === 'vento_beco') {
     await N(String(data.text));
-    if (g.step('vento') === 1) {
+    // o exame vale em qualquer ponto da missão ativa, inclusive antes de ouvir as duas versões
+    if (g.step('vento') >= 0 && g.step('vento') < 2) {
       D.setQuestVar(s, 'vento', p.id, 1);
-      if (D.questVar(s, 'vento', 'vento_terraco') && D.questVar(s, 'vento', 'vento_beco')) g.advance('vento', 2);
+      if (g.step('vento') === 1 && D.questVar(s, 'vento', 'vento_terraco') && D.questVar(s, 'vento', 'vento_beco')) g.advance('vento', 2);
+      else if (g.step('vento') === 0) g.toast('Anotado. Falta ouvir as duas versões para isso fazer sentido.');
     }
     return;
   }
