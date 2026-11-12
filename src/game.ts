@@ -5,10 +5,12 @@
 import * as THREE from 'three';
 import { Engine } from './core/engine';
 import { Input, DEFAULT_KEYS, type ActionName } from './core/input';
-import { AudioSys } from './core/audio';
+import { AudioSys, type AmbienceLoop, type Surface } from './core/audio';
 import { DEFAULT_SETTINGS, loadSettings, storeSettings, type Settings } from './core/settings';
 import { UI, type BookTab } from './ui/ui';
 import { Player } from './entities/player';
+import { preloadModels } from './entities/figure';
+import { preloadProps } from './core/assets';
 import { Crivo } from './entities/crivo';
 import { Enemy, Projectile, ENEMY_CFG, type EnemyCtx, type EnemyKind } from './entities/enemy';
 import { Npc, NPCS } from './entities/npc';
@@ -22,6 +24,14 @@ import * as D from './domain/state';
 import type { GameState, Look, ProfessionId, Reward, SaveAdapter, SkillDef, Stats } from './domain/state';
 import type { CaseFeedback, ClinicalCase } from './domain/clinical';
 import * as Story from './story';
+
+/** Piso e laços gravados de cada região. */
+const REGION_SOUND: Record<RegionId, { surface: Surface; loops: Partial<Record<AmbienceLoop, number>> }> = {
+  atrio: { surface: 'pedra', loops: { salao: 0.12, poca: 0.35 } },
+  bosque: { surface: 'terra', loops: { agua: 0.4 } },
+  arquivo: { surface: 'pedra', loops: { sala: 0.18 } },
+  observatorio: { surface: 'entulho', loops: { poca: 0.3 } },
+};
 
 export type Mode = 'boot' | 'splash' | 'menu' | 'create' | 'play' | 'dialogue' | 'book' | 'shop' | 'case' | 'pause' | 'dead' | 'transition' | 'ending';
 
@@ -150,7 +160,13 @@ export class Game {
     this.ui.loading(true, 0.1);
     await this.nextPaint();
     const flags = new Set<string>(D.deserialize(this.adapter.load())?.flags ?? []);
-    await this.loadRegion('atrio', flags, (p) => this.ui.loading(true, p));
+    // props, personagens e texturas de alta resolução vêm antes da primeira região
+    await Promise.all([
+      preloadProps((f) => this.ui.loading(true, 0.1 + f * 0.6)),
+      preloadModels(),
+      this.audio.preload(),
+    ]);
+    await this.loadRegion('atrio', flags, (p) => this.ui.loading(true, 0.7 + p * 0.3));
     this.ui.loading(false);
     this.mode = 'splash';
     this.ui.splash(true);
@@ -336,7 +352,8 @@ export class Game {
       sc.remove(this.region.root);
       this.region.root.traverse((o) => {
         const m = o as THREE.Mesh;
-        if (m.geometry) m.geometry.dispose();
+        // geometria de prop é compartilhada com o cache de glTF
+        if (m.geometry && !m.geometry.userData.shared) m.geometry.dispose();
       });
     }
     progress?.(0.3);
@@ -347,6 +364,7 @@ export class Game {
     this.engine.setFogAmount(1);
     this.engine.setLamps(this.region.lamps);
     this.audio.setAmbience(this.region.env.rain, this.region.env.interior ? 0.05 : 0.35);
+    this.audio.setLoops(REGION_SOUND[id].loops);
     progress?.(0.8);
     await this.nextPaint();
     // compila os materiais antes de revelar a cena
@@ -369,7 +387,8 @@ export class Game {
     const st = this.stats;
     p.vigor = st.maxVigor;
     s.hp = Math.min(Math.max(1, s.hp), st.maxHp);
-    p.onStep = () => this.audio.sfx(r.env.rain > 0.5 ? 'passoMolhado' : 'passo', 0.7);
+    const surf = REGION_SOUND[r.id].surface;
+    p.onStep = () => this.audio.step(r.env.rain > 0.5 && !r.env.interior ? 'agua' : surf, 0.7);
     p.onSwing = (h) => this.audio.sfx(h ? 'golpeFirme' : 'golpe');
     p.onDodge = () => this.audio.sfx('esquiva');
     p.onAttack = (e) => this.resolveAttack(e.heavy, e.origin, e.dir, e.range, e.arc);

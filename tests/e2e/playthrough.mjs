@@ -182,7 +182,7 @@ try {
 
   console.log('Registro');
   const before = await E(() => { __game.checkpoint(); return JSON.stringify(__game.state.quests); });
-  await p.reload();
+  await p.reload({ waitUntil: 'domcontentloaded', timeout: 120000 }); // a cena pesada demora a descarregar no WebGL por software
   await waitMode('splash');
   await p.keyboard.press('Enter');
   await waitMode('menu');

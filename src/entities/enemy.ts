@@ -3,6 +3,11 @@ import { smokeSprite, glowSprite } from '../world/textures';
 import { BRAND } from '../world/palette';
 import type { Collider } from '../world/builder';
 import { resolveCircle } from '../world/region';
+import { getGltf, instanceSkinned } from '../core/assets';
+
+/** Corpo de captura de movimento dos espectros maiores (MakeHuman + CMU, ver REGISTRO_DE_ASSETS). */
+const BODY_PATH = 'models/personagens/vulto.glb';
+const _hv = new THREE.Vector3();
 
 /**
  * Criaturas da Névoa. Linguagem fantástica: não representam pessoas, escolas
@@ -101,6 +106,18 @@ export class Enemy {
   /** barra de chefe / avisos na interface */
   reciteProgress = 0;
   onDeath: (() => void) | null = null;
+  /** corpo escaneado e animado; null = espectro procedural */
+  private body: {
+    root: THREE.Object3D;
+    mixer: THREE.AnimationMixer;
+    clips: Map<string, THREE.AnimationClip>;
+    cur: string;
+    act: THREE.AnimationAction | null;
+    mats: THREE.MeshStandardMaterial[];
+    head: THREE.Object3D | null;
+    eyes: THREE.Mesh[];
+    lastState: EnemyState | null;
+  } | null = null;
 
   constructor(
     public kind: EnemyKind,
@@ -320,6 +337,152 @@ export class Enemy {
     this.bar.renderOrder = 20;
     this.root.add(this.bar);
     this.root.position.copy(this.pos);
+    if (kind !== 'fiapo') this.useBody(eyeM);
+  }
+
+  /** Troca o espectro de primitivas por um corpo humano encapuzado, escurecido e com olhos acesos. */
+  private useBody(eyeM: THREE.Material): void {
+    const g = getGltf(BODY_PATH);
+    if (!g || !g.animations.length) return;
+    const c = this.cfg;
+    const root = instanceSkinned(g);
+    const mats: THREE.MeshStandardMaterial[] = [];
+    const tint = new THREE.Color(c.tint);
+    root.traverse((o) => {
+      const me = o as THREE.SkinnedMesh;
+      if (!me.isMesh) return;
+      me.castShadow = true;
+      me.frustumCulled = false;
+      const src = me.material as THREE.MeshStandardMaterial;
+      const m = src.clone();
+      const n = (src.name || me.name).toLowerCase();
+      if (/body|skin|eye|teeth|tongue|brow|lash/.test(n)) {
+        // sob o capuz não há rosto: só escuro
+        m.map = null;
+        m.color.set(0x050407);
+        m.roughness = 1;
+      } else {
+        m.color.multiplyScalar(0.32).lerp(tint, 0.25);
+        m.roughness = 0.95;
+      }
+      m.emissive = tint.clone();
+      m.emissiveIntensity = 0.1;
+      me.material = m;
+      mats.push(m);
+    });
+    const box = new THREE.Box3().setFromObject(root);
+    root.scale.setScalar((1.9 * c.scale) / Math.max(0.1, box.max.y - box.min.y));
+    this.root.add(root);
+    this.rig.visible = false;
+    let head: THREE.Object3D | null = null;
+    root.traverse((o) => {
+      if (!head && /^head$/i.test(o.name)) head = o;
+    });
+    const eyes: THREE.Mesh[] = [];
+    for (let i = 0; i < 2; i++) {
+      const e = new THREE.Mesh(new THREE.SphereGeometry(0.028 * c.scale, 12, 10), eyeM);
+      e.scale.set(1.5, 0.62, 0.8);
+      this.root.add(e);
+      eyes.push(e);
+      this.eyes.push(e);
+    }
+    const clips = new Map(g.animations.map((a) => [a.name, a] as const));
+    this.body = { root, mixer: new THREE.AnimationMixer(root), clips, cur: '', act: null, mats, head, eyes, lastState: null };
+  }
+
+  private playClip(name: string, opts: { once?: boolean; speed?: number; fade?: number } = {}): void {
+    const b = this.body!;
+    const clip = b.clips.get(name) ?? b.clips.get('idle');
+    if (!clip) return;
+    if (b.cur === name && b.act) {
+      if (opts.speed !== undefined) b.act.timeScale = opts.speed;
+      return;
+    }
+    const act = b.mixer.clipAction(clip);
+    act.reset();
+    act.setLoop(opts.once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity);
+    act.clampWhenFinished = !!opts.once;
+    act.timeScale = opts.speed ?? 1;
+    act.play();
+    if (b.act) b.act.crossFadeTo(act, opts.fade ?? 0.22, false);
+    b.act = act;
+    b.cur = name;
+  }
+
+  /** Estado da máquina de combate -> clipe de captura de movimento, com o tempo do clipe casado ao do golpe. */
+  private animateBody(dt: number, eyeHot: boolean): void {
+    const b = this.body!;
+    const c = this.cfg;
+    const st = this.state;
+    const dur = (n: string) => b.clips.get(n)?.duration ?? 1;
+    const changed = st !== b.lastState;
+    b.lastState = st;
+    switch (st) {
+      case 'idle':
+      case 'recover':
+        this.playClip(this.kind === 'veredito' ? 'listen' : 'idle', { speed: 0.8 });
+        break;
+      case 'chase': {
+        const v = this.moveSpeed / Math.max(0.5, c.scale);
+        if (v > 2.2) this.playClip('run', { speed: Math.min(1.4, v / 3.6) });
+        else this.playClip('walk', { speed: Math.max(0.5, Math.min(1.5, v / 1.4)) });
+        break;
+      }
+      case 'windup':
+        // o braço sobe durante a antecipação e desce no golpe: mesmo clipe, sem reinício
+        if (changed) {
+          b.cur = '';
+          this.playClip('heavy', { once: true, speed: (dur('heavy') * 0.42) / c.windup, fade: 0.12 });
+        }
+        break;
+      case 'strike':
+        if (b.act && b.cur === 'heavy') b.act.timeScale = 1.5;
+        else this.playClip('attack', { once: true, speed: 1.3 });
+        break;
+      case 'stunned':
+        if (changed) {
+          b.cur = '';
+          this.playClip('hit', { once: true, speed: 0.9, fade: 0.08 });
+        }
+        break;
+      case 'cast':
+      case 'ring':
+        if (changed) b.cur = '';
+        this.playClip('cast', { once: true, speed: 1.1 });
+        break;
+      case 'recite':
+        this.playClip('talk', { speed: 0.7 });
+        break;
+      case 'dying':
+        if (changed) {
+          b.cur = '';
+          this.playClip('die', { once: true, speed: dur('die') / 1.1, fade: 0.1 });
+          for (const m of b.mats) {
+            m.transparent = true;
+            m.depthWrite = true;
+          }
+        }
+        for (const m of b.mats) m.opacity = Math.max(0, 1 - Math.max(0, this.t - 0.35) / 0.55);
+        break;
+      default:
+        break;
+    }
+    b.mixer.update(dt);
+    const em = this.flash > 0 ? 0xffffff : eyeHot ? BRAND.classicCrimson : c.tint;
+    for (const m of b.mats) {
+      m.emissive.set(em);
+      m.emissiveIntensity = this.flash > 0 ? 1.2 : eyeHot ? 0.25 : 0.1;
+    }
+    // olhos presos ao osso da cabeça, à frente do rosto
+    if (b.head) {
+      // só a cadeia até a cabeça; o resto do esqueleto o renderizador atualiza
+      this.root.updateWorldMatrix(true, false);
+      b.head.updateWorldMatrix(true, false);
+      _hv.setFromMatrixPosition(b.head.matrixWorld);
+      this.root.worldToLocal(_hv);
+      const sc = c.scale;
+      for (let i = 0; i < 2; i++) b.eyes[i].position.set(_hv.x + (i ? 1 : -1) * 0.045 * sc, _hv.y + 0.07 * sc, _hv.z + 0.11 * sc);
+    }
   }
 
   get alive(): boolean {
@@ -624,7 +787,11 @@ export class Enemy {
     this.root.rotation.y = this.yaw;
     this.shroud.scale.set(swell, 1 + (swell - 1) * 0.3, swell);
     this.shroud.rotation.y = Math.sin(time * 0.7 + this.bobPhase) * 0.08;
-    this.poseBody(dt, time, lean, eyeHot > 0);
+    if (this.body) {
+      this.moveSpeed += ((dt > 0 ? this.pos.distanceTo(this.prevPos) / dt : 0) - this.moveSpeed) * Math.min(1, dt * 8);
+      this.prevPos.copy(this.pos);
+      this.animateBody(dt, eyeHot > 0);
+    } else this.poseBody(dt, time, lean, eyeHot > 0);
     const sm = this.shroud.material as THREE.MeshStandardMaterial;
     sm.emissive.set(this.flash > 0 ? 0xffffff : eyeHot ? BRAND.classicCrimson : cfg.tint);
     sm.emissiveIntensity = this.flash > 0 ? 1.4 : eyeHot ? 0.3 : 0.08;

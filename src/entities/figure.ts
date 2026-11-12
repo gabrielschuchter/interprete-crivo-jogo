@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { fixMaterials, instanceSkinned, loadGltf } from '../core/assets';
 import { M } from '../world/mats';
 
 /**
@@ -25,6 +26,10 @@ export interface FigureOpts {
   emblem?: Emblem | null;
   /** chave em public/models/manifest.json; se existir, o modelo glTF substitui o procedural */
   model?: string;
+  /** cor multiplicada sobre a textura de pele / cabelo do modelo externo */
+  tintSkin?: number;
+  tintHair?: number;
+  tintCoat?: number;
 }
 
 export type Emblem = 'caderno' | 'estetoscopio' | 'relogio' | 'oculos' | 'fita';
@@ -70,27 +75,46 @@ function seg(t: number, a: number, b: number): number {
 
 interface ModelManifest { [key: string]: string }
 let manifest: Promise<ModelManifest> | null = null;
-const modelCache = new Map<string, Promise<GLTF | null>>();
 
 /** Carrega public/models/<arquivo>.glb listado em manifest.json. Sem manifesto ou sem a chave, devolve null e o corpo procedural fica. */
 export function loadExternalModel(key: string): Promise<GLTF | null> {
   manifest ??= fetch(`${import.meta.env.BASE_URL}models/manifest.json`).then((r) => (r.ok ? (r.json() as Promise<ModelManifest>) : {})).catch(() => ({}));
-  if (!modelCache.has(key)) {
-    modelCache.set(
-      key,
-      manifest.then(async (mf) => {
-        const f = mf[key];
-        if (!f) return null;
-        try {
-          return await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/${f}`);
-        } catch {
-          return null;
-        }
-      }),
-    );
-  }
-  return modelCache.get(key)!;
+  return manifest.then((mf) => (mf[key] ? loadGltf(`models/${mf[key]}`) : null));
 }
+
+/** Pré-carrega todos os modelos do manifesto (tela de abertura). */
+export async function preloadModels(): Promise<void> {
+  manifest ??= fetch(`${import.meta.env.BASE_URL}models/manifest.json`).then((r) => (r.ok ? (r.json() as Promise<ModelManifest>) : {})).catch(() => ({}));
+  const mf = await manifest;
+  await Promise.all(Object.keys(mf).map((k) => loadExternalModel(k)));
+}
+
+/** Clipes de captura de movimento por ação. Ações sem clipe próprio usam o vizinho mais próximo. */
+const CLIP_FOR: Partial<Record<Action, string[]>> = {
+  attack1: ['attack'],
+  attack2: ['attack'],
+  heavy: ['heavy', 'attack'],
+  dodge: ['dodge'],
+  hit: ['hit'],
+  die: ['die'],
+  interact: ['interact'],
+  cast: ['cast', 'attack'],
+  talk: ['talk'],
+  sit: ['sit'],
+  shrug: ['shrug', 'talk'],
+  think: ['listen', 'idle'],
+  nod: ['talk'],
+  wave: ['wave', 'talk'],
+  point: ['point', 'talk'],
+  cheer: ['wave'],
+  bow: ['interact'],
+  listen: ['listen', 'idle'],
+};
+/** ações que acompanham a duração de jogo (golpes): o clipe é acelerado para caber em ACTION_TIME */
+const TIMED: Action[] = ['attack1', 'attack2', 'heavy', 'dodge', 'hit', 'interact', 'cast'];
+const LOOPED = new Set(['idle', 'walk', 'run', 'talk', 'listen']);
+
+const _v = new THREE.Vector3();
 
 export class Figure {
   root = new THREE.Group();
@@ -130,9 +154,19 @@ export class Figure {
   private idleT = 0;
   private lastYaw = 0;
   private bank = 0;
-  private ext: { mixer: THREE.AnimationMixer; clips: Map<string, THREE.AnimationAction>; cur: string } | null = null;
+  private ext: { mixer: THREE.AnimationMixer; clips: Map<string, THREE.AnimationAction>; cur: string; curAction: Action; hand: THREE.Object3D | null; head: THREE.Object3D | null } | null = null;
+  private opts: FigureOpts;
+  private lastActT = 0;
+  /** cabeça do modelo externo (para olhos, marcadores) */
+  get headBone(): THREE.Object3D | null {
+    return this.ext?.head ?? null;
+  }
+  get external(): boolean {
+    return !!this.ext;
+  }
 
   constructor(o: FigureOpts) {
+    this.opts = o;
     const H = (this.height = o.height ?? 1.74);
     const k = H / 1.74;
     const w = o.build ?? 1;
@@ -423,42 +457,97 @@ export class Figure {
 
   /** Troca o corpo procedural por um glTF de alta resolução, quando o manifesto o lista. */
   async useModel(key: string): Promise<boolean> {
-    const m = await loadExternalModel(key);
-    if (!m) return false;
-    const scene = m.scene;
+    const g = await loadExternalModel(key);
+    if (!g) return false;
+    const scene = instanceSkinned(g);
+    fixMaterials(scene, true);
+    // materiais próprios por instância: tom de pele, cabelo e brilho de dano não vazam entre figuras
+    const o = this.opts;
+    scene.traverse((ob) => {
+      const me = ob as THREE.Mesh;
+      if (!me.isMesh) return;
+      me.frustumCulled = false;
+      const m = (me.material as THREE.MeshStandardMaterial).clone();
+      me.material = m;
+      const n = m.name.toLowerCase();
+      if (o.tintSkin !== undefined && /body|skin/.test(n)) m.color.set(o.tintSkin);
+      else if (o.tintHair !== undefined && /hair|bob0|braid|bun|short0|long0|afro|ponytail|eyebrow/.test(n)) m.color.set(o.tintHair);
+      else if (o.tintCoat !== undefined && !/body|skin|high-poly|eye|shoe|teeth|tongue/.test(n)) m.color.set(o.tintCoat);
+      this.mats.push(m);
+    });
     const box = new THREE.Box3().setFromObject(scene);
     const k = this.height / Math.max(0.01, box.max.y - box.min.y);
     scene.scale.setScalar(k);
     scene.position.y = -box.min.y * k;
-    scene.traverse((o) => {
-      const me = o as THREE.Mesh;
-      if (me.isMesh) me.castShadow = me.receiveShadow = true;
-    });
     this.body.visible = false;
     this.root.add(scene);
     const mixer = new THREE.AnimationMixer(scene);
     const clips = new Map<string, THREE.AnimationAction>();
-    for (const c of m.animations) clips.set(c.name.toLowerCase(), mixer.clipAction(c));
-    this.ext = { mixer, clips, cur: '' };
+    for (const c of g.animations) {
+      const a = mixer.clipAction(c);
+      if (!LOOPED.has(c.name.toLowerCase())) {
+        a.setLoop(THREE.LoopOnce, 1);
+        a.clampWhenFinished = true;
+      }
+      clips.set(c.name.toLowerCase(), a);
+    }
+    const hand = scene.getObjectByName('RightHand') ?? null;
+    const head = scene.getObjectByName('Head') ?? null;
+    if (this.staff) {
+      // o cajado sai do antebraço procedural e passa a seguir a mão do esqueleto
+      this.root.add(this.staff);
+      this.staff.position.set(0.2, 0.9, 0.1);
+    }
+    this.ext = { mixer, clips, cur: '', curAction: 'none', hand, head };
     return true;
+  }
+
+  private pickClip(names: string[] | undefined): string | null {
+    for (const n of names ?? []) if (this.ext!.clips.has(n)) return n;
+    return null;
   }
 
   private updateExternal(dt: number): void {
     const e = this.ext!;
-    const act: Record<string, string> = { attack1: 'attack', attack2: 'attack', heavy: 'heavy', dodge: 'dodge', hit: 'hit', die: 'die', interact: 'interact', cast: 'cast', talk: 'talk', sit: 'sit' };
-    let want = this.action !== 'none' ? act[this.action] : this.speed > 3.4 ? 'run' : this.speed > 0.3 ? 'walk' : 'idle';
+    let want: string;
+    let timed = false;
+    if (this.action !== 'none') {
+      want = this.pickClip(CLIP_FOR[this.action]) ?? 'idle';
+      timed = TIMED.includes(this.action);
+    } else want = this.speed > 3.4 ? 'run' : this.speed > 0.3 ? 'walk' : 'idle';
     if (!e.clips.has(want)) want = this.speed > 0.3 && e.clips.has('walk') ? 'walk' : 'idle';
-    if (e.cur !== want) {
+    const restart = this.action !== 'none' && (this.action !== e.curAction || this.actionT < this.lastActT);
+    this.lastActT = this.actionT;
+    if (e.cur !== want || restart) {
       const next = e.clips.get(want);
       const prev = e.clips.get(e.cur);
       if (next) {
-        next.reset().fadeIn(0.18).play();
-        if (want === 'die') (next.clampWhenFinished = true), next.setLoop(THREE.LoopOnce, 1);
-        prev?.fadeOut(0.18);
+        const fade = timed ? 0.08 : 0.22;
+        next.reset();
+        next.setEffectiveWeight(1);
+        if (timed) next.setEffectiveTimeScale(next.getClip().duration / ACTION_TIME[this.action]);
+        else next.setEffectiveTimeScale(1);
+        next.fadeIn(fade).play();
+        if (prev && prev !== next) prev.fadeOut(fade);
         e.cur = want;
       }
     }
+    e.curAction = this.action;
+    const cur = e.clips.get(e.cur);
+    if (cur && (e.cur === 'walk' || e.cur === 'run')) {
+      // passada acompanha a velocidade real (clipes: andar ~1,4 m/s, correr ~3,6 m/s)
+      const nat = e.cur === 'walk' ? 1.4 : 3.6;
+      cur.setEffectiveTimeScale(THREE.MathUtils.clamp(this.speed / nat, 0.55, 1.7));
+    }
     e.mixer.update(dt);
+    if (this.staff && e.hand) {
+      // cajado na mão direita, quase vertical; inclina no golpe
+      e.hand.getWorldPosition(_v);
+      this.root.worldToLocal(_v);
+      this.staff.position.copy(_v);
+      const swing = this.action === 'attack1' || this.action === 'attack2' || this.action === 'heavy' ? Math.sin(this.progress * Math.PI) * 1.1 : 0;
+      this.staff.rotation.set(0.12 + swing, 0, this.action === 'attack2' ? -swing * 0.4 : swing * 0.25);
+    }
   }
 
   update(dt: number): void {

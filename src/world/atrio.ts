@@ -68,10 +68,14 @@ export function buildAtrio(ctx: RegionCtx): BuiltRegion {
   K.building(b, 0, -37, 0, 34, 22, 14, { floors: 3, bays: 8, windowW: 1.5, windowH: 4.4, lit: 0.55, mat: M.stoneDark, buttresses: true, seed: 5, roof: 'gable' });
   // portal principal com portas de madeira (entrada do Observatório)
   K.archWall(b, 0, -29.6, 0, 9, 9.5, 1.2, 4.6, 4.2, M.stone, TH, false);
-  b.box(M.woodDark, 4.6, 8.2, 0.3, 0, TH, -29.9, 0);
+  const doorScan = b.place('large_castle_door', 0, TH, -29.85, 0, { size: 4.7, fit: 'w', collide: false });
+  if (doorScan) b.box(M.woodDark, 4.6, 8.2, 0.2, 0, TH, -30.1, 0);
+  else b.box(M.woodDark, 4.6, 8.2, 0.3, 0, TH, -29.9, 0);
   for (const sgn of [-1, 1]) {
-    b.add(new THREE.BoxGeometry(0.1, 7.4, 0.36), M.iron, trs(sgn * 0.02, TH + 3.7, -29.86));
-    for (const yy of [1.2, 3.4, 5.4]) b.add(new THREE.BoxGeometry(2.0, 0.12, 0.36), M.iron, trs(sgn * 1.2, TH + yy, -29.86));
+    if (!doorScan) {
+      b.add(new THREE.BoxGeometry(0.1, 7.4, 0.36), M.iron, trs(sgn * 0.02, TH + 3.7, -29.86));
+      for (const yy of [1.2, 3.4, 5.4]) b.add(new THREE.BoxGeometry(2.0, 0.12, 0.36), M.iron, trs(sgn * 1.2, TH + yy, -29.86));
+    }
     K.wallLantern(b, sgn * 3.6, TH + 3.6, -29.0, 0);
   }
   K.gothicWindow(b, 0, 14.2, -29.96, 0, 4.2, 7.2, true);
@@ -94,7 +98,8 @@ export function buildAtrio(ctx: RegionCtx): BuiltRegion {
   b.box(M.stoneDark, 1, 11, 9, -32.5, 0, 0, 0, true);
   b.box(M.stoneDark, 9, 1, 10, -28, 10.5, 0, 0);
   K.archWall(b, -31.6, 0, Math.PI / 2, 8, 9, 0.8, 3.2, 3.2, M.stone, 0, false);
-  b.box(M.woodDark, 0.25, 6, 3.2, -31.9, 0, 0, 0);
+  if (!b.place('large_castle_door', -31.75, 0, 0, Math.PI / 2, { size: 3.3, fit: 'w', collide: false })) b.box(M.woodDark, 0.25, 6, 3.2, -31.9, 0, 0, 0);
+  else b.box(M.woodDark, 0.2, 6, 3.2, -32.05, 0, 0, 0);
   K.wallLantern(b, -27, 3.3, -3.95, 0);
   K.wallLantern(b, -27, 3.3, 3.95, Math.PI);
 
@@ -125,9 +130,11 @@ export function buildAtrio(ctx: RegionCtx): BuiltRegion {
   K.building(b, 7.5, 37, -Math.PI / 2, 14, 12, 8, { floors: 2, bays: 3, lit: 0.6, mat: M.brick, seed: 24, roof: 'flat', windowH: 2.6 });
   K.archWall(b, 0, 44.6, 0, 7, 8, 1.2, 3.0, 2.6, M.brick, 0, true);
   // portão de ferro fechado: saída para a área de membros
-  for (let i = -5; i <= 5; i++) b.add(new THREE.CylinderGeometry(0.03, 0.03, 4.6, 14), M.iron, trs(i * 0.27, 2.3, 44.6));
-  b.add(new THREE.BoxGeometry(3.0, 0.1, 0.1), M.iron, trs(0, 1.1, 44.6));
-  b.add(new THREE.BoxGeometry(3.0, 0.1, 0.1), M.iron, trs(0, 3.4, 44.6));
+  if (!b.place('large_iron_gate', 0, 0, 44.6, Math.PI, { size: 3.05, fit: 'w', collide: false })) {
+    for (let i = -5; i <= 5; i++) b.add(new THREE.CylinderGeometry(0.03, 0.03, 4.6, 14), M.iron, trs(i * 0.27, 2.3, 44.6));
+    b.add(new THREE.BoxGeometry(3.0, 0.1, 0.1), M.iron, trs(0, 1.1, 44.6));
+    b.add(new THREE.BoxGeometry(3.0, 0.1, 0.1), M.iron, trs(0, 3.4, 44.6));
+  }
   b.collideBox(0, 44.6, 1.6, 0.3, 0, -1, 6, 'portao_sul');
   K.lampPost(b, -2.7, 30, 3.4);
   K.lampPost(b, 2.7, 38, 3.4);
@@ -137,6 +144,16 @@ export function buildAtrio(ctx: RegionCtx): BuiltRegion {
   b.add(new THREE.BoxGeometry(3.0, 0.08, 1.6), M.wine, trs(2.6, 2.5, 33.2, 0, 0.12));
   for (const sx of [-1.3, 1.3]) b.add(new THREE.CylinderGeometry(0.04, 0.04, 2.5, 16), M.woodDark, trs(2.6 + sx, 1.25, 33.6));
   K.candle(b, 2.0, 0.9, 33.2, true);
+  // mercadoria da artesã: lâminas e ferramentas de verdade, deitadas na banca
+  b.place('antique_estoc', 2.95, 0.9, 33.0, 0.08, { tilt: -Math.PI / 2, collide: false });
+  b.place('wooden_handle_saber', 2.7, 0.9, 33.45, -0.1, { tilt: -Math.PI / 2, roll: Math.PI / 2, collide: false });
+  b.place('ornate_medieval_dagger', 1.55, 0.9, 33.35, 0.5, { tilt: -Math.PI / 2, collide: false });
+  b.place('ornate_medieval_mace', 3.55, 0.9, 33.5, Math.PI / 2 - 0.3, { tilt: -Math.PI / 2, collide: false });
+  b.place('pocket_watch', 2.25, 0.9, 33.55, 0.6, { tilt: -Math.PI / 2, collide: false });
+  b.place('vintage_pocket_watch', 2.4, 0.9, 32.85, -0.4, { tilt: -Math.PI / 2, collide: false });
+  b.place('ornate_war_hammer', 3.88, 0, 32.55, 0.3, { collide: false });
+  b.place('wooden_axe', 1.15, 0, 32.6, -0.4, { roll: 0.32, collide: false });
+  b.place('wooden_stool_01', 2.9, 0, 34.3, 0.4, { collide: 'circle' });
   K.crate(b, 3.2, 31.6, 0.7, 0.3);
   K.barrel(b, -3.0, 34.5);
   K.barrel(b, -2.9, 35.4);
@@ -171,7 +188,9 @@ export function buildAtrio(ctx: RegionCtx): BuiltRegion {
   const planter = (x: number, z: number, seed: number, autumn: boolean) => {
     b.add(new THREE.CylinderGeometry(1.7, 1.8, 0.5, 22), M.stoneDark, trs(x, 0.25, z), false);
     b.add(new THREE.CylinderGeometry(1.5, 1.5, 0.52, 22), M.ground, trs(x, 0.26, z), false);
-    K.tree(b, x, z, 8.5 + (seed % 3), seed, autumn ? M.leavesAutumn : M.leaves, 0.3);
+    // jacarandá escaneado; na qualidade baixa fica a árvore procedural
+    if (ctx.quality === 'baixa' || !b.place('jacaranda_tree', x, 0.5, z, seed * 1.3, { size: 10 + (seed % 3) * 0.8, collide: false }))
+      K.tree(b, x, z, 8.5 + (seed % 3), seed, autumn ? M.leavesAutumn : M.leaves, 0.3);
     b.collideCircle(x, z, 1.8, -1, 1.2);
     K.bush(b, x + 0.9, z + 0.5, 0.9, M.ivy, 0.45);
     K.bush(b, x - 0.8, z - 0.6, 0.8, M.ivy, 0.45);
@@ -180,6 +199,20 @@ export function buildAtrio(ctx: RegionCtx): BuiltRegion {
   planter(14.5, -13, 4, false);
   planter(-14.5, 14.5, 5, false);
   planter(14.5, 14.5, 6, true);
+  // estátuas ao pé da escadaria e floreiras junto aos arcos
+  for (const sgn of [-1, 1]) {
+    b.box(M.stoneDark, 1.9, 0.9, 1.9, sgn * 6.9, 0, -3.9, 0, true);
+    b.add(new THREE.BoxGeometry(2.04, 0.12, 2.04), M.carved, trs(sgn * 6.9, 0.96, -3.9));
+    b.place('gothic_statue', sgn * 6.9, 1.02, -3.9, sgn * -0.25, { size: 2.5, collide: false });
+    for (const zz of [-9.6, 9.6]) {
+      if (b.place('planter_box_03', sgn * 19.6, 0, zz, Math.PI / 2, { size: 1.6, fit: 'w' })) {
+        for (let k = 0; k < 3; k++) b.place('grass_medium_01', sgn * 19.6, 0.7, zz - 0.45 + k * 0.45, k * 2.1, { part: `grass_medium_01_geonodes_mid_${'abc'[k]}_LOD1`, size: 0.5, collide: false });
+      }
+    }
+  }
+  // barris e caixotes junto ao muro do beco
+  b.place('wooden_barrels_01', -17.5, 0, 19.6, 0.2, { size: 4.0, fit: 'w', pad: -0.4 });
+
   // hera e estandartes nos grandes arcos
   K.ivy(b, -21.45, 0, -5.4, Math.PI / 2, 4, 9, 2);
   K.ivy(b, -21.45, 0, 5.6, Math.PI / 2, 3.4, 7, 3);

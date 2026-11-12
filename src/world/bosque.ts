@@ -32,6 +32,10 @@ export function buildBosque(ctx: RegionCtx): BuiltRegion {
     b.box(M.stone, 1.2 + (i % 3) * 0.5, 9, 3.5, 26.1, -9.2 - (i % 2), z, 0.1 * (i % 3));
     b.box(M.stone, 1.2 + ((i + 1) % 3) * 0.5, 9, 3.5, 37.9, -9.4 - ((i + 1) % 2), z + 3, -0.1 * (i % 3));
   }
+  // faces de rocha escaneadas nas duas paredes do abismo, abaixo da borda
+  b.place('coastal_cliff_01', 27.6, -10.2, 0, Math.PI / 2, { collide: false });
+  b.place('coastal_cliff_01', 36.4, -10.6, 3, -Math.PI / 2, { collide: false });
+  b.place('coast_rocks_01', 32, -8.6, -4, 0.4, { size: 15, fit: 'w', collide: false });
   // névoa no fundo do abismo
   const mist = new THREE.Mesh(new THREE.PlaneGeometry(14, 62), new THREE.MeshBasicMaterial({ color: 0x1f5a4c, transparent: true, opacity: 0.85, fog: true }));
   mist.rotation.x = -Math.PI / 2;
@@ -224,11 +228,14 @@ export function buildBosque(ctx: RegionCtx): BuiltRegion {
   b.box(M.stoneDark, 3, 4.2, 1, 57, 0, 13.5, 0, true);
   K.ivy(b, 54, 0, 21.95, Math.PI, 5, 3.6, 21);
   const gate = new THREE.Group();
-  for (let i = -5; i <= 5; i++) {
-    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 3.2, 14), M.iron);
-    bar.position.set(54 + i * 0.27, 1.6, 13.5);
-    gate.add(bar);
-  }
+  const gateScan = b.place('large_iron_gate', 54, 0, 13.5, 0, { size: 3.1, fit: 'w', collide: false });
+  if (gateScan) gate.add(gateScan);
+  else
+    for (let i = -5; i <= 5; i++) {
+      const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 3.2, 14), M.iron);
+      bar.position.set(54 + i * 0.27, 1.6, 13.5);
+      gate.add(bar);
+    }
   const gopen = ctx.flags.has('aberta:grade_bosque');
   gate.visible = !gopen;
   b.dynamic(gate);
@@ -239,6 +246,8 @@ export function buildBosque(ctx: RegionCtx): BuiltRegion {
   };
   K.crate(b, 47.5, -9.4, 0.8, 0.4);
   K.barrel(b, 46.4, -8.2);
+  b.place('wooden_barrels_01', 51, -13.2, 0, -0.3, { size: 4.0, fit: 'w', pad: -0.4 });
+  b.place('wooden_axe', 47.2, 0, -10.1, 0.5, { roll: 0.35, collide: false });
   K.lampPost(b, 46, 2.8, 3.6);
   K.archWall(b, 57, -14, 0.5, 8, 7.5, 1.3, 3.6, 2.8, M.stoneDark);
 
@@ -254,8 +263,48 @@ export function buildBosque(ctx: RegionCtx): BuiltRegion {
     s = (s * 16807) % 2147483647;
     return (s & 0xffff) / 0xffff;
   };
-  const dense = ctx.quality === 'baixa' ? 34 : 58;
+  // ---------- chão de floresta escaneado: jacarandás, raízes, pedras, cascas e capim ----------
+  const taken: Array<[number, number, number]> = [];
+  const free = (x: number, z: number, r: number) => taken.every(([tx, tz, tr]) => Math.hypot(x - tx, z - tz) > r + tr);
+  const hi = ctx.quality !== 'baixa';
+  if (hi) {
+    for (const [x, z, h, rot] of [[-4.5, -27.5, 13, 0.3], [-35, -17, 12, 2.1], [-30, 19, 11.5, 4.0], [52.5, -24.5, 12, 1.2], [6, 17, 12.5, 5.2]] as Array<[number, number, number, number]>) {
+      if (b.place('jacaranda_tree', x, -0.1, z, rot, { size: h, collide: false })) {
+        b.collideCircle(x, z, 0.7, -1, 6);
+        taken.push([x, z, 5]);
+      }
+    }
+  }
+  for (const [x, z, rot, k] of [[-27.5, -4.6, 0.6, 1], [-12, 11.6, 2.4, 1], [2.6, 8.4, 4.1, 2], [12.4, -9.6, 1.2, 1], [-36, 7.5, 3.3, 2], [-18, -10.5, 5.5, 1], [48.4, 8.4, 1.7, 2], [-41, -12, 0.2, 1]] as Array<[number, number, number, number]>) {
+    if (distToPath(x, z) < 3) continue;
+    b.place(k === 1 ? 'root_cluster_01' : 'root_cluster_02', x, -0.05, z, rot, { collide: k === 1 ? 'box' : false, pad: -0.6 });
+    taken.push([x, z, k === 1 ? 2.4 : 1.6]);
+  }
+  for (const [x, z, rot, sc] of [[-21, -7.5, 0.4, 2.4], [-33.5, -4.5, 2.2, 1.8], [-14, 6.4, 1.1, 1.6], [4.4, -9.5, 3.5, 2.2], [15.6, 9.6, 0.8, 2.6], [-38, 12, 4.4, 2.0], [55.5, 6.5, 2.7, 2.2], [44.5, 20, 1.9, 1.8], [-1, -7.4, 5.1, 1.4]] as Array<[number, number, number, number]>) {
+    if (distToPath(x, z) < 2.6) continue;
+    b.place('namaqualand_boulder_02', x, -0.1, z, rot, { size: sc, fit: 'w', pad: -0.25 });
+    taken.push([x, z, sc / 2]);
+  }
+  if (hi) {
+    const barks = ['a', 'b', 'c', 'd'];
+    for (let i = 0; i < 26; i++) {
+      const x = -43 + rnd() * 65;
+      const z = -27 + rnd() * 54;
+      if (distToPath(x, z) < 1.9 || !free(x, z, 0.6)) continue;
+      b.place('bark_debris_01', x, 0, z, rnd() * 6.3, { part: `bark_debris_01_${barks[i % 4]}_LOD1`, collide: false });
+    }
+    const grass = ['large_a', 'large_b', 'large_c', 'mid_a', 'mid_b', 'mid_c', 'small_a', 'small_b'];
+    for (let i = 0; i < 170; i++) {
+      const east = rnd() < 0.2;
+      const x = east ? 41 + rnd() * 19 : -43 + rnd() * 65;
+      const z = -27 + rnd() * 54;
+      if (distToPath(x, z) < 1.85 || !free(x, z, 0.2) || (x > 22 && x < 41)) continue;
+      b.place('grass_medium_01', x, -0.02, z, rnd() * 6.3, { part: `grass_medium_01_geonodes_${grass[i % grass.length]}_LOD1`, size: 0.45 + rnd() * 0.5, collide: false });
+    }
+  }
+  const dense = ctx.quality === 'baixa' ? 34 : 50;
   let placed = 0;
+  let extraJac = 0;
   for (let i = 0; i < 600 && placed < dense; i++) {
     const east = rnd() < 0.22;
     const x = east ? 41 + rnd() * 19 : -43 + rnd() * 65;
@@ -266,7 +315,15 @@ export function buildBosque(ctx: RegionCtx): BuiltRegion {
     if (x > 22 && x < 41) continue;
     if (x > 48 && x < 60 && z > 12 && z < 24) continue;
     if (Math.hypot(x - 13, z - 5.6) < 2.5 || Math.hypot(x - 47, z + 8.6) < 3) continue;
-    K.tree(b, x, z, 8 + rnd() * 6, 100 + i, rnd() < 0.2 ? M.leavesAutumn : M.leaves, 0.3 + rnd() * 0.22);
+    if (!free(x, z, 1.2)) continue;
+    const th = 8 + rnd() * 6;
+    const autumn = rnd() < 0.2;
+    // perto da trilha, onde o olhar alcança, a árvore é o jacarandá escaneado; ao fundo, na bruma, a procedural
+    if (hi && extraJac < 7 && distToPath(x, z) < 8 && free(x, z, 3.5) && b.place('jacaranda_tree', x, -0.1, z, rnd() * 6.3, { size: th, collide: false })) {
+      b.collideCircle(x, z, 0.6, -1, 6);
+      taken.push([x, z, 3.5]);
+      extraJac++;
+    } else K.tree(b, x, z, th, 100 + i, autumn ? M.leavesAutumn : M.leaves, 0.3 + rnd() * 0.22);
     if (rnd() < 0.7) K.bush(b, x + 1.2 * (rnd() - 0.5) * 2, z + 1.2 * (rnd() - 0.5) * 2, 0.8 + rnd() * 0.7, M.ivy);
     placed++;
   }
@@ -282,6 +339,16 @@ export function buildBosque(ctx: RegionCtx): BuiltRegion {
     h.position.set(-40 + rnd() * 62, 1 + rnd() * 2, -26 + rnd() * 52);
     b.dynamic(h);
   }
+
+  // muralha de uma fortaleza antiga além da mata, ao norte e a leste (chão de fundo, não caminhável)
+  b.add(new THREE.PlaneGeometry(130, 18), M.ground, trs(14, -0.02, -40, 0, -Math.PI / 2), false, false);
+  b.add(new THREE.PlaneGeometry(14, 62), M.ground, trs(71, -0.02, 0, 0, -Math.PI / 2), false, false);
+  for (let i = 0; i < 5; i++) b.place('modular_fort_01', -40 + i * 14.5, -0.4, -37.5, 0, { part: i === 2 ? 'modular_fort_01_wall_thin_gate_01' : 'modular_fort_01_wall_thick_straight_0' + (1 + (i % 2)), size: 14.5, fit: 'w', collide: false });
+  b.place('modular_fort_01', 33, -1, -40, 0, { part: 'modular_fort_01_tower_round', size: 12, fit: 'w', collide: false });
+  b.place('modular_fort_01', 66, -0.4, -38, 0.3, { part: 'modular_fort_01_wall_walkway_straight_01', size: 14.5, fit: 'w', collide: false });
+  b.place('modular_fort_01', 71, -0.4, -20, Math.PI / 2, { part: 'modular_fort_01_wall_thick_straight_02', size: 14.5, fit: 'w', collide: false });
+  b.place('modular_fort_01', 71, -0.4, 0, Math.PI / 2, { part: 'modular_fort_01_wall_thick_straight_01', size: 14.5, fit: 'w', collide: false });
+  b.place('modular_fort_01', 71, -0.4, 20, Math.PI / 2, { part: 'modular_fort_01_wall_thick_straight_02', size: 14.5, fit: 'w', collide: false });
 
   // limites
   b.collideBox(8, -30, 56, 0.6, 0, -1, 30);
