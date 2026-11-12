@@ -1,0 +1,45 @@
+{
+  "$descricao": "Tokens da direção de arte PS2 gótica + dark academia do Interprete RPG. Fonte da verdade da camada de jogo; design/ps2/tokens-ps2.css é gerado por tools/ps2/gerar-tokens.mjs. Cores de marca continuam vindo de design/tokens.json.",
+  "rampas": {
+    "breu":     ["#0b0709", "#120910", "#1b0f1a", "#2a1426", "#3d2338"],
+    "vinho":    ["#1d0316", "#410230", "#6e0f29", "#8c1535", "#b23a52"],
+    "ardosia":  ["#0d1117", "#171d27", "#252d3a", "#3a4556", "#5b6779", "#8993a3"],
+    "musgo":    ["#0c130d", "#16241a", "#25382a", "#3b5236", "#5d7650"],
+    "madeira":  ["#0f0a07", "#1e140d", "#33221a", "#4d3424", "#6f4d33"],
+    "osso":     ["#2b241c", "#5a4b3a", "#8f7c5e", "#c2ad86", "#e3d5b3", "#f0e5d3"],
+    "ouro":     ["#3a2e15", "#6a5528", "#8f7438", "#bd9a61", "#d9bd82"],
+    "brasa":    ["#5a2a12", "#a85a1c", "#e5a85f", "#ffc27a"],
+    "espectro": ["#241c3d", "#3b2f63", "#5b4a8a", "#8c7bb8"]
+  },
+  "regioes": {
+    "atrio":        { "bruma": "#222b3c", "luzFria": "#7f95c0", "luzQuente": "#e5a85f", "rampa": "ardosia" },
+    "bosque":       { "bruma": "#142a26", "luzFria": "#5d9483", "luzQuente": "#d9bd82", "rampa": "musgo" },
+    "arquivo":      { "bruma": "#0e0a08", "luzFria": "#6f86c0", "luzQuente": "#ffc27a", "rampa": "madeira" },
+    "observatorio": { "bruma": "#131a2c", "luzFria": "#6478b0", "luzQuente": "#e5a85f", "rampa": "ardosia" },
+    "veredito":     { "bruma": "#1d0316", "luzFria": "#8c7bb8", "luzQuente": "#b23a52", "rampa": "vinho" }
+  },
+  "tipografia": {
+    "familias": {
+      "logotipo": "UnifrakturCook",
+      "titulo": "Cinzel",
+      "texto": "Source Serif 4",
+      "manuscrito": "IM Fell English",
+      "dado": "IBM Plex Mono"
+    },
+    "escala": { "rotulo": 12, "legenda": 14, "corpo": 17, "subtitulo": 22, "titulo": 32, "regiao": 56, "logotipo": 96 },
+    "entrelinha": { "corpo": 1.5, "titulo": 1.15 },
+    "rastreio": { "rotulo": "0.18em", "titulo": "0.06em" }
+  },
+  "forma": { "raio": 0, "filete": 2, "moldura": "2px escuro por fora, 1px ouro por dentro", "espaco": [4, 8, 12, 16, 24, 32, 48] },
+  "movimento": { "rapido": 100, "base": 160, "lento": 320, "curva": "steps(4, end)", "passosFade": 6 },
+  "render": {
+    "$nota": "textura = filtro de ampliação das texturas (linear é o borrão de 2003, nearest é a escada de 1996); ampliacao = como o buffer baixo sobe para a tela (suave imita a TV, pixel imita emulador em escala inteira). alturaInterna em pixels de linha; niveis = degraus por canal antes do dither; snap = fator da grade de vértices (0 desliga, 1 = 1 px interno, 2 = meio pixel).",
+    "padrao": "ps2",
+    "predefinicoes": {
+      "a": { "nome": "Necrópole fria", "alturaInterna": 360, "niveis": 20, "dither": 1.0, "snap": 1, "saturacao": 0.55, "crush": 0.03, "nevoaPerto": 0.04, "nevoaLonge": 1.7, "bloom": 0.35, "textura": "nearest", "ampliacao": "pixel" },
+      "b": { "nome": "Sala de vela", "alturaInterna": 448, "niveis": 32, "dither": 0.8, "snap": 2, "saturacao": 0.85, "crush": 0.02, "nevoaPerto": 0.08, "nevoaLonge": 2.4, "bloom": 0.5, "textura": "linear", "ampliacao": "suave" },
+      "c": { "nome": "Vitral regional", "alturaInterna": 360, "niveis": 24, "dither": 0.9, "snap": 1, "saturacao": 1.15, "crush": 0.04, "nevoaPerto": 0.05, "nevoaLonge": 2.0, "bloom": 0.6, "textura": "linear", "ampliacao": "pixel" },
+      "ps2": { "nome": "Luz de estudo", "alturaInterna": 448, "niveis": 32, "dither": 0.7, "snap": 2, "saturacao": 0.72, "crush": 0.03, "nevoaPerto": 0.06, "nevoaLonge": 2.0, "bloom": 0.4, "textura": "linear", "ampliacao": "suave" }
+    }
+  }
+}

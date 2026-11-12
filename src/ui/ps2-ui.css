@@ -1,0 +1,121 @@
+/*
+ * Interface na direção PS2 gótica. Só vale com <html data-arte="ps2"> (ativado por ?arte=).
+ * Regras: cantos retos, moldura dupla (filete escuro por fora, fio de ouro por dentro),
+ * painéis sólidos sem desfoque, transições em degraus, seleção por marcador e inversão.
+ * Fonte dos valores: design/ps2/ps2.tokens.json. Detalhes e porquês em docs/game/DIRECAO_DE_ARTE_PS2.md.
+ */
+html[data-arte] {
+  --g-panel: #140a12;
+  --g-panel-solid: #140a12;
+  --g-raise: #2a1426;
+  --g-line: #5a4a2c;
+  --g-line-strong: #bd9a61;
+  --ps2-frame: 0 0 0 2px var(--breu-1), inset 0 0 0 1px var(--ouro-3), inset 0 0 0 3px var(--breu-1), inset 0 0 0 4px rgba(189, 154, 97, 0.25);
+}
+html[data-arte] body { font-family: var(--ps2-font-texto); font-size: calc(var(--ps2-size-corpo) * var(--ui-scale)); line-height: var(--ps2-lh-corpo); }
+html[data-arte] * { border-radius: 0 !important; backdrop-filter: none !important; }
+html[data-arte] .label,
+html[data-arte] .kbd { font-family: var(--ps2-font-dado); letter-spacing: var(--ps2-tracking-rotulo); }
+
+/* títulos: inscrição romana; o logotipo é a única peça em fraktur */
+html[data-arte] .serif,
+html[data-arte] #hud .who .nm,
+html[data-arte] #dialogue .who .nm,
+html[data-arte] #book .page > h2,
+html[data-arte] #create h2,
+html[data-arte] #menu .side .btn { font-family: var(--ps2-font-titulo); font-weight: 700; letter-spacing: var(--ps2-tracking-titulo); }
+html[data-arte] .title-block h1,
+html[data-arte] #menu .side h1,
+html[data-arte] #loading .word,
+html[data-arte] #book nav .brand { font-family: var(--ps2-font-logotipo); font-weight: 700; letter-spacing: 0; }
+html[data-arte] .title-block h1 i,
+html[data-arte] #menu .side h1 i,
+html[data-arte] #loading .word i,
+html[data-arte] #book nav .brand i { color: var(--brasa-4); text-shadow: 0 0 6px var(--brasa-3); }
+html[data-arte] .title-block .subtitle,
+html[data-arte] #menu .side .subtitle,
+html[data-arte] #create .prof-line { font-family: var(--ps2-font-manuscrito); font-style: italic; }
+html[data-arte] #region-title .name { font-family: var(--ps2-font-titulo); font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; font-size: calc(var(--ps2-size-regiao) * var(--ui-scale)); text-shadow: 2px 2px 0 var(--breu-1); }
+
+/* texto corrido: serifa da marca, nunca sans */
+html[data-arte] #dialogue .txt,
+html[data-arte] .btn,
+html[data-arte] #book nav button,
+html[data-arte] input[type='text'],
+html[data-arte] #hud .objective .s { font-family: var(--ps2-font-texto); }
+
+/* molduras */
+html[data-arte] #dialogue,
+html[data-arte] #book .frame,
+html[data-arte] #menu .side,
+html[data-arte] #create .side,
+html[data-arte] #hud .objective .s,
+html[data-arte] #hud .coins,
+html[data-arte] .slot { border: 0; background: var(--g-panel); box-shadow: var(--ps2-frame); }
+html[data-arte] #hud .objective .s,
+html[data-arte] #hud .coins { border-left: 0; border-right: 0; }
+html[data-arte] #book { background: rgba(11, 7, 9, 0.88); }
+html[data-arte] #book nav { border-right: 2px solid var(--breu-1); box-shadow: 1px 0 0 var(--ouro-2); }
+html[data-arte] #menu .side { box-shadow: 2px 0 0 var(--breu-1), 3px 0 0 var(--ouro-3); }
+
+/* botões e seleção: marcador à esquerda e inversão, sem hover suave */
+html[data-arte] .btn { border: 0; box-shadow: inset 0 0 0 1px var(--ouro-2), 0 0 0 1px var(--breu-1); transition: none; }
+html[data-arte] .btn:hover,
+html[data-arte] .btn:focus-visible { background: var(--ouro-4); color: var(--breu-1); box-shadow: inset 0 0 0 1px var(--ouro-5), 0 0 0 1px var(--breu-1); }
+html[data-arte] .btn:focus-visible { outline: 2px solid var(--osso-6); outline-offset: 2px; }
+html[data-arte] .btn.primary { background: var(--vinho-3); box-shadow: inset 0 0 0 1px var(--vinho-5), 0 0 0 1px var(--breu-1); }
+html[data-arte] .btn.primary:hover,
+html[data-arte] .btn.primary:focus-visible { background: var(--vinho-4); color: var(--osso-6); }
+html[data-arte] .btn:active { transform: translate(1px, 1px); }
+html[data-arte] #menu .side .btn { box-shadow: none; border-bottom: 1px solid var(--ouro-1); }
+html[data-arte] #menu .side .btn:hover,
+html[data-arte] #menu .side .btn:focus-visible { padding-left: 26px; background: transparent; color: var(--ouro-5); box-shadow: none; position: relative; }
+html[data-arte] #menu .side .btn:hover::before,
+html[data-arte] #menu .side .btn:focus-visible::before { content: ''; position: absolute; left: 6px; top: 50%; width: 8px; height: 8px; margin-top: -4px; background: var(--brasa-3); transform: rotate(45deg); }
+html[data-arte] #menu .side .btn small { font-family: var(--ps2-font-texto); }
+html[data-arte] #book nav button { border-left: 4px solid transparent; font-family: var(--ps2-font-titulo); letter-spacing: 0.05em; transition: none; }
+html[data-arte] #book nav button:hover,
+html[data-arte] #book nav button:focus-visible { background: var(--g-raise); }
+html[data-arte] #book nav button[aria-current='true'] { border-left-color: var(--brasa-3); background: var(--vinho-1); color: var(--osso-6); }
+html[data-arte] .chip { border: 0; box-shadow: inset 0 0 0 1px var(--ouro-2); }
+html[data-arte] .chip[aria-pressed='true'] { background: var(--vinho-1); box-shadow: inset 0 0 0 1px var(--ouro-4); }
+
+/* HUD */
+html[data-arte] .slot svg { stroke-width: 2.2; shape-rendering: crispEdges; }
+html[data-arte] .slot .cd { background: rgba(11, 7, 9, 0.88); }
+html[data-arte] #hud .objective .q { font-family: var(--ps2-font-titulo); letter-spacing: 0.06em; }
+html[data-arte] #hud .objective .s,
+html[data-arte] #hud .coins { padding: 8px 12px; }
+html[data-arte] #dialogue .next { animation: ps2-blink 1s steps(2, end) infinite; }
+@keyframes ps2-blink { 50% { opacity: 0; } }
+html[data-arte] #splash .press { animation: ps2-blink 1.4s steps(2, end) infinite; font-family: var(--ps2-font-dado); }
+
+/* véu de transição em degraus, como o corte de uma cena de 2004 */
+html[data-arte] #fade { transition: opacity 0.48s steps(6, end); }
+html[data-arte] #loading .bar { height: 6px; background: var(--breu-1); box-shadow: 0 0 0 1px var(--ouro-2); }
+html[data-arte] #loading .bar b { background: var(--ouro-4); transition: width 0.3s steps(8, end); }
+
+/* grão de papel sobre painéis, em opacidade baixa (token da marca) */
+html[data-arte] #dialogue,
+html[data-arte] #book .frame,
+html[data-arte] #menu .side,
+html[data-arte] #create .side {
+  background:
+    linear-gradient(var(--ouro-4), var(--ouro-4)) 0 0 / 8px 8px no-repeat,
+    linear-gradient(var(--ouro-4), var(--ouro-4)) 100% 0 / 8px 8px no-repeat,
+    linear-gradient(var(--ouro-4), var(--ouro-4)) 0 100% / 8px 8px no-repeat,
+    linear-gradient(var(--ouro-4), var(--ouro-4)) 100% 100% / 8px 8px no-repeat,
+    var(--texture-grain), var(--g-panel);
+}
+/* casas de inventário e atalhos: chanfro de 1px, claro em cima e escuro embaixo */
+html[data-arte] .cell,
+html[data-arte] .slot { border: 0; background: var(--breu-2); box-shadow: inset 1px 1px 0 var(--ouro-1), inset -1px -1px 0 var(--breu-1), 0 0 0 1px var(--breu-1); }
+html[data-arte] .cell.empty { box-shadow: inset 1px 1px 0 var(--breu-1), inset -1px -1px 0 var(--breu-4); background: var(--breu-1); }
+html[data-arte] .cell:hover,
+html[data-arte] .cell:focus-visible { box-shadow: inset 0 0 0 2px var(--ouro-4), 0 0 0 1px var(--breu-1); }
+html[data-arte] .cell[aria-pressed='true'] { background: var(--vinho-1); box-shadow: inset 0 0 0 2px var(--brasa-3), 0 0 0 1px var(--breu-1); }
+/* barras em calha de pedra, com tampas de ouro e degraus visíveis */
+html[data-arte] .meter { border: 0; background: var(--breu-1); box-shadow: 0 0 0 1px var(--ouro-2), inset 0 1px 0 var(--breu-4); height: 12px; }
+html[data-arte] .meter b { background: repeating-linear-gradient(90deg, var(--vinho-4) 0 6px, var(--vinho-3) 6px 8px); transition: width 0.18s steps(6, end); }
+html[data-arte] .meter.vigor { height: 7px; }
+html[data-arte] .meter.vigor b { background: repeating-linear-gradient(90deg, var(--ouro-4) 0 6px, var(--ouro-3) 6px 8px); }

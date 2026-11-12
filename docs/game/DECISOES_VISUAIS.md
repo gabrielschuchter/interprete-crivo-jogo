@@ -1,5 +1,7 @@
 # Decisões visuais
 
+> Atualização de 12/11/2026: a direção de arte vigente é a de `DIRECAO_DE_ARTE_PS2.md` (PS2 gótico, dark academia). A regra anterior contra low-poly e a busca de realismo foram revogadas pelo Gabriel; o que este arquivo diz sobre luz por região, o Crivo e os limites conhecidos continua válido, e o que ele diz sobre estética geral foi superado pelo novo documento.
+
 A direção é Dark Academia gótica com luz de fim de tarde: pedra fria e céu azul-meia-noite contra janelas e lanternas em âmbar, com o carmesim da marca guardado para perigo e ação principal. Onde o atlas visual e o documento-matriz divergiam, valeu o atlas, por ser a diretriz mais recente; os requisitos funcionais do documento-matriz foram mantidos. A paleta de mundo está registrada em `DESIGN.md`, na seção "Extensão de jogo".
 
 Cada região tem uma assinatura de luz que acompanha a história. O Pátio começa ao entardecer e termina ao amanhecer, depois do Veredito. O Bosque é esmeralda e névoa baixa. O Arquivo é interior, com luz de vela e rastros de tinta que só a lupa do Crivo revela. O Observatório é noite aberta, e a névoa engrossa de forma visível se o jogador gastou o óleo no braseiro errado.

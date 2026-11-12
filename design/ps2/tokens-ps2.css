@@ -1,0 +1,99 @@
+/* Interprete RPG · camada PS2. Gerado de ps2.tokens.json por tools/ps2/gerar-tokens.mjs. Não editar à mão. */
+
+@font-face{font-family:"UnifrakturCook";src:url("../fonts/unifrakturcook-latin-700-normal.woff2") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Cinzel";src:url("../fonts/cinzel-latin-500-normal.woff2") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Cinzel";src:url("../fonts/cinzel-latin-700-normal.woff2") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"IM Fell English";src:url("../fonts/im-fell-english-latin-400-normal.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"IM Fell English";src:url("../fonts/im-fell-english-latin-400-italic.woff2") format("woff2");font-weight:400;font-style:italic;font-display:swap}
+
+:root{
+  --breu-1:#0b0709;
+  --breu-2:#120910;
+  --breu-3:#1b0f1a;
+  --breu-4:#2a1426;
+  --breu-5:#3d2338;
+  --vinho-1:#1d0316;
+  --vinho-2:#410230;
+  --vinho-3:#6e0f29;
+  --vinho-4:#8c1535;
+  --vinho-5:#b23a52;
+  --ardosia-1:#0d1117;
+  --ardosia-2:#171d27;
+  --ardosia-3:#252d3a;
+  --ardosia-4:#3a4556;
+  --ardosia-5:#5b6779;
+  --ardosia-6:#8993a3;
+  --musgo-1:#0c130d;
+  --musgo-2:#16241a;
+  --musgo-3:#25382a;
+  --musgo-4:#3b5236;
+  --musgo-5:#5d7650;
+  --madeira-1:#0f0a07;
+  --madeira-2:#1e140d;
+  --madeira-3:#33221a;
+  --madeira-4:#4d3424;
+  --madeira-5:#6f4d33;
+  --osso-1:#2b241c;
+  --osso-2:#5a4b3a;
+  --osso-3:#8f7c5e;
+  --osso-4:#c2ad86;
+  --osso-5:#e3d5b3;
+  --osso-6:#f0e5d3;
+  --ouro-1:#3a2e15;
+  --ouro-2:#6a5528;
+  --ouro-3:#8f7438;
+  --ouro-4:#bd9a61;
+  --ouro-5:#d9bd82;
+  --brasa-1:#5a2a12;
+  --brasa-2:#a85a1c;
+  --brasa-3:#e5a85f;
+  --brasa-4:#ffc27a;
+  --espectro-1:#241c3d;
+  --espectro-2:#3b2f63;
+  --espectro-3:#5b4a8a;
+  --espectro-4:#8c7bb8;
+  --reg-atrio-bruma:#222b3c;
+  --reg-atrio-fria:#7f95c0;
+  --reg-atrio-quente:#e5a85f;
+  --reg-bosque-bruma:#142a26;
+  --reg-bosque-fria:#5d9483;
+  --reg-bosque-quente:#d9bd82;
+  --reg-arquivo-bruma:#0e0a08;
+  --reg-arquivo-fria:#6f86c0;
+  --reg-arquivo-quente:#ffc27a;
+  --reg-observatorio-bruma:#131a2c;
+  --reg-observatorio-fria:#6478b0;
+  --reg-observatorio-quente:#e5a85f;
+  --reg-veredito-bruma:#1d0316;
+  --reg-veredito-fria:#8c7bb8;
+  --reg-veredito-quente:#b23a52;
+  --ps2-font-logotipo:"UnifrakturCook", "Cinzel", serif;
+  --ps2-font-titulo:"Cinzel", "Source Serif 4", Georgia, serif;
+  --ps2-font-texto:"Source Serif 4", Georgia, serif;
+  --ps2-font-manuscrito:"IM Fell English", "Source Serif 4", Georgia, serif;
+  --ps2-font-dado:"IBM Plex Mono", Menlo, Consolas, monospace;
+  --ps2-size-rotulo:12px;
+  --ps2-size-legenda:14px;
+  --ps2-size-corpo:17px;
+  --ps2-size-subtitulo:22px;
+  --ps2-size-titulo:32px;
+  --ps2-size-regiao:56px;
+  --ps2-size-logotipo:96px;
+  --ps2-lh-corpo:1.5;
+  --ps2-lh-titulo:1.15;
+  --ps2-tracking-rotulo:0.18em;
+  --ps2-tracking-titulo:0.06em;
+  --ps2-radius:0px;
+  --ps2-filete:2px;
+  --ps2-space-1:4px;
+  --ps2-space-2:8px;
+  --ps2-space-3:12px;
+  --ps2-space-4:16px;
+  --ps2-space-5:24px;
+  --ps2-space-6:32px;
+  --ps2-space-7:48px;
+  --ps2-dur-rapido:100ms;
+  --ps2-dur-base:160ms;
+  --ps2-dur-lento:320ms;
+  --ps2-ease:steps(4, end);
+}

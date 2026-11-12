@@ -5,6 +5,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import type { LampSpec } from '../world/builder';
+import { Ps2, readPs2Preset } from './ps2';
 
 export interface EnvPreset {
   skyTop: number;
@@ -122,6 +123,8 @@ export class Engine {
   private rainMat: THREE.ShaderMaterial;
   env!: EnvPreset;
   quality: Quality = 'alta';
+  /** camada PS2 opt-in (?arte=); null mantém o visual atual */
+  ps2: Ps2 | null = null;
   time = 0;
   shake = 0;
   flash = 0;
@@ -204,6 +207,14 @@ export class Engine {
     this.grade = new ShaderPass(GradeShader);
     this.composer.addPass(new OutputPass());
     this.composer.addPass(this.grade);
+    const art = readPs2Preset();
+    if (art) {
+      this.ps2 = new Ps2(art);
+      this.composer.addPass(this.ps2.pass);
+      this.scene.fog = new THREE.Fog(0x101418, 6, 70);
+      canvas.style.imageRendering = art.ampliacao === 'pixel' ? 'pixelated' : 'auto';
+      document.documentElement.dataset.arte = 'ps2';
+    }
     this.resize();
     window.addEventListener('resize', () => this.resize());
   }
@@ -212,8 +223,10 @@ export class Engine {
     const w = window.innerWidth;
     const h = window.innerHeight;
     const scale = this.quality === 'baixa' ? 0.66 : this.quality === 'media' ? 0.85 : 1;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5) * scale);
+    const ratio = this.ps2 ? this.ps2.pixelRatioFor(h) : Math.min(window.devicePixelRatio, 1.5) * scale;
+    this.renderer.setPixelRatio(ratio);
     this.renderer.setSize(w, h, false);
+    this.ps2?.setSize(w, h, ratio);
     this.renderer.domElement.style.width = '100%';
     this.renderer.domElement.style.height = '100%';
     this.composer.setPixelRatio(this.renderer.getPixelRatio());
@@ -247,15 +260,18 @@ export class Engine {
     u.uAmount.value = e.cloudAmount;
     u.uMoonOn.value = e.moon === false ? 0 : 1;
     u.uMoon.value.set(...e.sunDir).normalize();
-    (this.scene.fog as THREE.FogExp2).color.set(e.fog);
-    (this.scene.fog as THREE.FogExp2).density = e.fogDensity * this.fogAmount;
+    if (this.ps2) this.ps2.fog(this.scene, e.fog, e.fogDensity * this.fogAmount);
+    else {
+      (this.scene.fog as THREE.FogExp2).color.set(e.fog);
+      (this.scene.fog as THREE.FogExp2).density = e.fogDensity * this.fogAmount;
+    }
     this.hemi.color.set(e.hemiSky);
     this.hemi.groundColor.set(e.hemiGround);
     this.hemi.intensity = e.hemiIntensity;
     this.sun.color.set(e.sun);
     this.sun.intensity = e.sunIntensity;
     this.renderer.toneMappingExposure = e.exposure;
-    this.bloom.strength = e.bloom;
+    this.bloom.strength = this.ps2 ? Math.min(e.bloom, this.ps2.preset.bloom) : e.bloom;
     this.rainMat.uniforms.uAmount.value = e.rain;
     this.rain.visible = e.rain > 0.01;
     this.sky.visible = !e.interior;
@@ -275,7 +291,8 @@ export class Engine {
 
   setFogAmount(a: number): void {
     this.fogAmount = a;
-    if (this.env) (this.scene.fog as THREE.FogExp2).density = this.env.fogDensity * a;
+    if (this.env && this.ps2) this.ps2.fog(this.scene, this.env.fog, this.env.fogDensity * a);
+    else if (this.env) (this.scene.fog as THREE.FogExp2).density = this.env.fogDensity * a;
   }
 
   setLamps(lamps: LampSpec[]): void {
@@ -344,7 +361,8 @@ export class Engine {
       this.camera.position.y += (Math.random() - 0.5) * this.shake * 0.25;
       this.shake = Math.max(0, this.shake - dt * 2.2);
     } else this.shake = 0;
-    if (this.quality === 'baixa') this.renderer.render(this.scene, this.camera);
+    this.ps2?.sweep(this.scene, dt);
+    if (this.quality === 'baixa' && !this.ps2) this.renderer.render(this.scene, this.camera);
     else this.composer.render(dt);
   }
 }
