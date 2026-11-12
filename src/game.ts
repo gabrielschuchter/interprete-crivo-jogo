@@ -10,7 +10,8 @@ import { DEFAULT_SETTINGS, loadSettings, storeSettings, type Settings } from './
 import { UI, type BookTab } from './ui/ui';
 import { Player } from './entities/player';
 import { preloadModels } from './entities/figure';
-import { preloadProps } from './core/assets';
+import { DEFAULT_PAD } from './core/input';
+import { preloadProps, PROPS_FIRST } from './core/assets';
 import { Crivo } from './entities/crivo';
 import { Enemy, Projectile, ENEMY_CFG, type EnemyCtx, type EnemyKind } from './entities/enemy';
 import { Npc, NPCS } from './entities/npc';
@@ -46,9 +47,19 @@ const localAdapter: SaveAdapter = {
   },
   save: (d) => {
     try {
+      // a gravação anterior fica como cópia: se a nova sair truncada, ainda há de onde retomar
+      const prev = localStorage.getItem(SAVE_KEY);
       localStorage.setItem(SAVE_KEY, d);
+      if (prev) {
+        try {
+          localStorage.setItem(SAVE_KEY + '-anterior', prev);
+        } catch {
+          /* a cópia é opcional */
+        }
+      }
+      return true;
     } catch {
-      /* sem armazenamento: o jogo segue sem registro */
+      return false;
     }
   },
   clear: () => {
@@ -153,10 +164,17 @@ export class Game {
     this.input.onAnyKey = wake;
     window.addEventListener('error', (e) => this.errors.push(String(e.message)));
     window.addEventListener('unhandledrejection', (e) => this.errors.push(String(e.reason)));
-    window.addEventListener('beforeunload', () => this.save());
+    // ao sair, grava também a posição quando ela é segura; em celular quem avisa é pagehide ou a aba oculta
+    const leaving = () => (this.mode === 'play' ? this.checkpoint() : this.save());
+    window.addEventListener('beforeunload', leaving);
+    window.addEventListener('pagehide', leaving);
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden && this.mode === 'play') this.pauseGame();
+      if (!document.hidden) return;
+      leaving();
+      if (this.mode === 'play') this.pauseGame();
     });
+    this.input.uiOpen = () => this.mode !== 'play';
+    if (this.ui.instant) this.input.enabled = false;
     this.applySettings();
   }
 
@@ -166,11 +184,14 @@ export class Game {
     await this.nextPaint();
     const flags = new Set<string>(D.deserialize(this.adapter.load())?.flags ?? []);
     // props, personagens e texturas de alta resolução vêm antes da primeira região
+    // antes do menu vem só o que o Pátio usa; o resto dos props desce em segundo plano,
+    // e uma troca de região espera por ele se o jogador chegar antes
     await Promise.all([
-      preloadProps((f) => this.ui.loading(true, 0.1 + f * 0.6)),
+      preloadProps((f) => this.ui.loading(true, 0.1 + f * 0.6), PROPS_FIRST),
       preloadModels(),
       this.audio.preload(),
     ]);
+    this.restProps = preloadProps();
     await this.loadRegion('atrio', flags, (p) => this.ui.loading(true, 0.7 + p * 0.3));
     this.ui.loading(false);
     this.mode = 'splash';
@@ -179,6 +200,7 @@ export class Game {
     requestAnimationFrame((t) => this.frame(t));
   }
 
+  private restProps: Promise<void> = Promise.resolve();
   private nextPaint(): Promise<void> {
     return new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
   }
@@ -203,9 +225,13 @@ export class Game {
     document.body.classList.toggle('hc', s.highContrast);
     document.body.classList.toggle('rm', s.reduceMotion);
     document.body.classList.toggle('nohud', !s.hud);
+    document.body.classList.toggle('big', s.textScale >= 1.3);
     document.documentElement.style.setProperty('--ui-scale', String(s.textScale));
     document.documentElement.style.setProperty('--touch-scale', String(s.touchScale ?? 1));
     for (const a of Object.keys(DEFAULT_KEYS) as ActionName[]) this.input.keys[a] = s.keys[a] ?? [...DEFAULT_KEYS[a]];
+    this.input.pad = { ...(s.pad ?? DEFAULT_PAD) };
+    this.input.padDeadzone = s.padDeadzone;
+    this.ui.touch.easyRun = s.touchEasyRun;
     this.applyAudio();
     storeSettings(s);
   }
@@ -229,9 +255,39 @@ export class Game {
     const min = Math.round(s.playtime / 60);
     return `${s.name}, nível ${s.level} · ${min < 60 ? min + ' min' : Math.floor(min / 60) + ' h ' + (min % 60) + ' min'}`;
   }
+  /** verdadeiro enquanto a última tentativa de gravar falhou */
+  saveFailed = false;
   save(): void {
     if (!this.state) return;
-    this.adapter.save(D.serialize(this.state));
+    const ok = this.adapter.save(D.serialize(this.state)) !== false;
+    if (!ok && !this.saveFailed) this.ui.toast('O navegador recusou a gravação. O progresso desta sessão não está salvo; na pausa há como baixar uma cópia.', 'Registro', 12);
+    if (ok && this.saveFailed) this.ui.toast('A gravação voltou a funcionar.', 'Registro');
+    this.saveFailed = !ok;
+  }
+  /** Registro atual em texto, para cópia de segurança fora do navegador. */
+  exportSave(): string | null {
+    return this.state ? D.serialize(this.state) : this.adapter.load();
+  }
+  /** Substitui o registro por um arquivo exportado. Devolve falso se o conteúdo não for um registro válido. */
+  importSave(text: string): boolean {
+    if (!D.deserialize(text)) return false;
+    return this.adapter.save(text) !== false;
+  }
+  /** Há dado gravado que não pôde ser lido? Tenta a cópia anterior antes de desistir. */
+  recoverSave(): 'ok' | 'recuperado' | 'ilegivel' {
+    const raw = this.adapter.load();
+    if (!raw || D.deserialize(raw)) return 'ok';
+    try {
+      localStorage.setItem(SAVE_KEY + '-ilegivel', raw);
+      const prev = localStorage.getItem(SAVE_KEY + '-anterior');
+      if (prev && D.deserialize(prev)) {
+        localStorage.setItem(SAVE_KEY, prev);
+        return 'recuperado';
+      }
+    } catch {
+      /* sem armazenamento */
+    }
+    return 'ilegivel';
   }
   /** grava também a posição, se for seguro retomar dali */
   checkpoint(): void {
@@ -342,7 +398,10 @@ export class Game {
     this.player = null;
     for (const n of this.npcs) sc.remove(n.fig.root);
     for (const e of this.enemies) sc.remove(e.root);
-    for (const p of this.projectiles) sc.remove(p.mesh);
+    for (const p of this.projectiles) {
+      sc.remove(p.mesh);
+      p.dispose();
+    }
     for (const p of this.props) if (p.own && p.obj) sc.remove(p.obj);
     this.npcs = [];
     this.enemies = [];
@@ -364,6 +423,7 @@ export class Game {
     }
     progress?.(0.3);
     await this.nextPaint();
+    if (id !== 'atrio') await this.restProps;
     this.region = buildRegion(id, { flags, quality: this.settings.quality });
     sc.add(this.region.root);
     this.engine.applyEnv(this.region.env);
@@ -966,8 +1026,9 @@ export class Game {
     const p = this.player!;
     const s = this.state!;
     p.teleport(p.lastSafe.x, p.lastSafe.y, p.lastSafe.z, p.yaw);
+    const before = s.hp;
     s.hp = Math.max(1, s.hp - 15);
-    this.ui.hurt(15);
+    this.ui.hurt(before - s.hp);
     this.audio.sfx('dano');
     this.ui.toast('A névoa devolveu você à borda. Sem ponte, não há passagem.');
   }
@@ -1173,6 +1234,7 @@ export class Game {
     }
     this.ui.update(dt);
     this.audio.update();
+    this.padMenus(m);
 
     if (m === 'splash' || m === 'menu' || m === 'create' || (m === 'book' && !this.state)) {
       this.updateTitle(dt, m);
@@ -1194,12 +1256,6 @@ export class Game {
           else if (inp.took('habilidades')) this.openBookTab('habilidades');
         }
       }
-      if (inp.usingPad && m !== 'play') {
-        if (inp.took('interagir')) m === 'dialogue' ? this.ui.advance() : this.ui.activate();
-        if (inp.padMove.y > 0.6 && !this.padNav) this.ui.moveFocus(1);
-        if (inp.padMove.y < -0.6 && !this.padNav) this.ui.moveFocus(-1);
-        this.padNav = Math.abs(inp.padMove.y) > 0.6;
-      }
       const live = this.mode === 'play' || this.mode === 'dialogue' || this.mode === 'dead' || this.mode === 'transition';
       if (live) {
         let wdt = dt;
@@ -1212,9 +1268,54 @@ export class Game {
     }
     for (const u of this.region.updaters) u(dt, this.engine.time);
     this.updateSparks(dt);
-    this.engine.render(dt, this.focus);
+    // telas paradas (pausa, caderno, loja, dossiê) redesenham a 15 quadros por segundo: poupa bateria e GPU
+    const still = this.mode === 'pause' || this.mode === 'shop' || this.mode === 'case' || (this.mode === 'book' && !!this.state);
+    this.renderAcc += dt;
+    if (!still || this.renderAcc >= 1 / 15) {
+      this.engine.render(still ? this.renderAcc : dt, this.focus);
+      this.renderAcc = 0;
+    }
   }
-  private padNav = false;
+  private renderAcc = 0;
+  private padNavPrev = { x: 0, y: 0 };
+  private padNavRepeat = 0;
+  /** Menus pelo controle, do título ao epílogo: direcional ou analógico percorrem, A aciona, B volta. */
+  private padMenus(m: Mode): void {
+    const inp = this.input;
+    const nav = inp.padNav;
+    if (m === 'play' || m === 'boot' || m === 'transition' || !inp.usingPad || inp.capturePad) {
+      this.padNavPrev.x = nav.x;
+      this.padNavPrev.y = nav.y;
+      return;
+    }
+    if (inp.took('interagir')) m === 'dialogue' ? this.ui.advance() : this.ui.activate();
+    if (inp.took('esquiva')) {
+      if (m === 'book' || m === 'pause' || m === 'shop') this.closeOverlay();
+      else this.ui.back();
+    }
+    // segurar repete, com pausa inicial maior
+    const now = performance.now();
+    const fresh = nav.x !== this.padNavPrev.x || nav.y !== this.padNavPrev.y;
+    if ((nav.x || nav.y) && (fresh || now > this.padNavRepeat)) {
+      this.padNavRepeat = now + (fresh ? 420 : 140);
+      if (nav.y) this.ui.moveFocus(nav.y);
+      else this.ui.adjust(nav.x);
+    }
+    this.padNavPrev.x = nav.x;
+    this.padNavPrev.y = nav.y;
+  }
+  /** há parede ou móvel alto entre os dois pontos? amostragem a cada 0,5 m */
+  private blocked(a: THREE.Vector3, b: THREE.Vector3): boolean {
+    const d = Math.hypot(b.x - a.x, b.z - a.z);
+    const n = Math.ceil(d / 0.5);
+    for (let i = 1; i < n; i++) {
+      const t = i / n;
+      const x = a.x + (b.x - a.x) * t;
+      const z = a.z + (b.z - a.z) * t;
+      if (pointBlocked(this.region.colliders, x, a.y + 1.2, z, 0.05)) return true;
+    }
+    return false;
+  }
 
   private updateTitle(dt: number, m: Mode): void {
     const cam = this.engine.camera;
@@ -1249,7 +1350,8 @@ export class Game {
     const inp = this.input;
     const st = this.stats;
     const cam = this.engine.camera;
-    s.playtime += dt;
+    // tempo de jogo: só enquanto se joga ou conversa, não em derrota nem em troca de região
+    if (this.mode === 'play' || this.mode === 'dialogue') s.playtime += dt;
     this.abilityCd = Math.max(0, this.abilityCd - dt);
     this.abrigoCd = Math.max(0, this.abrigoCd - dt);
     if (this.lupaT > 0) {
@@ -1261,17 +1363,37 @@ export class Game {
     if (controls && inp.took('travar')) {
       if (p.lockTarget) p.lockTarget = null;
       else {
-        const c = this.enemies.filter((e) => e.alive && e.pos.distanceTo(p.pos) < 16).sort((a, b) => a.pos.distanceTo(p.pos) - b.pos.distanceTo(p.pos))[0];
+        // prefere quem está à frente da câmera e sem parede no meio; a distância desempata
+        const fx = -Math.sin(p.camYaw);
+        const fz = -Math.cos(p.camYaw);
+        const score = (e: Enemy): number => {
+          const dx = e.pos.x - p.pos.x;
+          const dz = e.pos.z - p.pos.z;
+          const d = Math.hypot(dx, dz) || 1e-3;
+          const facing = (dx * fx + dz * fz) / d;
+          let sc = d + (1 - facing) * 7;
+          if (this.blocked(p.pos, e.pos)) sc += 30;
+          return sc;
+        };
+        const c = this.enemies.filter((e) => e.alive && e.pos.distanceTo(p.pos) < 16).sort((a, b) => score(a) - score(b))[0];
         p.lockTarget = c ?? null;
         this.audio.sfx(c ? 'ui' : 'uiNegar');
       }
     }
-    if (p.lockTarget && (!p.lockTarget.alive || p.lockTarget.pos.distanceTo(p.pos) > 20)) p.lockTarget = null;
+    if (p.lockTarget && (!p.lockTarget.alive || p.lockTarget.pos.distanceTo(p.pos) > 20)) {
+      // a trava se desfaz sozinha: avisa, para a câmera solta não parecer defeito
+      if (p.lockTarget.alive) {
+        this.audio.sfx('uiNegar');
+        this.ui.toast('Alvo fora de alcance: mira solta.');
+      }
+      p.lockTarget = null;
+    }
 
     p.sensitivity = this.settings.sens;
     p.invertY = this.settings.invertY;
     const lantern = D.isEquipped(s, 'lanterna_transparencia');
-    p.light.intensity = lantern ? 26 : 9;
+    // 9 estourava o rosto visto de frente (auditoria, item 3); a lanterna segue sendo o ganho de alcance
+    p.light.intensity = lantern ? 20 : 5.5;
     p.light.distance = lantern ? 16 : 9;
     p.update(dt, inp, r, st, cam, controls);
     this.focus.copy(p.pos);
@@ -1320,6 +1442,7 @@ export class Game {
       if (gone) {
         this.burst(pr.pos, 0xd62839, 6, 2);
         this.engine.scene.remove(pr.mesh);
+        pr.dispose();
         this.projectiles.splice(i, 1);
       }
     }
@@ -1334,6 +1457,7 @@ export class Game {
     this.inCombat = fighting;
     this.audio.setCombat(fighting ? 1 : 0);
 
+    Npc.cam.copy(cam.position);
     for (const n of this.npcs) n.update(dt, p.pos);
 
     // habilidades e itens
@@ -1448,6 +1572,8 @@ export class Game {
       vigor: p.vigor,
       maxVigor: st.maxVigor,
       xp: s.level >= D.MAX_LEVEL ? 1 : (s.xp - D.xpForLevel(s.level)) / (D.xpForLevel(s.level + 1) - D.xpForLevel(s.level)),
+      xpLeft: s.level >= D.MAX_LEVEL ? 0 : D.xpForLevel(s.level + 1) - s.xp,
+      limao: D.countItem(s, 'limao_lind'),
       coins: s.coins,
       quest: tq ? tq.def.title : 'Sem objetivo acompanhado',
       step: stepText,

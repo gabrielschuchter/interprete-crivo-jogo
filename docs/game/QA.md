@@ -2,7 +2,7 @@
 
 ## Automatizada
 
-`npm run test` roda 27 testes unitários sobre progressão, missões, inventário, registro, coerência do conteúdo (toda missão aponta para regiões e alvos que existem, todo item citado está definido) e a pontuação do caso simulado.
+`npm run test` roda 35 testes unitários sobre progressão, missões, inventário, registro, coerência do conteúdo (toda missão aponta para regiões e alvos que existem, todo item citado está definido) e a pontuação do caso simulado.
 
 `npm run e2e` joga a campanha em Chromium e confere 29 pontos: abertura e criação de personagem; conversa com Heloísa e Íris; lutas da trilha e da clareira; baú do selo; mecanismo errado devolvendo o selo; ponte estendida; marco aceso; conclusão da ponte e da encomenda; caso de Lia decidido, registrado e sem experiência em dobro ao refazer; missão do vento; compra com desconto; lupa ensinada; fichas ocultas sem lupa e reveladas com ela; alavanca errada e alavanca certa; Eco; lanterna; conclusão do Arquivo; progresso preservado ao recarregar a página; braseiro gastando o único frasco; Veredito vencido; tela final; páginas entregues; nenhum erro de execução registrado. Estado em 11/11/2026: 29 de 29.
 
@@ -29,3 +29,9 @@ Correções feitas na rodada: Configurações abertas pela pausa voltam para a p
 ## Toque e telas pequenas (12/11/2026)
 
 Bateria com toque real emulado (Chromium, CDP): joystick parcial e corrida com histerese, olhar com o segundo dedo enquanto anda, nove botões de ação, conversa avançada só por toque, caderno com todas as abas, equipar, usar, aprender habilidade, mapa (botões e arrasto), configurações, loja, pausa, derrota. Layout sem sobreposição de botões e do HUD conferido em 320x568, 360x640, 390x844, 667x375, 844x390, 932x430, 768x1024 e 1024x768. Limite: sem aparelho físico, sem háptica, sem medida de bateria nem de fluidez em GPU móvel; a sensação do joystick precisa de mão humana.
+
+## Teclado, controle e registro (12/11/2026, resposta à auditoria externa)
+
+`npm run e2e:controles` confere 39 pontos com teclas reais e um controle simulado (troca de `navigator.getGamepads`): controle desde a tela de abertura, direcional e botões A e B nos menus, volta ao teclado, Tab e Shift+Tab dentro de Configurações sem abrir o Inventário, setas em barra e em seletor, valor da barra em texto, remapeamento com conflito, com botão do mouse, com Esc e com botão do controle, restauração dos padrões, reconexão com botão apertado, zona morta, analógico direito, falha de gravação avisada, cópia exportada, registro truncado recuperado, importação válida e inválida, e o dossiê de Lia (decisão compartilhada, risco de base, fontes, persistência, confirmação, horizonte). Estado: 39 de 39, com campanha (`npm run e2e`) e toque (`npm run e2e:touch`) também sem falhas depois das mudanças.
+
+Limite: o controle é simulado. Nenhum controle físico foi ligado, nenhum leitor de tela foi usado, e o áudio continua sem escuta.

@@ -40,13 +40,16 @@ export class Npc {
     this.fig.root.position.copy(this.pos);
     this.fig.root.rotation.y = yaw;
     markGeo ??= new THREE.OctahedronGeometry(0.13);
-    markMat ??= new THREE.MeshBasicMaterial({ color: new THREE.Color(0xe5a85f).multiplyScalar(1.8) });
+    markMat ??= new THREE.MeshBasicMaterial({ color: new THREE.Color(0xe5a85f).multiplyScalar(1.25) });
     this.marker = new THREE.Mesh(markGeo, markMat);
     this.marker.position.set(0, this.fig.height + 0.5, 0);
     this.marker.scale.set(1, 1.5, 1);
     this.marker.visible = false;
     this.fig.root.add(this.marker);
   }
+
+  /** posição da câmera, atualizada pelo jogo a cada quadro */
+  static cam = new THREE.Vector3(0, 1e3, 0);
 
   update(dt: number, playerPos: THREE.Vector3): void {
     this.t += dt;
@@ -78,5 +81,9 @@ export class Npc {
     this.fig.update(dt);
     this.marker.rotation.y = this.t * 1.6;
     this.marker.position.y = this.fig.height + 0.5 + Math.sin(this.t * 2.2) * 0.06;
+    // perto da câmera o losango encolhe e some: a menos de 1,2 m ele tomava a tela, somado ao brilho
+    const cd = Math.hypot(Npc.cam.x - this.pos.x, Npc.cam.y - (this.pos.y + this.marker.position.y), Npc.cam.z - this.pos.z);
+    const k = THREE.MathUtils.clamp((cd - 1.2) / 2.0, 0, 1);
+    this.marker.scale.set(k, 1.5 * k, k);
   }
 }

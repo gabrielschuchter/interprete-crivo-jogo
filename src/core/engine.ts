@@ -183,9 +183,12 @@ export class Engine {
       uniforms: { uTime: { value: 0 }, uCam: { value: new THREE.Vector3() }, uAmount: { value: 0 } },
       vertexShader: `uniform float uTime; uniform vec3 uCam; attribute float end; varying float vA;
         void main(){ vec3 p = position; float sp = 17.0 + fract(p.x * 7.13) * 6.0;
+          // cada gota tem comprimento e opacidade próprios; as distantes somem antes
+          float h = fract(position.z * 3.71 + position.x * 1.37);
           p.y = mod(p.y - uTime * sp, 22.0);
-          p.xz = mod(p.xz - uCam.xz + 22.0, 44.0) - 22.0 + uCam.xz; p.y += uCam.y - 7.0 + end * 0.55; p.x += end * 0.05;
-          vA = 1.0 - end * 0.6; gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0); }`,
+          p.xz = mod(p.xz - uCam.xz + 22.0, 44.0) - 22.0 + uCam.xz; p.y += uCam.y - 7.0 + end * (0.2 + 0.42 * h); p.x += end * 0.05;
+          float d = distance(p.xz, uCam.xz);
+          vA = (1.0 - end * 0.6) * (0.3 + 0.7 * fract(h * 7.0)) * (0.35 + 0.65 * smoothstep(22.0, 5.0, d)); gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0); }`,
       fragmentShader: `uniform float uAmount; varying float vA; void main(){ gl_FragColor = vec4(0.72, 0.78, 0.88, 0.2 * vA * uAmount); }`,
       transparent: true,
       depthWrite: false,

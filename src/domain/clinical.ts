@@ -13,9 +13,15 @@ export interface CaseOption {
   /** rótulo alternativo quando a ação está fora do escopo da profissão */
   scopeLabel?: Partial<Record<ProfessionId, string>>;
   detail: string;
-  /** chance de melhora por 100 pessoas (dado sintético do caso) */
+  /** melhora por 100 pessoas no horizonte do caso: estimativa pontual do estudo fictício */
   improvePer100: number;
-  /** chance de o dano principal ocorrer por 100 pessoas */
+  /**
+   * Faixa em que a chance real pode estar (intervalo do ensaio, ou incerteza maior do estudo sem sorteio).
+   * O simulador sorteia primeiro um valor dentro dela e só depois o desfecho: a estimativa de um grupo
+   * não é tratada como a probabilidade exata de uma pessoa.
+   */
+  improveRange?: [number, number];
+  /** risco absoluto total do efeito indesejado por 100 pessoas, já incluído o risco de base de quem não trata */
   harmPer100: number;
   costPerWeek: number;
   /** passos de processo sem os quais a escolha fica frágil */
@@ -39,6 +45,16 @@ export interface ClinicalCase {
   intervention: string;
   comparison: string;
   outcomes: string;
+  /** semanas até a medida de desfecho, igual à dos estudos fictícios */
+  horizon_weeks: number;
+  /** nome do efeito indesejado acompanhado */
+  harm_label: string;
+  /** risco de base do efeito indesejado por 100 pessoas, sem a intervenção */
+  baseline_harm_per100: number;
+  /** id da opção que serve de comparador (não tratar) */
+  comparator: string;
+  /** premissas do sorteio de desfecho, mostradas ao jogador */
+  simulation_notes: string[];
   sources: Array<{ label: string; note: string }>;
   evidence_summary: string[];
   quality_considerations: string[];
@@ -90,7 +106,14 @@ export function rng(seed: number): () => number {
 }
 
 export function drawOutcome(option: CaseOption, rand: () => number): CaseOutcome {
-  return { improved: rand() * 100 < option.improvePer100, harmed: rand() * 100 < option.harmPer100 };
+  const [lo, hi] = option.improveRange ?? [option.improvePer100, option.improvePer100];
+  const p = lo + rand() * (hi - lo);
+  return { improved: rand() * 100 < p, harmed: rand() * 100 < option.harmPer100 };
+}
+
+/** Efeito indesejado a mais por 100 pessoas, em relação a não tratar. */
+export function excessHarm(c: ClinicalCase, o: CaseOption): number {
+  return Math.max(0, o.harmPer100 - c.baseline_harm_per100);
 }
 
 /**
@@ -106,8 +129,10 @@ export function evaluateCase(c: ClinicalCase, optionId: string, done: ProcessSte
   const processNote = fragile ? option.fragileNote : option.reasonableNote;
   let outcomeNote: string;
   if (outcome.improved && !outcome.harmed) outcomeNote = 'Desta vez, ela melhorou. Isso sozinho não prova que a escolha foi a melhor: parte de quem não faz nada também melhora.';
-  else if (outcome.improved && outcome.harmed) outcomeNote = 'Ela melhorou e teve o efeito indesejado. Benefício e dano não se excluem.';
-  else if (!outcome.improved && outcome.harmed) outcomeNote = 'Desta vez não houve melhora e o efeito indesejado apareceu. Um desfecho ruim não torna ruim, por si só, uma decisão bem conduzida.';
+  else if (outcome.harmed && excessHarm(c, option) === 0)
+    outcomeNote = `${outcome.improved ? 'Ela melhorou' : 'Desta vez não houve melhora perceptível'}, e teve ${c.harm_label}. Nesta opção isso não vem do tratamento: cerca de ${c.baseline_harm_per100} em cada 100 pessoas têm o mesmo sem tratar nada.`;
+  else if (outcome.improved && outcome.harmed) outcomeNote = `Ela melhorou e teve ${c.harm_label}. Benefício e dano não se excluem, e não dá para saber, numa pessoa só, se o efeito veio do tratamento ou viria de qualquer jeito.`;
+  else if (!outcome.improved && outcome.harmed) outcomeNote = `Desta vez não houve melhora e apareceu ${c.harm_label}. Um desfecho ruim não torna ruim, por si só, uma decisão bem conduzida.`;
   else outcomeNote = 'Desta vez não houve melhora perceptível. Acontece com boa parte das pessoas em qualquer das opções.';
   const xp = 20 + recognized.length * 12 + (fragile ? 0 : 16);
   return { option, recognized, missed, fragile, processNote, outcome, outcomeNote, xp };

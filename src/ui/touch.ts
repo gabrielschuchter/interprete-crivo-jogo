@@ -96,7 +96,9 @@ export class TouchControls {
       if (this.stick?.id === e.pointerId) this.releaseStick();
       if (this.look?.id === e.pointerId) this.look = null;
       this.held.delete(e.pointerId);
-      const bt = (e.target as HTMLElement).closest?.('[data-b]');
+      // com captura de ponteiro o alvo do evento é o contêiner: o botão certo é o que este dedo apertou
+      const bt = this.lit.get(e.pointerId) ?? (e.target as HTMLElement).closest?.('[data-b]');
+      this.lit.delete(e.pointerId);
       if (bt) bt.classList.remove('on');
     };
     el.addEventListener('pointerup', end);
@@ -153,8 +155,8 @@ export class TouchControls {
     inp.touchMove.x = Math.cos(ang) * curved;
     inp.touchMove.y = Math.sin(ang) * curved;
     // corrida: empurrar até a borda; histerese evita tremer entre andar e correr
-    if (mm >= 0.94) inp.touchRun = true;
-    else if (mm < 0.8) inp.touchRun = false;
+    if (mm >= (this.easyRun ? 0.6 : 0.94)) inp.touchRun = true;
+    else if (mm < (this.easyRun ? 0.45 : 0.8)) inp.touchRun = false;
     this.knob.style.transform = `translate(${Math.cos(ang) * l}px,${Math.sin(ang) * l}px)`;
   }
 
@@ -171,12 +173,18 @@ export class TouchControls {
     this.releaseStick();
     this.look = null;
     this.held.clear();
+    this.lit.clear();
+    this.el.querySelectorAll('[data-b].on').forEach((b) => b.classList.remove('on'));
   }
+  /** corrida a partir de 60% do curso, para quem não alcança a borda com conforto */
+  easyRun = false;
+  private lit = new Map<number, HTMLElement>();
 
   private pressButton(e: PointerEvent, bt: HTMLElement): void {
     e.preventDefault();
     const id = bt.dataset.b!;
     bt.classList.add('on');
+    this.lit.set(e.pointerId, bt);
     this.g.audio.start();
     if (id === 'pausa') return this.g.pauseGame();
     if (id === 'caderno') return this.g.ui.openBook('inventario');
@@ -213,7 +221,7 @@ export class TouchControls {
     (b.querySelector('.l') as HTMLElement).textContent = text ? text.split(' ')[0].slice(0, 10) : 'Agir';
   }
 
-  setHud(d: { abilityCd: number; ability: string; caldo: number }): void {
+  setHud(d: { abilityCd: number; ability: string; caldo: number; limao: number }): void {
     const c = this.btnEls.get('crivo');
     if (c) {
       (c.querySelector('.cd') as HTMLElement).style.height = `${(d.abilityCd * 100).toFixed(0)}%`;
@@ -221,8 +229,9 @@ export class TouchControls {
     }
     const it = this.btnEls.get('item');
     if (it) {
-      (it.querySelector('.n') as HTMLElement).textContent = String(d.caldo);
-      it.classList.toggle('empty', d.caldo <= 0);
+      const n = d.caldo > 0 ? d.caldo : d.limao;
+      (it.querySelector('.n') as HTMLElement).textContent = String(n);
+      it.classList.toggle('empty', n <= 0);
     }
   }
 }

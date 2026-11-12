@@ -624,7 +624,12 @@ export async function useProp(g: G, p: PropPlacement): Promise<void> {
     g.region.actions.porta?.();
     if (!s.flags.includes('limpo:arquivo:eco')) g.spawnEnemy('eco', 0, -31, 'eco');
     g.audio.sfx('porta');
-    await N('A porta cede. O Registro da Maré foi escrito no cais por quem estava lá. Sino e Farol concordavam entre si porque um copiava o outro.');
+    if (fichas < 3) {
+      // acertar sem as três fichas é permitido, mas fica registrado como palpite
+      g.flag('originais_palpite');
+      await N('A porta cede. Você acertou sem ter lido as três fichas: desta vez o palpite coincidiu com a procedência. As fichas que faltam ainda dizem por quê.');
+    }
+    await N('O Registro da Maré foi escrito no cais por quem estava lá. Sino e Farol concordavam entre si porque um copiava o outro.');
     D.unlockCodex(s, 'procedencia');
     g.toast('Novo verbete no códice: Cópia de cópia');
     g.advance('arquivo', 4);

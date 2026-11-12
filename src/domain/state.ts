@@ -391,7 +391,8 @@ export function damageTaken(raw: number, st: Stats, difficulty: 'historia' | 'pa
 
 export interface SaveAdapter {
   load(): string | null;
-  save(data: string): void;
+  /** falso quando a gravação falhou; adaptadores antigos que não devolvem nada contam como sucesso */
+  save(data: string): boolean | void;
   clear(): void;
 }
 
@@ -420,8 +421,40 @@ export function migrate(raw: unknown): GameState | null {
     if (!Array.isArray(out[k])) (out as unknown as Record<string, unknown>)[k] = [];
   }
   if (!out.crivoSkills.includes('farejar')) out.crivoSkills.push('farejar');
+  // valores numéricos e aninhados: um registro editado ou truncado não pode travar o jogo
+  const num = (v: unknown, min: number, max: number, def: number): number => (typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : def);
+  out.level = Math.round(num(out.level, 1, MAX_LEVEL, 1));
+  out.xp = num(out.xp, 0, 1e7, 0);
+  out.hp = num(out.hp, 1, 1e5, base.hp);
+  out.coins = Math.round(num(out.coins, 0, 1e7, 0));
+  out.skillPoints = Math.round(num(out.skillPoints, 0, 999, 0));
+  out.crivoPoints = Math.round(num(out.crivoPoints, 0, 999, 0));
+  out.playtime = num(out.playtime, 0, 1e9, 0);
+  if (typeof out.name !== 'string' || !out.name.trim()) out.name = base.name;
+  out.name = out.name.slice(0, 40);
+  if (typeof out.region !== 'string') out.region = base.region;
+  const pos = out.pos as Partial<GameState['pos']> | null;
+  if (!pos || typeof pos !== 'object' || ![pos.x, pos.y, pos.z, pos.yaw].every((v) => typeof v === 'number' && Number.isFinite(v))) {
+    out.pos = { ...base.pos };
+    out.region = base.region;
+  }
+  const lk = out.look as Partial<Look> | null;
+  out.look = { skin: Math.round(num(lk?.skin, 0, 99, 1)), hair: Math.round(num(lk?.hair, 0, 99, 0)), coat: Math.round(num(lk?.coat, 0, 99, 0)) };
+  if (out.crivoActive !== 'pulso' && out.crivoActive !== 'lupa') out.crivoActive = 'pulso';
+  if (!out.crivoLook || typeof out.crivoLook !== 'object') out.crivoLook = base.crivoLook;
+  if (typeof out.equipment !== 'object' || !out.equipment) out.equipment = {};
+  for (const k of ['flags', 'collected', 'defeated', 'codex', 'rewards', 'skills', 'crivoSkills'] as const) out[k] = out[k].filter((x) => typeof x === 'string');
+  out.cases = out.cases.filter((c) => c && typeof c === 'object' && typeof c.caseId === 'string');
   if (typeof out.inventory !== 'object' || !out.inventory) out.inventory = {};
   if (typeof out.quests !== 'object' || !out.quests) out.quests = {};
+  for (const [k, v] of Object.entries(out.inventory)) if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0) delete out.inventory[k];
+  for (const [k, q] of Object.entries(out.quests)) {
+    if (!q || typeof q !== 'object' || (q.status !== 'ativa' && q.status !== 'concluida')) delete out.quests[k];
+    else {
+      q.step = Math.round(num(q.step, 0, 99, 0));
+      if (!q.vars || typeof q.vars !== 'object') q.vars = {};
+    }
+  }
   return out;
 }
 

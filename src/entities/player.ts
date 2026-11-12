@@ -220,7 +220,8 @@ export class Player {
     const running = controls && (input.held('correr') || input.padRun()) && wish.lengthSq() > 0 && this.vigor > 1;
     const acting = fig.action === 'attack1' || fig.action === 'attack2' || fig.action === 'heavy';
 
-    // esquiva
+    // esquiva. Regra de vigor, de propósito tolerante: com 60% do custo ainda sai uma última esquiva,
+    // e o vigor vai a zero. Golpes pedem metade do custo. A dica "último fôlego" explica isso ao jogador.
     if (controls && !this.dead && !this.frozen && input.took('esquiva') && this.dodgeT <= 0 && this.vigor >= stats.dodgeCost * 0.6 && fig.action !== 'hit') {
       this.dodgeT = 0.42;
       this.iframes = Math.max(this.iframes, stats.dodgeIframes);
@@ -244,7 +245,7 @@ export class Player {
       if (this.vigor >= cost * 0.5) {
         this.vigor = Math.max(0, this.vigor - cost);
         this.vigorDelay = 0.6;
-        // mira: alvo travado, senão a direção do movimento ou a da câmera
+        // mira: alvo travado; senão a direção do movimento; parado e sem alvo, o golpe sai para onde o corpo já olha
         if (this.lockTarget?.alive) this.yaw = Math.atan2(this.lockTarget.pos.x - this.pos.x, this.lockTarget.pos.z - this.pos.z);
         else if (wish.lengthSq() > 0.01) this.yaw = Math.atan2(wish.x, wish.z);
         if (heavy) fig.play('heavy');
@@ -337,7 +338,7 @@ export class Player {
           // degrau alto para baixo: desce com gravidade
           this.pos.y = Math.max(g, this.pos.y - dt * 9);
         } else this.pos.y += (g - this.pos.y) * Math.min(1, dt * 16);
-        if (Math.abs(g - this.pos.y) < 0.1) this.lastSafe.lerp(this.pos, 0.02);
+        if (Math.abs(g - this.pos.y) < 0.1) this.lastSafe.lerp(this.pos, 1 - Math.exp(-1.2 * dt)); // independe da taxa de quadros
       }
     } else {
       this.vel.y -= 18 * dt;

@@ -3,11 +3,12 @@
  * A interface só lê o estado e chama operações do jogo; nenhuma regra mora aqui.
  */
 import type { Game } from '../game';
-import { ACTION_LABEL, keyLabel, type ActionName } from '../core/input';
+import { ACTION_LABEL, keyLabel, padLabel, type ActionName } from '../core/input';
 import { CODEX, COAT_COLORS, CRIVO_SKILLS, ITEMS, PLAYER_SKILLS, PROFESSIONS, QUESTS, SHOP } from '../content/data';
 import { canUnlock, countItem, isEquipped, xpForLevel, type ProfessionId, type SkillDef } from '../domain/state';
 import { HAIRS, SKINS } from '../entities/figure';
 import { icon } from './icons';
+import { problems } from '../core/diag';
 import { CaseView } from './caseview';
 import { TouchControls, isTouchDevice } from './touch';
 
@@ -37,10 +38,18 @@ export interface HudData {
   ability: 'pulso' | 'lupa';
   abilityCd: number;
   caldo: number;
+  limao: number;
+  /** pontos que faltam para o próximo nível; 0 no nível máximo */
+  xpLeft: number;
   boss: { name: string; frac: number; recite: number } | null;
 }
 
+const SKIN_NAMES = ['muito clara', 'clara', 'média', 'escura', 'muito escura'];
+const HAIR_NAMES = ['preto', 'castanho-escuro', 'castanho', 'grisalho', 'ruivo', 'loiro'];
+const COAT_NAMES = ['vinho', 'azul-marinho', 'verde-escuro', 'roxo', 'marrom', 'grafite'];
+
 const TIPS = [
+  'Último fôlego: com pouco vigor ainda sai uma esquiva (a partir de 60% do custo) ou um golpe (a partir da metade). O vigor vai a zero e demora a voltar.',
   'O Crivo olha para o que merece um segundo olhar. Ele não marca tudo o tempo todo.',
   'Inimigos hesitam antes de investir. O anel vermelho no chão mostra até onde o golpe chega.',
   'Nenhuma missão tem cronômetro. Ler com calma nunca é penalizado.',
@@ -82,36 +91,38 @@ export class UI {
       <div id="hud" class="hidden">
         <div class="status">
           <div class="who"><span class="lvl" data-k="lvl"></span><span class="nm" data-k="nm"></span></div>
-          <div class="meter"><b class="lag" data-k="hplag"></b><b data-k="hp"></b></div>
-          <div class="meter vigor"><b data-k="vigor"></b></div>
-          <div class="meter xp"><b data-k="xp"></b></div>
+          <div class="meter" role="meter" aria-label="Vida" aria-valuemin="0" data-k="hpM"><b class="lag" data-k="hplag"></b><b data-k="hp"></b><span class="num" data-k="hpN"></span></div>
+          <div class="meter vigor" role="meter" aria-label="Vigor" aria-valuemin="0" data-k="vigorM"><b data-k="vigor"></b><span class="num" data-k="vigorN"></span></div>
+          <div class="meter xp" role="meter" aria-label="Experiência" aria-valuemin="0" aria-valuemax="100" data-k="xpM"><b data-k="xp"></b></div>
+          <div class="xpn" data-k="xpN"></div>
         </div>
         <div class="objective"><div class="label">Objetivo</div><div class="q" data-k="quest"></div><div class="s" data-k="step"></div></div>
         <div class="coins" data-k="coins"></div>
         <div class="quick">
-          <div class="slot"><span class="kbd key" data-k="kItem"></span><span data-k="iItem">${icon('caldo')}</span><span class="n" data-k="caldo"></span><span class="nm">Caldo</span></div>
+          <div class="slot"><span class="kbd key" data-k="kItem"></span><span data-k="iItem">${icon('caldo')}</span><span class="n" data-k="caldo"></span><span class="nm" data-k="itemNm">Caldo</span></div>
           <div class="slot big"><span class="kbd key" data-k="kCrivo"></span><span data-k="iCrivo">${icon('pulso')}</span><span class="cd" data-k="cd"></span><span class="nm" data-k="ability"></span></div>
         </div>
-        <div id="boss" class="hidden"><div class="nm" data-k="bossNm"></div><div class="meter"><b data-k="bossHp"></b></div><div class="recite hidden" data-k="reciteBox">Recitando a sentença · interrompa com o pulso do Crivo<div class="meter"><b data-k="recite"></b></div></div></div>
-        <div id="marker" class="hidden"><i></i><span></span></div>
-        <div id="lock" class="hidden"><i></i></div>
+        <div id="boss" class="hidden"><div class="nm" data-k="bossNm"></div><div class="meter" role="meter" aria-label="Vida do adversário" aria-valuemin="0" aria-valuemax="100" data-k="bossM"><b data-k="bossHp"></b></div><div class="recite hidden" data-k="reciteBox">Recitando a sentença · interrompa com o pulso do Crivo<div class="meter"><b data-k="recite"></b></div></div></div>
+        <div id="marker" class="hidden" role="img" aria-label="Objetivo"><i></i><span></span></div>
+        <div id="lock" class="hidden" role="img" aria-label="Mira travada"><i></i></div>
         <div id="prompt" class="hidden"></div>
       </div>
-      <div id="toasts"></div>
-      <div id="hint" class="hidden"></div>
+      <div id="toasts" role="log" aria-live="polite" aria-relevant="additions"></div>
+      <div id="hint" class="hidden" role="status" aria-live="polite"></div>
+      <div id="sr-status" class="sr-only" role="status" aria-live="assertive"></div>
       <div id="subtitle" class="hidden"></div>
       <div id="banner"><div class="label k"></div><div class="t"></div><div class="d"></div></div>
       <div id="region-title"><div class="sub"></div><div class="rule"></div><div class="name"></div></div>
-      <div id="dialogue" class="hidden" role="dialog" aria-live="polite"><div class="who"><span class="nm"></span><span class="label role"></span></div><div class="txt"></div><div class="choices"></div><div class="next"></div></div>
+      <div id="dialogue" class="hidden" role="dialog" aria-label="Conversa" aria-live="polite"><div class="who"><span class="nm"></span><span class="label role"></span></div><div class="txt"></div><div class="choices"></div><div class="next"></div></div>
       <div id="splash" class="screen hidden"></div>
-      <div id="menu" class="screen hidden"></div>
-      <div id="create" class="screen hidden"></div>
-      <div id="book" class="screen hidden"></div>
-      <div id="shop" class="screen center hidden"></div>
-      <div id="case" class="screen hidden"></div>
-      <div id="pause" class="screen center hidden"></div>
-      <div id="defeat" class="screen center hidden"></div>
-      <div id="ending" class="screen center hidden"></div>
+      <div id="menu" class="screen hidden" role="dialog" aria-modal="true" aria-label="Menu inicial"></div>
+      <div id="create" class="screen hidden" role="dialog" aria-modal="true" aria-label="Criação de personagem"></div>
+      <div id="book" class="screen hidden" role="dialog" aria-modal="true" aria-label="Caderno"></div>
+      <div id="shop" class="screen center hidden" role="dialog" aria-modal="true" aria-label="Loja"></div>
+      <div id="case" class="screen hidden" role="dialog" aria-modal="true" aria-label="Dossiê do caso simulado"></div>
+      <div id="pause" class="screen center hidden" role="dialog" aria-modal="true" aria-label="Pausa"></div>
+      <div id="defeat" class="screen center hidden" role="dialog" aria-modal="true" aria-label="Derrota"></div>
+      <div id="ending" class="screen center hidden" role="dialog" aria-modal="true" aria-label="Epílogo"></div>
       <div id="fade"></div>
       <div id="loading"><div class="word">Interprete<i>.</i></div><div class="bar"><b></b></div><div class="tip"></div></div>`;
     for (const e of Array.from(root.querySelectorAll<HTMLElement>('[id]'))) this.$[e.id] = e;
@@ -129,6 +140,19 @@ export class UI {
       },
       true,
     );
+    // remapeamento também aceita botões do mouse
+    document.addEventListener(
+      'mousedown',
+      (e) => {
+        if (!this.rebinding || this.rebindPad) return;
+        e.preventDefault();
+        e.stopPropagation();
+        this.clickBlockedUntil = performance.now() + 300;
+        this.finishRebind('Mouse' + e.button);
+      },
+      true,
+    );
+    document.addEventListener('contextmenu', (e) => this.rebinding && e.preventDefault(), true);
     this.$.dialogue.addEventListener('click', (e) => {
       if (!(e.target as HTMLElement).closest('.choices')) this.advance();
     });
@@ -162,6 +186,7 @@ export class UI {
       const t: Partial<Record<ActionName, string>> = { interagir: 'Toque', ataque: 'Golpe', golpe: 'Firme', esquiva: 'Esquiva', crivo: 'Pulso', travar: 'Mira', item: 'Item', dica: 'Dica', trocarCrivo: 'Trocar', habilidades: 'Caderno', inventario: 'Caderno', diario: 'Caderno', mapa: 'Caderno' };
       if (t[a]) return t[a]!;
     }
+    if (this.g.input.usingPad && this.g.input.pad[a] !== undefined) return padLabel(this.g.input.pad[a]);
     return keyLabel(this.g.input.keys[a][0] ?? '');
   }
   private sfx(n = 'ui'): void {
@@ -179,6 +204,30 @@ export class UI {
     const i = list.indexOf(document.activeElement as HTMLElement);
     list[(i + dir + list.length) % list.length].focus();
   }
+  /** esquerda/direita do controle sobre o controle em foco: mexe em seletor ou barra, ou troca de aba */
+  adjust(dir: number): void {
+    const a = document.activeElement as HTMLInputElement | HTMLSelectElement | null;
+    if (!a || !this.topScreen()?.contains(a)) return;
+    if (a instanceof HTMLInputElement && a.type === 'range') {
+      dir > 0 ? a.stepUp() : a.stepDown();
+      a.dispatchEvent(new Event('input', { bubbles: true }));
+    } else if (a instanceof HTMLSelectElement) {
+      const i = Math.min(a.options.length - 1, Math.max(0, a.selectedIndex + dir));
+      if (i !== a.selectedIndex) {
+        a.selectedIndex = i;
+        a.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    } else this.moveFocus(dir);
+  }
+  /** botão B do controle fora do jogo: aciona o "voltar" da tela, se houver */
+  back(): void {
+    const scr = this.topScreen();
+    scr?.querySelector<HTMLElement>('[data-a=back], [data-a=no], [data-a=leave], [data-a=close]')?.click();
+  }
+  /** aviso lido de imediato por leitor de tela (mudanças críticas de combate) */
+  announce(text: string): void {
+    this.$['sr-status'].textContent = text;
+  }
   activate(): void {
     const a = document.activeElement as HTMLElement | null;
     if (a && this.topScreen()?.contains(a)) a.click();
@@ -193,13 +242,7 @@ export class UI {
     if (this.rebinding) {
       e.preventDefault();
       e.stopPropagation();
-      if (e.code !== 'Escape') {
-        this.g.input.rebind(this.rebinding, e.code);
-        this.g.settings.keys = { ...this.g.input.keys };
-        this.g.applySettings();
-      }
-      this.rebinding = null;
-      this.renderBook();
+      this.finishRebind(e.code === 'Escape' ? null : e.code);
       return;
     }
     if (e.repeat) return;
@@ -213,7 +256,7 @@ export class UI {
       else if (e.code === 'ArrowUp') this.moveFocus(-1);
       return;
     }
-    if (this.topScreen() && !typing) {
+    if (this.topScreen() && !typing && !(e.target instanceof HTMLSelectElement)) {
       if (e.code === 'ArrowDown') {
         e.preventDefault();
         this.moveFocus(1);
@@ -223,6 +266,28 @@ export class UI {
       }
     }
   }
+  /** Conclui o remapeamento com uma tecla, um botão do mouse ("Mouse0"...) ou um botão do controle. */
+  private finishRebind(code: string | null, padButton?: number): void {
+    const a = this.rebinding;
+    const inp = this.g.input;
+    this.rebinding = null;
+    this.rebindPad = false;
+    inp.capturePad = null;
+    if (a && padButton !== undefined) {
+      const r = inp.rebindPad(a, padButton);
+      this.g.settings.pad = { ...inp.pad };
+      this.g.applySettings();
+      this.toast(r ? `${ACTION_LABEL[a]} passou a usar ${padLabel(padButton)}. ${ACTION_LABEL[r.other]} ficou com ${padLabel(r.got ?? undefined)}.` : `${ACTION_LABEL[a]}: ${padLabel(padButton)}.`, 'Controle');
+    } else if (a && code) {
+      const r = inp.rebind(a, code);
+      this.g.settings.keys = { ...inp.keys };
+      this.g.applySettings();
+      if (r) this.toast(`${keyLabel(code)} era de "${ACTION_LABEL[r.other]}", que ${r.got ? `ficou com ${keyLabel(r.got)}` : 'ficou sem tecla: escolha outra para ela'}.`, 'Teclas trocadas', 8);
+    }
+    this.renderBook();
+    requestAnimationFrame(() => this.$.book.querySelector<HTMLElement>(`[data-bind${padButton !== undefined ? 'pad' : ''}="${a}"]`)?.focus());
+  }
+  private rebindPad = false;
   private topScreenIsModal(): boolean {
     const t = this.topScreen();
     return !!t && t !== this.$.dialogue;
@@ -250,7 +315,14 @@ export class UI {
     clearTimeout(this.titleTimer);
     this.titleTimer = window.setTimeout(() => t.classList.remove('on'), 3600);
   }
+  private bannerQueue: [string, string, string] | null = null;
   banner(kicker: string, title: string, desc = ''): void {
+    // com a caixa de conversa aberta o anúncio espera: dois textos ao mesmo tempo disputam a leitura
+    if (!this.$.dialogue.classList.contains('hidden') && !this.instant) {
+      this.bannerQueue = [kicker, title, desc];
+      return;
+    }
+    this.remember(kicker, desc ? `${title}. ${desc}` : title);
     const b = this.$.banner;
     (b.querySelector('.k') as HTMLElement).textContent = kicker;
     (b.querySelector('.t') as HTMLElement).textContent = title;
@@ -260,19 +332,29 @@ export class UI {
     clearTimeout(this.bannerTimer);
     this.bannerTimer = window.setTimeout(() => b.classList.remove('on'), 4200);
   }
-  toast(text: string, label = ''): void {
+  /** últimos avisos e dicas, para reler no Diário */
+  log: Array<{ label: string; text: string }> = [];
+  private remember(label: string, text: string): void {
+    if (this.log[0]?.text === text) return;
+    this.log.unshift({ label, text });
+    if (this.log.length > 40) this.log.pop();
+  }
+  toast(text: string, label = '', seconds = 4.2): void {
+    this.remember(label || 'Aviso', text);
     const t = el(`<div class="toast">${label ? `<span class="label">${esc(label)}</span>` : ''}${esc(text)}</div>`);
     this.$.toasts.prepend(t);
     while (this.$.toasts.children.length > 4) this.$.toasts.lastElementChild?.remove();
-    setTimeout(() => t.classList.add('out'), 4200);
-    setTimeout(() => t.remove(), 4800);
+    const ms = seconds * 1000 * (this.g?.settings.noticeTime ?? 1);
+    setTimeout(() => t.classList.add('out'), ms);
+    setTimeout(() => t.remove(), ms + 600);
   }
   hint(text: string | null, label = 'O Crivo aponta', seconds = 7): void {
     clearTimeout(this.hintTimer);
     this.show('hint', !!text);
     if (text) {
+      this.remember(label, text);
       this.$.hint.innerHTML = `<span class="label">${esc(label)}</span>${esc(text)}`;
-      this.hintTimer = window.setTimeout(() => this.show('hint', false), seconds * 1000);
+      this.hintTimer = window.setTimeout(() => this.show('hint', false), seconds * 1000 * (this.g?.settings.noticeTime ?? 1));
     }
   }
   subtitle(text: string | null): void {
@@ -302,11 +384,27 @@ export class UI {
     this.set('hplag', f, 'width');
     this.set('vigor', `${Math.max(0, (d.vigor / d.maxVigor) * 100).toFixed(1)}%`, 'width');
     this.set('xp', `${(d.xp * 100).toFixed(1)}%`, 'width');
+    const hp = Math.ceil(d.hp);
+    const vg = Math.round(d.vigor);
+    const nums = this.g.settings.hudNumbers;
+    this.set('hpN', nums ? `${hp} / ${d.maxHp}` : '');
+    this.set('vigorN', nums ? `${vg} / ${Math.round(d.maxVigor)}` : '');
+    this.set('xpN', nums ? (d.xpLeft > 0 ? `faltam ${Math.ceil(d.xpLeft)} de experiência` : 'nível máximo') : '');
+    this.aria('hpM', hp, d.maxHp, `${hp} de ${d.maxHp}`);
+    this.aria('vigorM', vg, Math.round(d.maxVigor), `${vg} de ${Math.round(d.maxVigor)}`);
+    this.aria('xpM', Math.round(d.xp * 100), 100, d.xpLeft > 0 ? `faltam ${Math.ceil(d.xpLeft)} pontos para o próximo nível` : 'nível máximo');
+    // vida baixa: um aviso por queda, lido por leitor de tela
+    const low = d.hp / d.maxHp < 0.3;
+    if (low && !this.wasLow) this.announce(`Vida baixa: ${hp} de ${d.maxHp}.`);
+    this.wasLow = low;
     this.set('coins', `${d.coins} moedas`);
     this.set('quest', d.quest);
     this.set('step', d.step);
     this.$['k:step'].style.display = d.step ? '' : 'none';
-    this.set('caldo', String(d.caldo));
+    // o atalho usa caldo e, sem caldo, limão: o contador mostra o que de fato será usado
+    const useLimao = d.caldo <= 0 && d.limao > 0;
+    this.set('caldo', String(useLimao ? d.limao : d.caldo));
+    this.set('itemNm', useLimao ? 'Limão' : 'Caldo');
     this.touch.setHud(d);
     this.set('kItem', this.key('item'));
     this.set('kCrivo', this.key('crivo'));
@@ -317,9 +415,20 @@ export class UI {
     if (d.boss) {
       this.set('bossNm', d.boss.name);
       this.set('bossHp', `${(d.boss.frac * 100).toFixed(1)}%`, 'width');
+      this.aria('bossM', Math.round(d.boss.frac * 100), 100, `${d.boss.name}: ${Math.round(d.boss.frac * 100)} por cento`);
       this.$['k:reciteBox'].classList.toggle('hidden', d.boss.recite <= 0);
       this.set('recite', `${(d.boss.recite * 100).toFixed(0)}%`, 'width');
     }
+  }
+  private wasLow = false;
+  private aria(key: string, now: number, max: number, text: string): void {
+    const ck = key + 'aria';
+    if (this.cache[ck] === text) return;
+    this.cache[ck] = text;
+    const e = this.$['k:' + key];
+    e.setAttribute('aria-valuenow', String(now));
+    e.setAttribute('aria-valuemax', String(max));
+    e.setAttribute('aria-valuetext', text);
   }
   prompt(text: string | null): void {
     const key = text ?? '';
@@ -417,6 +526,11 @@ export class UI {
   endDialogue(): void {
     this.show('dialogue', false);
     this.typing = null;
+    if (this.bannerQueue) {
+      const q = this.bannerQueue;
+      this.bannerQueue = null;
+      this.banner(...q);
+    }
   }
   update(dt: number): void {
     this.touch.update(dt, this.g.mode);
@@ -441,11 +555,14 @@ export class UI {
   menu(on: boolean): void {
     this.show('menu', on);
     if (!on) return;
+    const rec = this.g.recoverSave();
     const has = this.g.hasSave();
+    const note = rec === 'recuperado' ? '<p class="warn" role="alert">O registro mais recente estava ilegível. O jogo voltou para a gravação anterior.</p>' : rec === 'ilegivel' ? '<p class="warn" role="alert">Há um registro gravado que não pôde ser lido. Ele foi guardado à parte e não será apagado enquanto você não começar um novo caminho.</p>' : '';
     this.$.menu.innerHTML = `<div class="side"><h1>Interprete<i>.</i></h1><div class="subtitle">O Crivo e a Névoa das Conclusões</div>
       ${has ? `<button class="btn" data-a="continue" data-focus>Continuar<small>${esc(this.g.saveSummary())}</small></button>` : ''}
       <button class="btn" data-a="new" ${has ? '' : 'data-focus'}>Novo caminho<small>${has ? 'Substitui o registro atual depois de confirmar' : 'Escolha um ofício e conheça o Crivo'}</small></button>
       <button class="btn" data-a="config">Configurações<small>Imagem, som, controles e acessibilidade</small></button>
+      <div class="row save-tools">${has ? '<button class="btn small" data-a="export">Baixar registro</button>' : ''}<button class="btn small" data-a="import">Importar registro</button><input type="file" accept="application/json,.json" hidden aria-hidden="true" tabindex="-1"></div>${note}
       <div class="foot">Versão 0.1 · um jogador. A cooperação entra numa fase posterior.<br>Os casos são simulações fictícias e não orientam decisões de saúde.</div></div><div></div>`;
     this.$.menu.querySelectorAll('button').forEach((b) =>
       b.addEventListener('click', () => {
@@ -455,14 +572,31 @@ export class UI {
         else if (a === 'new') {
           if (has) this.confirm('Começar um novo caminho?', 'O registro atual será substituído quando você confirmar o nome do novo viajante.', 'Começar de novo', () => this.g.openCreate());
           else this.g.openCreate();
-        } else this.openBook('config');
+        } else if (a === 'export') this.downloadSave();
+        else if (a === 'import') file.click();
+        else this.openBook('config');
       }),
     );
+    const file = this.$.menu.querySelector('input[type=file]') as HTMLInputElement;
+    file.addEventListener('change', () => {
+      const f = file.files?.[0];
+      if (!f) return;
+      void f.text().then((txt) => {
+        const go = () => {
+          if (this.g.importSave(txt)) {
+            this.toast('Registro importado.', 'Registro');
+            this.menu(true);
+          } else this.toast('Este arquivo não é um registro válido do jogo, ou o navegador recusou a gravação.', 'Registro', 8);
+        };
+        if (has) this.confirm('Substituir o registro atual?', 'O registro deste navegador dá lugar ao do arquivo. A gravação anterior fica guardada como cópia.', 'Substituir', go);
+        else go();
+      });
+    });
     this.focusFirst(this.$.menu);
   }
   confirm(title: string, text: string, yes: string, onYes: () => void): void {
     const p = this.$.pause;
-    p.innerHTML = `<div class="card"><div class="label">Confirmar</div><h2>${esc(title)}</h2><p>${esc(text)}</p><button class="btn primary" data-a="y">${esc(yes)}</button><button class="btn" data-a="n" data-focus>Voltar</button></div>`;
+    p.innerHTML = `<div class="card"><div class="label">Confirmar</div><h2>${esc(title)}</h2><p>${esc(text)}</p><button class="btn primary" data-a="y">${esc(yes)}</button><button class="btn" data-a="no" data-focus>Voltar</button></div>`;
     this.show('pause', true);
     p.querySelectorAll('button').forEach((b) =>
       b.addEventListener('click', () => {
@@ -483,10 +617,10 @@ export class UI {
         <div><div class="label" style="margin-bottom:8px">Ofício</div><div class="profs">${PROFESSIONS.map((p) => `<button class="chip" data-prof="${p.id}" aria-pressed="${p.id === c.prof}">${esc(p.name)}</button>`).join('')}</div></div>
         <div class="prof-line">${esc(prof.line)}<br><span class="label" style="font-style:normal">Objeto de ofício · ${esc(prof.tool)}</span></div>
         <div class="row"><span class="label">Nome</span><input type="text" maxlength="18" placeholder="Viajante" value="${esc(c.name)}" style="flex:1;width:auto" aria-label="Nome"></div>
-        <div class="row"><span class="label">Pele</span>${SKINS.map((s, i) => `<button class="swatch" data-skin="${i}" aria-pressed="${i === c.skin}" aria-label="Tom ${i + 1}" style="background:${hex(s)}"></button>`).join('')}</div>
-        <div class="row"><span class="label">Cabelo</span>${HAIRS.map((s, i) => `<button class="swatch" data-hair="${i}" aria-pressed="${i === c.hair}" aria-label="Cor ${i + 1}" style="background:${hex(s)}"></button>`).join('')}</div>
+        <div class="row"><span class="label">Pele</span>${SKINS.map((s, i) => `<button class="swatch" data-skin="${i}" aria-pressed="${i === c.skin}" aria-label="Pele: ${SKIN_NAMES[i] ?? `tom ${i + 1}`}" title="${SKIN_NAMES[i] ?? ``}" style="background:${hex(s)}"></button>`).join('')}</div>
+        <div class="row"><span class="label">Cabelo</span>${HAIRS.map((s, i) => `<button class="swatch" data-hair="${i}" aria-pressed="${i === c.hair}" aria-label="Cabelo: ${HAIR_NAMES[i] ?? `cor ${i + 1}`}" title="${HAIR_NAMES[i] ?? ``}" style="background:${hex(s)}"></button>`).join('')}</div>
         <div class="row"><span class="label">Corte</span>${['Curto', 'Coque', 'Longo', 'Capuz'].map((s, i) => `<button class="chip" data-style="${i}" aria-pressed="${i === c.style}">${s}</button>`).join('')}</div>
-        <div class="row"><span class="label">Casaco</span>${coats.map((s, i) => `<button class="swatch" data-coat="${i}" aria-pressed="${i === c.coat}" aria-label="Casaco ${i + 1}" style="background:${hex(s)}"></button>`).join('')}</div>
+        <div class="row"><span class="label">Casaco</span>${coats.map((s, i) => `<button class="swatch" data-coat="${i}" aria-pressed="${i === c.coat}" aria-label="Casaco: ${COAT_NAMES[i] ?? `cor ${i + 1}`}" title="${COAT_NAMES[i] ?? ``}" style="background:${hex(s)}"></button>`).join('')}</div>
         <div class="row" style="margin-top:auto"><button class="btn" data-a="back">Voltar</button><button class="btn primary" data-a="go" style="margin-left:auto">Entrar no Pátio</button></div>
         <div class="foot" style="color:var(--g-mute);font-size:12px">Nenhum ofício é melhor que outro. Mudam algumas falas e o que cabe a você fazer em cada caso.</div></div><div></div>`;
       const inp = this.$.create.querySelector('input') as HTMLInputElement;
@@ -524,15 +658,16 @@ export class UI {
     this.show('pause', on);
     if (!on) return;
     const p = this.$.pause;
-    p.innerHTML = `<div class="card"><div class="label">Pausa</div><h2>O Pátio espera.</h2><p>O caminho é registrado ao descansar, ao mudar de região e a cada objetivo cumprido.</p>
-      <button class="btn primary" data-a="resume" data-focus>Continuar</button><button class="btn" data-a="config">Configurações</button>${document.fullscreenEnabled ? '<button class="btn" data-a="full">Tela cheia</button>' : ''}<button class="btn" data-a="title">Registrar e voltar ao título</button></div>`;
+    p.innerHTML = `<div class="card"><div class="label">Pausa</div><h2>O Pátio espera.</h2><p>O caminho é registrado ao descansar, ao mudar de região, a cada objetivo cumprido e, fora de combate, a cada 45 segundos.</p>${this.g.saveFailed ? '<p class="warn" role="alert">O navegador recusou a última gravação (armazenamento cheio, bloqueado ou janela anônima). Baixe uma cópia do registro para não perder esta sessão.</p>' : ''}
+      <button class="btn primary" data-a="resume" data-focus>Continuar</button><button class="btn" data-a="config">Configurações</button>${document.fullscreenEnabled ? '<button class="btn" data-a="full">Tela cheia</button>' : ''}<button class="btn" data-a="export">Baixar cópia do registro</button><button class="btn" data-a="title">Registrar e voltar ao título</button></div>`;
     p.querySelectorAll<HTMLElement>('button').forEach((b) =>
       b.addEventListener('click', () => {
         this.sfx('ui');
         if (b.dataset.a === 'full') {
           if (document.fullscreenElement) void document.exitFullscreen();
           else void document.documentElement.requestFullscreen?.().catch(() => undefined);
-        } else if (b.dataset.a === 'resume') this.g.closeOverlay();
+        } else if (b.dataset.a === 'export') this.downloadSave();
+        else if (b.dataset.a === 'resume') this.g.closeOverlay();
         else if (b.dataset.a === 'config') {
           this.show('pause', false);
           this.bookFromPause = true;
@@ -542,11 +677,21 @@ export class UI {
     );
     this.focusFirst(p);
   }
+  downloadSave(): void {
+    const data = this.g.exportSave();
+    if (!data) return this.toast('Ainda não há registro para copiar.');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
+    a.download = 'interprete-rpg-registro.json';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    this.toast('Cópia do registro baixada. No menu inicial, "Importar registro" traz esse arquivo de volta.', 'Registro', 8);
+  }
   defeat(on: boolean): void {
     this.show('defeat', on);
     if (!on) return;
     const p = this.$.defeat;
-    p.innerHTML = `<div class="card"><div class="label">A névoa fechou</div><h2>Você perdeu o fio.</h2><p>Nada do que você aprendeu ou recolheu foi perdido. O Crivo leva você de volta ao último ponto de descanso.</p><button class="btn primary" data-focus>Retomar o caminho</button></div>`;
+    p.innerHTML = `<div class="card"><div class="label">A névoa fechou</div><h2>Você perdeu o fio.</h2><p>Nada do que você aprendeu ou recolheu foi perdido. O Crivo leva você de volta ao último ponto seguro registrado, com a vida refeita.</p><button class="btn primary" data-focus>Retomar o caminho</button></div>`;
     p.querySelector('button')!.addEventListener('click', () => this.g.respawn());
     this.focusFirst(p);
   }
@@ -637,7 +782,7 @@ export class UI {
     for (let i = 0; i < Math.max(20, Math.ceil(ids.length / 5) * 5); i++) {
       const id = ids[i];
       if (!id) cells.push('<div class="cell empty"></div>');
-      else cells.push(`<button class="cell" data-id="${id}" aria-pressed="${id === sel}" aria-label="${esc(ITEMS[id]?.name ?? id)}">${icon(ITEMS[id]?.glyph ?? 'vazio')}${s.inventory[id] > 1 ? `<span class="n">${s.inventory[id]}</span>` : ''}${isEquipped(s, id) ? '<span class="eq">EM USO</span>' : ''}</button>`);
+      else cells.push(`<button class="cell" data-id="${id}" aria-pressed="${id === sel}" aria-label="${esc(ITEMS[id]?.name ?? id)}${s.inventory[id] > 1 ? `, ${s.inventory[id]} unidades` : ''}${isEquipped(s, id) ? ', em uso' : ''}">${icon(ITEMS[id]?.glyph ?? 'vazio')}${s.inventory[id] > 1 ? `<span class="n">${s.inventory[id]}</span>` : ''}${isEquipped(s, id) ? '<span class="eq">EM USO</span>' : ''}</button>`);
     }
     let detail = '<div class="empty-state">A bolsa está vazia. O que você recolher pelo caminho aparece aqui, com o que faz e de onde veio.</div>';
     if (sel && ITEMS[sel]) {
@@ -678,7 +823,7 @@ export class UI {
       return `<button class="node ${on ? 'on' : can ? 'can' : ''}" data-id="${d.id}" aria-pressed="${d.id === selDef.id}"><b>${esc(d.name)}</b><small>${on ? 'ativa' : d.locked ? 'em breve' : d.cost === 0 ? 'inata' : d.cost + (d.cost > 1 ? ' pontos' : ' ponto')}</small></button>`;
     };
     const looks = crivo && (s.flags.includes('crivo_laco') || s.flags.includes('crivo_capa'))
-      ? `<div class="set"><label>Laço dourado</label><input type="checkbox" data-look="laco" ${s.crivoLook.laco ? 'checked' : ''} ${s.flags.includes('crivo_laco') ? '' : 'disabled'}></div><div class="set"><label>Capa esmeralda</label><input type="checkbox" data-look="capa" ${s.crivoLook.capa ? 'checked' : ''} ${s.flags.includes('crivo_capa') ? '' : 'disabled'}></div>`
+      ? `<div class="set"><label for="look-laco">Laço dourado</label><input type="checkbox" id="look-laco" data-look="laco" ${s.crivoLook.laco ? 'checked' : ''} ${s.flags.includes('crivo_laco') ? '' : 'disabled'}></div><div class="set"><label for="look-capa">Capa esmeralda</label><input type="checkbox" id="look-capa" data-look="capa" ${s.crivoLook.capa ? 'checked' : ''} ${s.flags.includes('crivo_capa') ? '' : 'disabled'}></div>`
       : '';
     page.innerHTML = `<div class="label">${crivo ? 'O companheiro cresce com as missões' : 'Um ponto a cada nível'}</div><h2>Habilidades</h2>
       <div class="tabs" role="tablist"><button role="tab" data-t="jogador" aria-selected="${!crivo}">${esc(s.name)}</button><button role="tab" data-t="crivo" aria-selected="${crivo}">Crivo</button><span class="pts">${pts} ${pts === 1 ? 'PONTO DISPONÍVEL' : 'PONTOS DISPONÍVEIS'}</span></div>
@@ -718,7 +863,7 @@ export class UI {
           if (!done && !cur) return '';
           return `<li class="${done ? 'done' : 'cur'}">${esc(p.text)}${cur && p.hint && notes ? `<em>${esc(p.hint)}</em>` : ''}</li>`;
         })
-        .join('')}</ul>${st.status === 'ativa' ? `<button class="btn" data-a="track" style="margin-top:12px">${this.g.trackedQuest()?.id === sel ? 'Acompanhando no objetivo' : 'Acompanhar esta missão'}</button>` : ''}</div></div>`;
+        .join('')}</ul>${st.status === 'ativa' ? `<button class="btn" data-a="track" style="margin-top:12px">${this.g.trackedQuest()?.id === sel ? 'Acompanhando no objetivo' : 'Acompanhar esta missão'}</button>` : ''}${this.log.length ? `<details class="recent" style="margin-top:18px"><summary>Avisos e dicas recentes (${this.log.length})</summary><ul class="log-list">${this.log.map((l) => `<li><span class="label">${esc(l.label)}</span>${esc(l.text)}</li>`).join('')}</ul></details>` : ''}</div></div>`;
     page.querySelectorAll<HTMLElement>('button').forEach((x) =>
       x.addEventListener('click', () => {
         if (x.dataset.id) this.sel.quest = x.dataset.id;
@@ -740,7 +885,7 @@ export class UI {
         const list = have.filter((id) => CODEX[id].group === gname);
         return list.length ? `<div class="label" style="margin:10px 12px 4px">${gname}</div>${list.map((id) => `<button class="quest" data-id="${id}" aria-pressed="${id === sel}"><b>${esc(CODEX[id].title)}</b></button>`).join('')}` : '';
       })
-      .join('')}</div><div class="detail scroll codex-body"><div><div class="label">${e.group}</div><h3>${esc(e.title)}</h3></div>${e.body.map((p) => `<p>${esc(p)}</p>`).join('')}${e.note ? `<div class="note"><span class="label">Para quem quiser saber mais</span>${esc(e.note)}</div>` : ''}</div></div>`;
+      .join('')}</div><div class="detail scroll codex-body"><div><div class="label">${e.group}</div><h3>${esc(e.title)}</h3></div>${e.body.map((p) => `<p>${esc(p)}</p>`).join('')}${e.note ? `<div class="note"><span class="label">Para quem quiser saber mais</span>${esc(e.note)}</div>` : ''}${e.refs?.length ? `<div class="note refs"><span class="label">Onde conferir</span><ul class="case-src">${e.refs.map((r) => `<li>${esc(r)}</li>`).join('')}</ul></div>` : ''}</div></div>`;
     page.querySelectorAll<HTMLElement>('button').forEach((x) =>
       x.addEventListener('click', () => {
         this.sel.codex = x.dataset.id!;
@@ -752,7 +897,7 @@ export class UI {
 
   private pageMap(page: HTMLElement): void {
     const r = this.g.region;
-    page.innerHTML = `<div class="label">${esc(r.subtitle)}</div><h2>${esc(r.name)}</h2><div class="map-tools"><button class="btn" data-z="1" aria-label="Aproximar">+</button><button class="btn" data-z="-1" aria-label="Afastar">−</button><button class="btn" data-z="0">Centralizar em mim</button><span class="map-hint">Arraste para mover · roda do mouse para aproximar</span></div><canvas id="map-canvas" tabindex="0"></canvas>`;
+    page.innerHTML = `<div class="label">${esc(r.subtitle)}</div><h2>${esc(r.name)}</h2><div class="map-tools"><button class="btn" data-z="1" aria-label="Aproximar">+</button><button class="btn" data-z="-1" aria-label="Afastar">−</button><button class="btn" data-z="0">Centralizar em mim</button><span class="map-hint">${this.touch.enabled ? 'Arraste para mover · use + e − para aproximar' : this.g.input.usingPad ? 'Use os botões + e − e "Centralizar em mim"' : 'Arraste ou use as setas para mover · roda do mouse ou + e − para aproximar'}</span></div><canvas id="map-canvas" tabindex="0"></canvas>`;
     const cv = page.querySelector('canvas') as HTMLCanvasElement;
     const v = this.mapView;
     const redraw = () => this.drawMap(cv);
@@ -908,24 +1053,37 @@ export class UI {
 
   private pageConfig(page: HTMLElement): void {
     const st = this.g.settings;
+    const fmt: Partial<Record<keyof typeof st, (v: number) => string>> = {
+      fov: (v) => `${v}°`,
+      sens: (v) => `${v.toFixed(1)}×`,
+      touchScale: (v) => `${Math.round(v * 100)}%`,
+      padDeadzone: (v) => `${Math.round(v * 100)}%`,
+      noticeTime: (v) => `${v.toFixed(1)}×`,
+    };
+    const show = (k: keyof typeof st, v: number) => (fmt[k] ?? ((x: number) => `${Math.round(x * 100)}%`))(v);
     const range = (k: keyof typeof st, label: string, min: number, max: number, step: number, note = '') =>
-      `<div class="set"><label>${label}${note ? `<small>${note}</small>` : ''}</label><input type="range" data-k="${k}" min="${min}" max="${max}" step="${step}" value="${st[k]}" aria-label="${label}"></div>`;
-    const check = (k: keyof typeof st, label: string, note = '') => `<div class="set"><label>${label}${note ? `<small>${note}</small>` : ''}</label><input type="checkbox" data-k="${k}" ${st[k] ? 'checked' : ''} aria-label="${label}"></div>`;
+      `<div class="set"><label for="cfg-${k}">${label}${note ? `<small>${note}</small>` : ''}</label><span class="rng"><input type="range" id="cfg-${k}" data-k="${k}" min="${min}" max="${max}" step="${step}" value="${st[k]}"><output for="cfg-${k}">${show(k, Number(st[k]))}</output></span></div>`;
+    const check = (k: keyof typeof st, label: string, note = '') => `<div class="set"><label for="cfg-${k}">${label}${note ? `<small>${note}</small>` : ''}</label><input type="checkbox" id="cfg-${k}" data-k="${k}" ${st[k] ? 'checked' : ''}></div>`;
     const select = (k: keyof typeof st, label: string, opts: Array<[string, string]>, note = '') =>
-      `<div class="set"><label>${label}${note ? `<small>${note}</small>` : ''}</label><select data-k="${k}" aria-label="${label}">${opts.map(([v, n]) => `<option value="${v}" ${String(st[k]) === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>`;
+      `<div class="set"><label for="cfg-${k}">${label}${note ? `<small>${note}</small>` : ''}</label><select id="cfg-${k}" data-k="${k}">${opts.map(([v, n]) => `<option value="${v}" ${String(st[k]) === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>`;
     const acts = Object.keys(ACTION_LABEL) as ActionName[];
+    const inp = this.g.input;
+    const padActs = acts.filter((a) => !['frente', 'tras', 'esquerda', 'direita', 'camEsq', 'camDir', 'habilidades'].includes(a));
+    const bindRow = (a: ActionName) =>
+      `<div class="set"><label>${ACTION_LABEL[a]}</label><span class="binds"><button class="btn" data-bind="${a}" aria-label="${ACTION_LABEL[a]}: tecla ${inp.keys[a].map(keyLabel).join(' ou ') || 'nenhuma'}. Acione para trocar.">${inp.keys[a].map(keyLabel).join(' · ') || 'sem tecla'}</button>${padActs.includes(a) ? `<button class="btn" data-bindpad="${a}" aria-label="${ACTION_LABEL[a]}: botão do controle ${padLabel(inp.pad[a])}. Acione para trocar.">${padLabel(inp.pad[a])}</button>` : '<span class="btn ghost" aria-hidden="true">analógico</span>'}</span></div>`;
     page.innerHTML = `<div class="label">Valem para este navegador</div><h2>Configurações</h2><div class="scroll"><div class="settings">
-      <h4>Imagem</h4>${select('quality', 'Qualidade', [['baixa', 'Baixa'], ['media', 'Média'], ['alta', 'Alta']], 'Baixa desliga sombras e brilho')}${range('fov', 'Campo de visão', 48, 75, 1)}${check('grain', 'Grão de filme')}${check('vignette', 'Vinheta')}
+      <h4>Imagem</h4>${select('quality', 'Qualidade', [['baixa', 'Baixa'], ['media', 'Média'], ['alta', 'Alta']], 'Baixa desliga sombras e brilho. A troca pode levar um instante.')}${range('fov', 'Campo de visão', 48, 75, 1)}${check('grain', 'Grão de filme')}${check('vignette', 'Vinheta')}
       <h4>Som</h4>${range('volGeral', 'Volume geral', 0, 1, 0.05)}${range('volMusica', 'Música', 0, 1, 0.05)}${range('volEfeitos', 'Efeitos', 0, 1, 0.05)}${range('volAmbiente', 'Ambiente', 0, 1, 0.05)}
-      <h4>Jogo</h4>${select('difficulty', 'Encontros', [['padrao', 'Padrão'], ['historia', 'História']], 'História reduz o dano recebido')}${range('sens', this.touch.enabled ? 'Sensibilidade da câmera e do toque' : 'Sensibilidade da câmera', 0.3, 2.5, 0.1)}${this.touch.enabled ? range('touchScale', 'Tamanho dos botões de toque', 0.8, 1.4, 0.05) : ''}${check('invertY', 'Inverter eixo vertical')}${check('hud', 'Mostrar interface durante o jogo')}
-      <h4>Acessibilidade</h4>${select('textScale', 'Tamanho do texto', [['0.9', 'Menor'], ['1', 'Padrão'], ['1.15', 'Maior'], ['1.3', 'Muito maior']])}${check('highContrast', 'Alto contraste')}${check('reduceMotion', 'Reduzir movimento', 'Sem tremor de câmera, clarões e texto animado')}
-      ${this.touch.enabled ? '' : '<h4>Controles · clique para remapear</h4>'}</div><div class="keys">${this.touch.enabled ? '' : acts.map((a) => `<div class="set"><label>${ACTION_LABEL[a]}</label><button class="btn" data-bind="${a}">${this.rebinding === a ? 'Pressione uma tecla' : this.g.input.keys[a].map(keyLabel).join(' · ') || 'sem tecla'}</button></div>`).join('')}</div>
-      <div class="settings"><h4>Gamepad</h4><div class="set"><label>Analógicos movem e olham. A interage, B esquiva, X golpe leve, Y golpe firme, RB Crivo, LB alterna, Start pausa.</label></div><div class="set"><button class="btn" data-a="reset">Restaurar padrões</button></div>
+      <h4>Jogo</h4>${select('difficulty', 'Encontros', [['padrao', 'Padrão'], ['historia', 'História']], 'História reduz o dano recebido')}${range('sens', this.touch.enabled ? 'Sensibilidade da câmera e do toque' : 'Sensibilidade da câmera', 0.3, 2.5, 0.1)}${range('touchScale', 'Tamanho dos botões de toque', 0.8, 1.4, 0.05, this.touch.enabled ? '' : 'Vale quando a tela for tocada')}${check('touchEasyRun', 'Correr sem levar o dedo à borda', 'No toque, a corrida começa a 60% do curso do analógico, em vez de 94%')}${check('invertY', 'Inverter eixo vertical')}${check('hud', 'Mostrar interface durante o jogo')}${check('hudNumbers', 'Números nas barras', 'Vida, vigor e experiência que falta, em números')}
+      <h4>Acessibilidade</h4>${select('textScale', 'Tamanho do texto', [['0.9', 'Menor'], ['1', 'Padrão'], ['1.15', 'Maior'], ['1.3', 'Muito maior'], ['1.6', 'Máximo']])}${check('highContrast', 'Alto contraste')}${check('reduceMotion', 'Reduzir movimento', 'Sem tremor de câmera, clarões e texto animado. Começa igual à preferência do sistema.')}${range('noticeTime', 'Duração de avisos e dicas', 0.5, 4, 0.5, 'Avisos passados ficam no Diário')}
+      <h4>Controles · acione para remapear</h4><div class="set"><label>Teclado e mouse à esquerda, controle à direita<small>Depois de acionar, pressione a tecla, o botão do mouse ou o botão do controle. Esc cancela. Se a escolha já for de outra ação, as duas trocam e um aviso diz o que mudou.</small></label></div></div><div class="keys">${acts.map(bindRow).join('')}</div>
+      <div class="settings"><h4>Controle</h4>${range('padDeadzone', 'Zona morta dos analógicos', 0.05, 0.45, 0.01, 'Aumente se o personagem ou a câmera andarem sozinhos')}<div class="set"><label>Analógico esquerdo move, direito olha, RT também corre. Nos menus, direcional ou analógico percorrem, A aciona e B volta.</label></div><div class="set"><button class="btn" data-a="reset">Restaurar padrões</button></div>
+      ${problems.length ? `<div class="settings"><h4>Diagnóstico</h4><div class="set"><label>${problems.length} ${problems.length === 1 ? 'arquivo não carregou' : 'arquivos não carregaram'} nesta sessão. O jogo usa a versão de reserva deles.<small>${problems.map(esc).join('<br>')}</small></label></div></div>` : ''}
       <div class="settings credits"><h4>Créditos</h4>
-      <div class="set"><label>Música<small>"Night Vigil", "Equatorial Complex", "Aquarium", "Ether Vox" e "That Zen Moment", de Kevin MacLeod (incompetech.com). Licenciadas sob Creative Commons: By Attribution 4.0, creativecommons.org/licenses/by/4.0/</small></label></div>
+      <div class="set"><label>Música<small>"Night Vigil", "Equatorial Complex", "Aquarium", "Ether Vox" e "That Zen Moment", de Kevin MacLeod (incompetech.com). Licenciadas sob Creative Commons Atribuição 4.0, creativecommons.org/licenses/by/4.0/. Alterações: arquivos recomprimidos; "That Zen Moment" cortada em cinco minutos.</small></label></div>
       <div class="set"><label>Captura de movimento<small>The data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217. Conversão BVH de B. Hahne.</small></label></div>
       <div class="set"><label>Modelos, texturas e céu<small>Poly Haven (polyhaven.com), CC0. Humanos montados com MakeHuman e MPFB2, com roupas e cabelos CC0 de Donitz, MargaretToigo, Elvaerwyn, RehmanPolanski, jujube, frankyaye, grinsegold e WDG.</small></label></div>
-      <div class="set"><label>Sons<small>Freesound: dolineh, klankbeeld, isalreky, incrediblesgm, starsoundzzz, duranburrus, loganzsound.</small></label></div>
+      <div class="set"><label>Sons<small>Freesound (freesound.org): "766206" de dolineh, "789860" de klankbeeld, "877794" e "877796" de isalreky, "877860" de incrediblesgm, "877999", "878005" e "878006" de starsoundzzz, "878026" de duranburrus, "878286" de loganzsound. Cortados, normalizados e convertidos. A licença de cada um ainda está em conferência; ver docs/game/REGISTRO_DE_ASSETS.md.</small></label></div>
       </div></div>`;
     page.querySelectorAll<HTMLElement>('input, select').forEach((x) =>
       x.addEventListener('input', () => {
@@ -933,6 +1091,11 @@ export class UI {
         const inp = x as HTMLInputElement;
         const v = inp.type === 'checkbox' ? inp.checked : inp.type === 'range' || k === 'textScale' ? Number(inp.value) : inp.value;
         (st as unknown as Record<string, unknown>)[k] = v;
+        if (k === 'reduceMotion') st.reduceMotionSet = true;
+        if (inp.type === 'range') {
+          const out = inp.parentElement?.querySelector('output');
+          if (out) out.textContent = show(k, Number(v));
+        }
         this.g.applySettings();
       }),
     );
@@ -940,7 +1103,13 @@ export class UI {
       x.addEventListener('click', () => {
         if (x.dataset.bind) {
           this.rebinding = x.dataset.bind as ActionName;
-          x.textContent = 'Pressione uma tecla';
+          this.rebindPad = false;
+          x.textContent = 'Tecla ou botão do mouse…';
+        } else if (x.dataset.bindpad) {
+          this.rebinding = x.dataset.bindpad as ActionName;
+          this.rebindPad = true;
+          x.textContent = 'Botão do controle…';
+          this.g.input.capturePad = (b) => this.finishRebind(null, b);
         } else if (x.dataset.a === 'reset') {
           this.g.resetSettings();
           this.renderBook();
