@@ -25,3 +25,7 @@ WASD move, o mouse gira a câmera, Shift corre, Espaço esquiva, E interage, bot
 `src/core` tem motor, entrada, áudio e ajustes. `src/world` constrói as regiões com geometria e texturas geradas em código. `src/entities` tem jogador, Crivo, inimigos e NPCs. `src/domain` guarda o estado puro e serializável, sem dependência de Three.js, que é a parte pronta para um servidor de cooperativo. `src/content/data.ts` reúne itens, missões, códice e habilidades. `src/story.ts` contém os diálogos e a lógica das missões, e `src/game.ts` orquestra tudo. `src/ui` é DOM e CSS sobre os tokens de `design/`.
 
 A documentação de decisões, o registro de assets, a lista de verificação e as pendências ficam em `docs/game/`. As regras do design system estão em `DESIGN.md` e devem ser lidas antes de qualquer mudança de interface.
+
+## Celular e tablet
+
+Em aparelhos de toque o jogo mostra controles próprios: joystick flutuante na metade esquerda (arraste para andar, empurre até a borda para correr), olhar por arrasto na metade direita, e botões de Golpe, Firme, Esquiva, Pulso, Item, Agir (com o verbo do alvo), Trocar, Dica e Mira, mais Caderno e Pausa no topo. Cada dedo é rastreado em separado, então andar, olhar e golpear acontecem juntos. A primeira execução em aparelho de toque começa em qualidade baixa; Configurações permite subir a qualidade, a sensibilidade e o tamanho dos botões. Funciona em paisagem e em retrato. Para testar no computador, abra a URL com `?touch`. `npm run e2e:touch` roda a bateria com toque real em quatro tamanhos de tela.

@@ -38,7 +38,8 @@ export async function opening(g: G): Promise<void> {
   g.audio.sfx('crivoAlegre');
   await g.say('', 'Ele não diz nada. Dá uma volta ao seu redor, pisca devagar e se põe ao seu lado. Pelo visto, a decisão foi tomada.');
   g.startQuest('chegada');
-  g.ui.hint(`${g.ui.key('frente')} ${g.ui.key('esquerda')} ${g.ui.key('tras')} ${g.ui.key('direita')} para andar · ${g.ui.key('correr')} para correr · mouse para olhar · ${g.ui.key('interagir')} para interagir · ${g.ui.key('dica')} pede uma dica ao Crivo`, 'Primeiros passos', 14);
+  if (g.ui.isTouch) g.ui.hint('Arraste na metade esquerda para andar, empurre até a borda para correr · arraste na direita para olhar · Interagir fica ativo perto de pessoas e objetos · Dica pede ajuda ao Crivo', 'Primeiros passos', 14);
+  else g.ui.hint(`${g.ui.key('frente')} ${g.ui.key('esquerda')} ${g.ui.key('tras')} ${g.ui.key('direita')} para andar · ${g.ui.key('correr')} para correr · mouse para olhar · ${g.ui.key('interagir')} para interagir · ${g.ui.key('dica')} pede uma dica ao Crivo`, 'Primeiros passos', 14);
 }
 
 // ---------- marcadores sobre personagens ----------

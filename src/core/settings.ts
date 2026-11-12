@@ -17,6 +17,8 @@ export interface Settings {
   difficulty: 'historia' | 'padrao';
   fov: number;
   hud: boolean;
+  /** tamanho dos botões de toque */
+  touchScale: number;
   keys: Partial<Record<ActionName, string[]>>;
 }
 
@@ -36,6 +38,7 @@ export const DEFAULT_SETTINGS: Settings = {
   difficulty: 'padrao',
   fov: 58,
   hud: true,
+  touchScale: 1,
   keys: {},
 };
 
@@ -49,6 +52,8 @@ export function loadSettings(): Settings {
     /* armazenamento indisponível: segue com o padrão */
   }
   const s = { ...DEFAULT_SETTINGS };
+  // primeira execução em aparelho de toque: qualidade baixa poupa bateria e garante fluidez
+  if (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches) s.quality = 'baixa';
   if (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) s.reduceMotion = true;
   return s;
 }

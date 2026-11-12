@@ -25,3 +25,7 @@ Jogar a chegada e o Bosque sem pressa, anotando onde o caminho não fica claro. 
 Teste funcional com cliques e teclas reais em Chromium headless (SwiftShader): 59 verificações de interface (atalhos Tab, L, M, P, I e Esc; equipar, guardar e usar itens; aprender habilidades do jogador e do Crivo; acompanhar missão; códice; zoom, arraste e roda do mapa; 15 ajustes e remapeamento com restauração; loja; derrota; pausa, título e continuar) e 15 verificações de ação (câmera pelo teclado, item rápido, esquiva, Pulso e Lupa, dica, descanso, queda, viagem, golpe). Todas passam, sem erro de página nem do jogo.
 
 Correções feitas na rodada: Configurações abertas pela pausa voltam para a pausa; F escolhe o limão de Lind quando o caldo não serve; Z e C giram a câmera quando o mouse não está capturado. Limite: não há teste em GPU real, com som, nem com gamepad físico; sensação de combate e desempenho continuam dependendo de jogo humano.
+
+## Toque e telas pequenas (12/11/2026)
+
+Bateria com toque real emulado (Chromium, CDP): joystick parcial e corrida com histerese, olhar com o segundo dedo enquanto anda, nove botões de ação, conversa avançada só por toque, caderno com todas as abas, equipar, usar, aprender habilidade, mapa (botões e arrasto), configurações, loja, pausa, derrota. Layout sem sobreposição de botões e do HUD conferido em 320x568, 360x640, 390x844, 667x375, 844x390, 932x430, 768x1024 e 1024x768. Limite: sem aparelho físico, sem háptica, sem medida de bateria nem de fluidez em GPU móvel; a sensação do joystick precisa de mão humana.
