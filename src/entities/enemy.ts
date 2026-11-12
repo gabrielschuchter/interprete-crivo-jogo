@@ -68,6 +68,17 @@ export class Enemy {
   private puffs: Array<{ s: THREE.Sprite; a: number; r: number; y: number; sp: number; base: number }> = [];
   private eyes: THREE.Mesh[] = [];
   private shroud: THREE.Mesh;
+  private rig = new THREE.Group();
+  private hips = new THREE.Group();
+  private torso = new THREE.Group();
+  private head = new THREE.Group();
+  private arms: Array<{ up: THREE.Group; fore: THREE.Group; hand: THREE.Group; fingers: THREE.Group[] }> = [];
+  private strips: THREE.Mesh[] = [];
+  private orb: THREE.Sprite;
+  private pz: Record<string, number> = {};
+  private prevPos = new THREE.Vector3();
+  private moveSpeed = 0;
+  private gait = Math.random() * 6;
   private ring: THREE.Mesh;
   private bar: THREE.Group;
   private barFill: THREE.Mesh;
@@ -107,41 +118,154 @@ export class Enemy {
     glowTex ??= glowSprite(64, 'rgba(255,255,255,1)', 'rgba(255,255,255,0)');
     const s = c.scale;
 
-    // manto: cone rasgado de névoa densa
-    const g = new THREE.ConeGeometry(0.55 * s, 1.9 * s, 12, 6, true);
-    const p = g.getAttribute('position');
-    for (let i = 0; i < p.count; i++) {
-      const yy = p.getY(i);
-      const k = 0.5 - yy / (1.9 * s);
-      const a = Math.atan2(p.getZ(i), p.getX(i));
-      const rag = 1 + Math.sin(a * 5 + yy * 3) * 0.16 * k + Math.sin(a * 9) * 0.08 * k;
-      p.setX(i, p.getX(i) * rag);
-      p.setZ(i, p.getZ(i) * rag);
-      if (k > 0.92) p.setY(i, yy + Math.sin(a * 7) * 0.16 * s);
+    // corpo: espectro articulado (manto rasgado, tronco, capuz, braços com garras)
+    const tint = new THREE.Color(c.tint);
+    const robeM = new THREE.MeshStandardMaterial({ color: tint.clone().multiplyScalar(0.26), roughness: 0.95, transparent: true, opacity: 0.94, side: THREE.DoubleSide, emissive: c.tint, emissiveIntensity: 0.08 });
+    const boneM = new THREE.MeshStandardMaterial({ color: tint.clone().lerp(new THREE.Color(0xd8d2c0), 0.6), roughness: 0.55, emissive: c.tint, emissiveIntensity: 0.05 });
+    const voidM = new THREE.MeshBasicMaterial({ color: 0x050407 });
+    const thin = kind === 'fiapo';
+    const broad = kind === 'vulto' ? 1.18 : kind === 'veredito' ? 1.3 : kind === 'eco' ? 1.22 : 0.86;
+    const armLen = thin ? 1.2 : 1;
+    const ragged = (g: THREE.BufferGeometry, amp: number, bottomY: number, freq: number): void => {
+      const pos = g.getAttribute('position');
+      for (let i = 0; i < pos.count; i++) {
+        const y = pos.getY(i);
+        const k = Math.max(0, (bottomY + 0.35 - y) / 0.35);
+        const a = Math.atan2(pos.getZ(i), pos.getX(i));
+        const rag = 1 + (Math.sin(a * freq) * 0.2 + Math.sin(a * freq * 2.3 + 1) * 0.1) * k * amp;
+        pos.setX(i, pos.getX(i) * rag);
+        pos.setZ(i, pos.getZ(i) * rag);
+        if (k > 0.85) pos.setY(i, y - (Math.sin(a * freq * 1.7) * 0.5 + 0.5) * 0.18 * amp);
+      }
+      g.computeVertexNormals();
+    };
+    const mesh = (parent: THREE.Object3D, geo: THREE.BufferGeometry, mat: THREE.Material, x = 0, y = 0, z = 0): THREE.Mesh => {
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(x, y, z);
+      m.castShadow = true;
+      parent.add(m);
+      return m;
+    };
+    this.rig.scale.setScalar(s);
+    this.root.add(this.rig);
+    this.hips.position.y = thin ? 0.98 : 1.06;
+    this.rig.add(this.hips);
+    // saia/manto longo, flutuando
+    const skirtProfile: THREE.Vector2[] = [];
+    for (let i = 0; i <= 14; i++) {
+      const u = i / 14;
+      skirtProfile.push(new THREE.Vector2((0.17 + Math.pow(u, 1.4) * 0.5) * broad, -u * 0.98));
     }
-    g.computeVertexNormals();
-    const sm = new THREE.MeshStandardMaterial({ color: new THREE.Color(c.tint).multiplyScalar(0.28), roughness: 1, transparent: true, opacity: 0.9, side: THREE.DoubleSide, emissive: c.tint, emissiveIntensity: 0.08 });
-    this.shroud = new THREE.Mesh(g, sm);
-    this.shroud.position.y = 1.15 * s;
-    this.shroud.castShadow = true;
-    this.root.add(this.shroud);
+    const sg = new THREE.LatheGeometry(skirtProfile, 56);
+    ragged(sg, 1.3, -0.98, 7);
+    this.shroud = mesh(this.hips, sg, robeM);
+    // tronco
+    this.torso.position.y = 0.04;
+    this.hips.add(this.torso);
+    const chestProfile = [0.0, 0.17, 0.24, 0.33, 0.45, 0.55, 0.62, 0.66].map((y, i) => new THREE.Vector2([0.17, 0.165, 0.19, 0.225, 0.235, 0.2, 0.1, 0.06][i] * broad, y));
+    mesh(this.torso, new THREE.LatheGeometry(chestProfile, 40), robeM);
+    const collar = mesh(this.torso, new THREE.TorusGeometry(0.115 * broad, 0.035, 12, 32), robeM, 0, 0.6, 0);
+    collar.rotation.x = Math.PI / 2;
+    // costelas expostas: arcos de osso sob o manto
+    for (let i = 0; i < 4; i++) {
+      const rib = mesh(this.torso, new THREE.TorusGeometry((0.2 - i * 0.012) * broad, 0.008, 6, 22, Math.PI * 1.1), boneM, 0, 0.28 + i * 0.065, 0.02);
+      rib.rotation.set(Math.PI / 2, 0, -Math.PI * 0.05);
+      rib.scale.z = 0.75;
+    }
+    // cabeça: capuz, vazio no rosto, olhos
+    this.head.position.y = 0.72;
+    this.torso.add(this.head);
+    const hood = mesh(this.head, new THREE.SphereGeometry(0.19, 36, 28), robeM, 0, 0.03, -0.02);
+    hood.scale.set(0.95 * (thin ? 0.9 : 1), 1.22, 1.08);
+    const tip = mesh(this.head, new THREE.ConeGeometry(0.1, kind === 'vulto' ? 0.42 : 0.3, 20, 1, true), robeM, 0, 0.26, -0.1);
+    tip.rotation.x = -0.5;
+    const face = mesh(this.head, new THREE.SphereGeometry(0.115, 28, 20), voidM, 0, -0.01, 0.1);
+    face.scale.set(0.92, 1.18, 0.7);
+    face.castShadow = false;
+    const brow = mesh(this.head, new THREE.TorusGeometry(0.135, 0.022, 10, 30, Math.PI), robeM, 0, 0.06, 0.085);
+    brow.rotation.set(0.0, 0.0, 0);
+    brow.scale.set(1, 0.9, 0.7);
+    // boca de osso entreaberta para criaturas mais velhas
+    if (kind !== 'fiapo') {
+      for (let i = -2; i <= 2; i++) {
+        const tooth = mesh(this.head, new THREE.ConeGeometry(0.008, 0.035, 5), boneM, i * 0.02, -0.098 + Math.abs(i) * 0.004, 0.155);
+        tooth.rotation.x = Math.PI;
+        tooth.castShadow = false;
+      }
+    }
+    if (kind === 'veredito') {
+      for (let i = 0; i < 9; i++) {
+        const a = (i / 9) * Math.PI * 2;
+        const sp = mesh(this.head, new THREE.ConeGeometry(0.018, 0.2 + (i % 3) * 0.06, 6), boneM, Math.cos(a) * 0.17, 0.26, Math.sin(a) * 0.17 - 0.02);
+        sp.rotation.set(Math.sin(a) * 0.35, 0, -Math.cos(a) * 0.35);
+      }
+    }
+    const eyeM = new THREE.MeshBasicMaterial({ color: new THREE.Color(c.eye).multiplyScalar(2.2) });
+    for (const sx of [-1, 1]) {
+      const e = new THREE.Mesh(new THREE.SphereGeometry(0.018, 12, 10), eyeM);
+      e.position.set(sx * 0.052, 0.02, 0.172);
+      e.scale.set(1.5, 0.62, 0.8);
+      e.rotation.z = sx * -0.28;
+      this.head.add(e);
+      this.eyes.push(e);
+    }
+    // braços articulados: manga rasgada, antebraço, mão com quatro garras
+    for (const sx of [-1, 1]) {
+      const up = new THREE.Group();
+      up.position.set(sx * 0.27 * broad, 0.52, 0);
+      this.torso.add(up);
+      mesh(up, new THREE.SphereGeometry(0.075, 18, 14), robeM).scale.set(1.2, 0.9, 1);
+      mesh(up, new THREE.CapsuleGeometry(0.042, 0.34 * armLen, 8, 14), boneM, 0, -0.2 * armLen, 0);
+      const sleeve = mesh(up, new THREE.ConeGeometry(0.1, 0.4 * armLen, 20, 1, true), robeM, 0, -0.22 * armLen, 0);
+      sleeve.rotation.x = Math.PI;
+      const fore = new THREE.Group();
+      fore.position.y = -0.4 * armLen;
+      up.add(fore);
+      mesh(fore, new THREE.SphereGeometry(0.045, 14, 10), boneM);
+      mesh(fore, new THREE.CapsuleGeometry(0.034, 0.32 * armLen, 8, 14), boneM, 0, -0.19 * armLen, 0);
+      const fsl = mesh(fore, new THREE.ConeGeometry(0.085, 0.34 * armLen, 20, 1, true), robeM, 0, -0.2 * armLen, 0);
+      fsl.rotation.x = Math.PI;
+      ragged(fsl.geometry, 1.2, -0.17 * armLen, 6);
+      const hand = new THREE.Group();
+      hand.position.y = -0.38 * armLen;
+      fore.add(hand);
+      mesh(hand, new THREE.SphereGeometry(0.04, 14, 10), boneM).scale.set(1, 1.2, 0.6);
+      const fingers: THREE.Group[] = [];
+      for (let f = 0; f < 4; f++) {
+        const fg = new THREE.Group();
+        fg.position.set((f - 1.5) * 0.02, -0.04, 0.0);
+        hand.add(fg);
+        mesh(fg, new THREE.CapsuleGeometry(0.0075, 0.07, 4, 8), boneM, 0, -0.045, 0);
+        const claw = mesh(fg, new THREE.ConeGeometry(0.009, 0.075, 8), boneM, 0, -0.115, 0);
+        claw.rotation.x = Math.PI;
+        fg.rotation.z = (f - 1.5) * 0.08;
+        fingers.push(fg);
+      }
+      this.arms.push({ up, fore, hand, fingers });
+    }
+    // fitas de manto às costas, balançando
+    for (let i = 0; i < 6; i++) {
+      const w = 0.07 + (i % 2) * 0.03;
+      const g = new THREE.PlaneGeometry(w, 0.7 + (i % 3) * 0.18, 1, 6);
+      const st = mesh(this.torso, g, robeM, (i - 2.5) * 0.075 * broad, 0.5 - (0.7 + (i % 3) * 0.18) / 2, -0.19 * broad);
+      st.geometry.translate(0, 0, 0);
+      this.strips.push(st);
+    }
+    // esfera de energia na conjuração
+    glowTex ??= glowSprite(64, 'rgba(255,255,255,1)', 'rgba(255,255,255,0)');
+    this.orb = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color(c.eye).multiplyScalar(2), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    this.orb.position.set(0, 1.35, 0.6);
+    this.orb.scale.setScalar(0.001);
+    this.rig.add(this.orb);
 
-    const n = kind === 'veredito' ? 22 : kind === 'eco' ? 16 : 10;
+    const n = kind === 'veredito' ? 16 : kind === 'eco' ? 12 : 7;
     for (let i = 0; i < n; i++) {
       const m = new THREE.SpriteMaterial({ map: smokeTex, color: c.tint, transparent: true, opacity: 0.5, depthWrite: false, rotation: Math.random() * 6 });
       const sp = new THREE.Sprite(m);
       const base = (0.7 + Math.random() * 0.9) * s;
       sp.scale.setScalar(base);
       this.root.add(sp);
-      this.puffs.push({ s: sp, a: Math.random() * 6.28, r: (0.2 + Math.random() * 0.45) * s, y: (0.2 + Math.random() * 1.7) * s, sp: 0.4 + Math.random() * 1.2, base });
-    }
-    const eyeM = new THREE.MeshBasicMaterial({ color: new THREE.Color(c.eye).multiplyScalar(2.2) });
-    for (const sx of [-1, 1]) {
-      const e = new THREE.Mesh(new THREE.SphereGeometry(0.05 * s, 8, 6), eyeM);
-      e.position.set(sx * 0.13 * s, 1.72 * s, 0.3 * s);
-      e.scale.set(1.5, 0.7, 1);
-      this.root.add(e);
-      this.eyes.push(e);
+      this.puffs.push({ s: sp, a: Math.random() * 6.28, r: (0.2 + Math.random() * 0.45) * s, y: (0.05 + Math.random() * 1.0) * s, sp: 0.4 + Math.random() * 1.2, base });
     }
     if (kind === 'veredito') {
       // tábuas de sentença orbitando: certezas escritas cedo demais
@@ -151,6 +275,30 @@ export class Enemy {
         t.castShadow = true;
         this.root.add(t);
         this.tablets.push(t);
+      }
+    }
+    if (kind === 'eco') {
+      // máscaras pálidas que repetem o que ouviram, orbitando
+      const mm = new THREE.MeshStandardMaterial({ color: 0xd9d0b8, roughness: 0.5, emissive: c.tint, emissiveIntensity: 0.12 });
+      const dark = new THREE.MeshBasicMaterial({ color: 0x08060a });
+      for (let i = 0; i < 5; i++) {
+        const g = new THREE.Group();
+        const m = new THREE.Mesh(new THREE.SphereGeometry(0.22, 24, 18), mm);
+        m.scale.set(0.8, 1.1, 0.35);
+        g.add(m);
+        for (const sx of [-1, 1]) {
+          const e = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), dark);
+          e.position.set(sx * 0.07, 0.05, 0.07);
+          e.scale.set(1.3, 0.6, 0.5);
+          g.add(e);
+        }
+        const mo = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), dark);
+        mo.position.set(0, -0.1, 0.07);
+        mo.scale.set(1.5, 0.5 + i * 0.25, 0.5);
+        g.add(mo);
+        g.traverse((o) => ((o as THREE.Mesh).isMesh ? ((o as THREE.Mesh).castShadow = true) : 0));
+        this.root.add(g);
+        this.tablets.push(g as unknown as THREE.Mesh);
       }
     }
     // anel de aviso no chão
@@ -453,7 +601,8 @@ export class Enemy {
       }
       case 'dying': {
         const k = Math.min(1, this.t / 0.9);
-        swell = 1 + k * 0.8;
+        swell = 1 + k * 0.3;
+        this.rig.scale.setScalar(s * Math.max(0.05, 1 - k * 0.85));
         (this.shroud.material as THREE.MeshStandardMaterial).opacity = 0.9 * (1 - k);
         for (const p of this.puffs) (p.s.material as THREE.SpriteMaterial).opacity = 0.5 * (1 - k);
         for (const e of this.eyes) e.scale.setScalar(Math.max(0.001, 1 - k * 1.5));
@@ -473,9 +622,9 @@ export class Enemy {
     const bob = Math.sin(this.bobPhase * 1.7) * 0.08 * s;
     this.root.position.set(this.pos.x, this.pos.y + bob + 0.05, this.pos.z);
     this.root.rotation.y = this.yaw;
-    this.shroud.scale.set(swell, 1 + (swell - 1) * 0.5, swell);
-    this.shroud.rotation.x = lean;
-    this.shroud.rotation.y = Math.sin(time * 0.7 + this.bobPhase) * 0.3;
+    this.shroud.scale.set(swell, 1 + (swell - 1) * 0.3, swell);
+    this.shroud.rotation.y = Math.sin(time * 0.7 + this.bobPhase) * 0.08;
+    this.poseBody(dt, time, lean, eyeHot > 0);
     const sm = this.shroud.material as THREE.MeshStandardMaterial;
     sm.emissive.set(this.flash > 0 ? 0xffffff : eyeHot ? BRAND.classicCrimson : cfg.tint);
     sm.emissiveIntensity = this.flash > 0 ? 1.4 : eyeHot ? 0.3 : 0.08;
@@ -505,6 +654,177 @@ export class Enemy {
       this.barFill.scale.x = f;
       this.barFill.position.x = -0.44 * (1 - f);
     }
+  }
+
+  /** Pose do espectro por estado: antecipação legível antes de cada golpe, fluidez entre estados. */
+  private poseBody(dt: number, time: number, lean: number, hot: boolean): void {
+    const d = dt || 0.016;
+    const t = this.t;
+    const cfg = this.cfg;
+    const sp = d > 0 ? this.pos.distanceTo(this.prevPos) / d : 0;
+    this.prevPos.copy(this.pos);
+    this.moveSpeed += (sp - this.moveSpeed) * Math.min(1, d * 8);
+    const mv = Math.min(1, this.moveSpeed / 2.6);
+    this.gait += d * (2 + mv * 4.5);
+    const g = Math.sin(this.gait);
+    const k = (x: number, a: number, b: number) => Math.min(1, Math.max(0, (x - a) / (b - a)));
+    const sm = (x: number) => x * x * (3 - 2 * x);
+    const T: Record<string, number> = {
+      hipsRx: 0.12 + mv * 0.28,
+      hipsY: 0,
+      torsoRx: 0.16 + Math.sin(time * 1.3 + this.bobPhase) * 0.03,
+      torsoRy: Math.sin(time * 0.6 + this.bobPhase) * 0.12,
+      headRx: 0.1,
+      headRy: Math.sin(time * 0.5 + this.bobPhase * 1.3) * 0.5 * (1 - mv),
+      aLx: g * 0.55 * mv + Math.sin(time * 0.9) * 0.05,
+      aRx: -g * 0.55 * mv + Math.sin(time * 0.9 + 1.5) * 0.05,
+      aLz: 0.12 + mv * 0.05,
+      aRz: -(0.12 + mv * 0.05),
+      fLx: -0.35 - mv * 0.5,
+      fRx: -0.35 - mv * 0.5,
+      claw: 0.5,
+      orb: 0,
+      rate: 12,
+    };
+    switch (this.state) {
+      case 'windup': {
+        const w = sm(k(t, 0, cfg.windup));
+        T.hipsRx = 0.1 - 0.15 * w;
+        T.torsoRx = -0.4 * w;
+        T.headRx = -0.35 * w;
+        T.aLx = T.aRx = -(0.8 + 1.8 * w);
+        T.aLz = 0.25 + 0.3 * w;
+        T.aRz = -T.aLz;
+        T.fLx = T.fRx = -0.5;
+        T.claw = 0.5 - 0.9 * w;
+        T.headRy = 0;
+        T.rate = 16;
+        break;
+      }
+      case 'strike': {
+        const w = k(t, 0, 0.24);
+        T.hipsRx = 0.55;
+        T.torsoRx = 0.65 * w;
+        T.headRx = 0.25;
+        T.aLx = T.aRx = -2.6 + 2.7 * w;
+        T.aLz = 0.15;
+        T.aRz = -0.15;
+        T.fLx = T.fRx = -0.15;
+        T.claw = -0.5;
+        T.headRy = 0;
+        T.rate = 34;
+        break;
+      }
+      case 'recover': {
+        const w = sm(k(t, 0, this.cfg.recover));
+        T.hipsRx = 0.4 - 0.25 * w;
+        T.torsoRx = 0.45 - 0.25 * w;
+        T.headRx = 0.35;
+        T.aLx = T.aRx = 0.1 - 0.1 * w;
+        T.claw = 0.2;
+        T.rate = 8;
+        break;
+      }
+      case 'cast': {
+        const w = sm(k(t, 0, 0.8));
+        T.hipsRx = 0;
+        T.torsoRx = -0.12 * w;
+        T.headRx = -0.18 * w;
+        T.aLx = T.aRx = -1.3 * w;
+        T.aLz = 0.3 + 0.3 * w;
+        T.aRz = -T.aLz;
+        T.fLx = T.fRx = -0.55;
+        T.claw = 0.1;
+        T.orb = w * (0.55 + Math.sin(t * 28) * 0.04);
+        T.headRy = 0;
+        break;
+      }
+      case 'ring': {
+        const wind = 1.15;
+        const up = sm(k(t, 0, wind));
+        const slam = k(t, wind, wind + 0.12);
+        T.hipsRx = 0.1 + 0.5 * slam;
+        T.torsoRx = -0.3 * up + 0.95 * slam;
+        T.headRx = -0.4 * up + 0.5 * slam;
+        T.aLx = T.aRx = -2.8 * up * (1 - slam) + 0.3 * slam;
+        T.aLz = 0.5;
+        T.aRz = -0.5;
+        T.fLx = T.fRx = -0.3;
+        T.claw = -0.2;
+        T.hipsY = -0.2 * slam;
+        T.headRy = 0;
+        T.rate = slam > 0 ? 38 : 14;
+        break;
+      }
+      case 'recite': {
+        const w = sm(k(t, 0, 0.8));
+        T.hipsRx = -0.05;
+        T.torsoRx = -0.35 * w;
+        T.headRx = -0.5 * w;
+        T.aLx = T.aRx = -2.2 * w;
+        T.aLz = 0.9 * w;
+        T.aRz = -T.aLz;
+        T.fLx = T.fRx = -0.35;
+        T.claw = -0.3;
+        T.headRy = Math.sin(t * 6) * 0.15;
+        break;
+      }
+      case 'stunned': {
+        const sh = Math.sin(t * 38) * 0.04;
+        T.hipsRx = 0.45;
+        T.torsoRx = 0.6 + sh;
+        T.headRx = 0.6;
+        T.headRy = sh * 4;
+        T.aLx = T.aRx = 0.25;
+        T.aLz = 0.35;
+        T.aRz = -0.35;
+        T.fLx = T.fRx = -0.15;
+        T.claw = 0.9;
+        T.rate = 20;
+        break;
+      }
+      case 'dying': {
+        const w = sm(k(t, 0, 0.8));
+        T.hipsRx = 0.9 * w;
+        T.torsoRx = 1.0 * w;
+        T.headRx = 0.9 * w;
+        T.hipsY = -0.45 * w;
+        T.aLx = T.aRx = 0.3;
+        T.aLz = 0.7;
+        T.aRz = -0.7;
+        T.claw = 1;
+        T.rate = 9;
+        break;
+      }
+      default:
+        break;
+    }
+    // aviso do golpe é de postura; o lean antigo ainda soma um pouco (inclinação do avanço)
+    T.hipsRx += lean * 0.25;
+    const f = Math.min(1, d * T.rate);
+    const z = this.pz;
+    const set = (key: string, v: number): number => (z[key] = (z[key] ?? v) + (v - (z[key] ?? v)) * f);
+    this.hips.position.y = (this.cfg.scale > 0 ? (this.kind === 'fiapo' ? 0.98 : 1.06) : 1) + set('hipsY', T.hipsY);
+    this.hips.rotation.x = set('hipsRx', T.hipsRx);
+    this.torso.rotation.set(set('torsoRx', T.torsoRx) - this.hips.rotation.x * 0.4, set('torsoRy', T.torsoRy), 0);
+    this.head.rotation.set(set('headRx', T.headRx), set('headRy', T.headRy), 0);
+    const [L, R] = this.arms;
+    L.up.rotation.set(set('aLx', T.aLx), 0, set('aLz', T.aLz));
+    R.up.rotation.set(set('aRx', T.aRx), 0, set('aRz', T.aRz));
+    L.fore.rotation.x = set('fLx', T.fLx);
+    R.fore.rotation.x = set('fRx', T.fRx);
+    const curl = set('claw', T.claw);
+    for (const a of this.arms) a.fingers.forEach((fg, i) => (fg.rotation.x = curl * (0.8 + (i % 2) * 0.25)));
+    // fitas de manto seguem o movimento
+    this.strips.forEach((st, i) => {
+      st.rotation.x = 0.12 + mv * 0.5 + Math.sin(time * 2.1 + i * 1.3) * 0.08 + (this.state === 'strike' ? 0.5 : 0);
+      st.rotation.z = Math.sin(time * 1.7 + i) * 0.06;
+    });
+    const o = set('orb', T.orb);
+    this.orb.scale.setScalar(Math.max(0.001, o));
+    this.orb.visible = o > 0.02;
+    this.orb.position.set(0, 1.35, 0.6);
+    void hot;
   }
 }
 

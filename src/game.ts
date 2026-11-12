@@ -600,6 +600,7 @@ export class Game {
     s.hp = this.stats.maxHp;
     this.audio.sfx('nivel');
     this.crivo.cheer();
+    if (this.player && !this.player.fig.busy && this.player.fig.action === 'none') this.player.fig.play('cheer');
     this.ui.banner('Você subiu de nível', `Nível ${s.level}`, `Um ponto de habilidade disponível. Abra as habilidades com ${this.ui.key('habilidades')}.`);
   }
   startQuest(id: string): boolean {

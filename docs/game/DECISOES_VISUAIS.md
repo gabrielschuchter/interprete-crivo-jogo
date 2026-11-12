@@ -13,3 +13,9 @@ O atlas lista 398 superfícies e marca 39 como P0. Estão implementadas as que s
 ## Limites conhecidos
 
 As figuras humanas são estilizadas e leem escuras quando vistas de costas contra o chão do Pátio. O topo do Crivo estoura um pouco sob luz forte. As capturas em `docs/game/capturas/` saíram de renderização por software, com sombras e pós-processamento reduzidos; numa placa de vídeo real o resultado é melhor do que elas mostram, mas isso ainda não foi verificado.
+
+## Refino de personagens e criaturas (12/11/2026)
+
+Humanos: toda pose passa por suavização exponencial, o que elimina saltos entre estados. Em repouso há troca de apoio, deriva do olhar, respiração no tronco e piscar; na caminhada o corpo balança o quadril e inclina nas curvas. Oito gestos novos (dar de ombros, pensar, assentir, acenar, apontar, comemorar, reverência, escuta) e uma fala em batidas, com boca e sobrancelhas animadas. NPCs cumprimentam uma vez ao se aproximar e gesticulam de tempos em tempos. Gestos sociais não bloqueiam a interação do jogador.
+
+Criaturas: o cone de névoa deu lugar a um espectro articulado (capuz com vazio no rosto, costelas, braços de duas articulações, mão com quatro garras, manto rasgado e fitas), com pose própria por estado: antecipação com braços erguidos antes do golpe, avanço, recuperação curvada, conjuração com esfera, pancada no chão, recitação, atordoamento e colapso. O Eco ganhou máscaras orbitando; o Veredito, coroa de espinhos. A geometria continua procedural; o teto de realismo segue sendo o glTF externo (ver REGISTRO_DE_ASSETS).

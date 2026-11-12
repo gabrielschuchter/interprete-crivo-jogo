@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Figure, HAIRS, SKINS, type FigureOpts } from './figure';
+import { Figure, HAIRS, SKINS, type Action, type FigureOpts } from './figure';
 
 export interface NpcDef {
   id: string;
@@ -29,6 +29,8 @@ export class Npc {
   private homeYaw: number;
   marker: THREE.Mesh;
   talking = false;
+  private gestureCd = 3 + Math.random() * 6;
+  private greeted = false;
   private t = Math.random() * 6;
 
   constructor(public def: NpcDef, x: number, y: number, z: number, yaw: number) {
@@ -60,6 +62,19 @@ export class Npc {
     if (this.talking && this.fig.action !== 'talk') this.fig.play('talk');
     if (!this.talking && this.fig.action === 'talk') this.fig.action = 'none';
     this.fig.speed = 0;
+    // gestos espontâneos: cumprimenta uma vez ao se aproximar e, de vez em quando, pensa, assente ou dá de ombros
+    if (!this.talking && this.fig.action === 'none') {
+      if (d < 7 && !this.greeted) {
+        this.greeted = true;
+        this.fig.play('wave');
+      } else if (d > 11) this.greeted = false;
+      this.gestureCd -= dt;
+      if (this.gestureCd <= 0) {
+        this.gestureCd = 7 + Math.random() * 10;
+        const pool: Action[] = d < 9 ? ['think', 'nod', 'shrug', 'think'] : ['think', 'shrug'];
+        this.fig.play(pool[Math.floor(Math.random() * pool.length)]);
+      }
+    }
     this.fig.update(dt);
     this.marker.rotation.y = this.t * 1.6;
     this.marker.position.y = this.fig.height + 0.5 + Math.sin(this.t * 2.2) * 0.06;

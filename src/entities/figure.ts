@@ -29,7 +29,7 @@ export interface FigureOpts {
 
 export type Emblem = 'caderno' | 'estetoscopio' | 'relogio' | 'oculos' | 'fita';
 
-export type Action = 'none' | 'attack1' | 'attack2' | 'heavy' | 'dodge' | 'hit' | 'die' | 'interact' | 'cast' | 'talk' | 'sit';
+export type Action = 'none' | 'attack1' | 'attack2' | 'heavy' | 'dodge' | 'hit' | 'die' | 'interact' | 'cast' | 'talk' | 'sit' | 'shrug' | 'think' | 'nod' | 'wave' | 'point' | 'cheer' | 'bow' | 'listen';
 
 export const SKINS = [0xf1cfb4, 0xd9a47c, 0xb07a52, 0x7a4f34, 0x4f3222];
 export const HAIRS = [0x1a1210, 0x3d2416, 0x6b3f22, 0x8a8078, 0xb9482e, 0xd8c8a8];
@@ -46,6 +46,14 @@ const ACTION_TIME: Record<Action, number> = {
   cast: 0.55,
   talk: 2.4,
   sit: 9999,
+  shrug: 1.5,
+  think: 3.2,
+  nod: 1.1,
+  wave: 2.0,
+  point: 1.6,
+  cheer: 1.6,
+  bow: 1.8,
+  listen: 9999,
 };
 
 function cloth(color: number, rough = 0.92): THREE.MeshStandardMaterial {
@@ -113,6 +121,15 @@ export class Figure {
   height: number;
   alive = true;
   private mats: THREE.MeshStandardMaterial[] = [];
+  private eyeParts: Array<{ m: THREE.Mesh; y: number }> = [];
+  private brows: THREE.Mesh[] = [];
+  private lips: THREE.Mesh | null = null;
+  private smo: Record<string, number> = {};
+  private blinkT = 2 + Math.random() * 3;
+  private blink = 0;
+  private idleT = 0;
+  private lastYaw = 0;
+  private bank = 0;
   private ext: { mixer: THREE.AnimationMixer; clips: Map<string, THREE.AnimationAction>; cur: string } | null = null;
 
   constructor(o: FigureOpts) {
@@ -277,16 +294,20 @@ export class Figure {
     for (const sx of [-1, 1]) add(this.head, new THREE.SphereGeometry(0.02, 10, 8), skin, sx * 0.096, -0.005, -0.004).scale.set(0.5, 1, 0.8);
     const eyeM = new THREE.MeshStandardMaterial({ color: 0x15100e, roughness: 0.3 });
     for (const sx of [-1, 1]) {
-      add(this.head, new THREE.SphereGeometry(0.0155, 12, 10), white, sx * 0.038, 0.012, 0.094).scale.set(1, 0.7, 0.6);
-      add(this.head, new THREE.SphereGeometry(0.0085, 10, 8), eyeM, sx * 0.038, 0.012, 0.1);
-      const brow = add(this.head, new THREE.BoxGeometry(0.042, 0.009, 0.012), hairM, sx * 0.04, 0.04, 0.097);
-      brow.rotation.z = sx * -0.14;
+      const ew = add(this.head, new THREE.SphereGeometry(0.0155, 16, 12), white, sx * 0.038, 0.012, 0.094);
+      ew.scale.set(1, 0.7, 0.6);
+      const ei = add(this.head, new THREE.SphereGeometry(0.0085, 14, 10), eyeM, sx * 0.038, 0.012, 0.1);
+      this.eyeParts.push({ m: ew, y: 0.7 }, { m: ei, y: 1 });
+      const brow = add(this.head, new THREE.CapsuleGeometry(0.0045, 0.036, 4, 8), hairM, sx * 0.04, 0.04, 0.097);
+      brow.rotation.z = Math.PI / 2 + sx * -0.14;
+      this.brows.push(brow);
     }
     const nose = add(this.head, new THREE.SphereGeometry(0.019, 12, 10), skin, 0, -0.016, 0.104);
     nose.scale.set(0.8, 1.1, 1.1);
     const lipM = new THREE.MeshStandardMaterial({ color: new THREE.Color(o.skin).multiplyScalar(0.72).getHex(), roughness: 0.6 });
     this.mats.push(lipM);
-    add(this.head, new THREE.BoxGeometry(0.036, 0.006, 0.01), lipM, 0, -0.058, 0.092);
+    this.lips = add(this.head, new THREE.CapsuleGeometry(0.0038, 0.03, 4, 8), lipM, 0, -0.058, 0.092);
+    this.lips.rotation.z = Math.PI / 2;
     if (emb === 'oculos') {
       for (const sx of [-1, 1]) add(this.head, new THREE.TorusGeometry(0.026, 0.0035, 8, 20), M.bronze, sx * 0.038, 0.012, 0.105);
       add(this.head, new THREE.BoxGeometry(0.02, 0.004, 0.004), M.bronze, 0, 0.018, 0.106);
@@ -384,7 +405,8 @@ export class Figure {
   }
 
   get busy(): boolean {
-    return this.action !== 'none' && this.action !== 'talk' && this.action !== 'sit';
+    // gestos sociais não bloqueiam o jogador: só combate, esquiva, dano, morte e uso de objetos
+    return !['none', 'talk', 'sit', 'shrug', 'think', 'nod', 'wave', 'point', 'cheer', 'bow', 'listen'].includes(this.action);
   }
 
   /** progresso 0..1 da ação atual */
@@ -449,6 +471,20 @@ export class Figure {
     }
     this.phase += dt * (2.2 + this.speed * 1.55);
     this.breathe += dt;
+    this.idleT += dt;
+    this.blinkT -= dt;
+    if (this.blinkT <= 0) {
+      this.blink = 0.16;
+      this.blinkT = 2.2 + Math.random() * 4;
+    }
+    this.blink = Math.max(0, this.blink - dt);
+    // inclinação nas curvas: o corpo acompanha a mudança de direção
+    let dyaw = this.root.rotation.y - this.lastYaw;
+    while (dyaw > Math.PI) dyaw -= Math.PI * 2;
+    while (dyaw < -Math.PI) dyaw += Math.PI * 2;
+    this.lastYaw = this.root.rotation.y;
+    const turn = dt > 0 ? THREE.MathUtils.clamp(dyaw / dt, -4, 4) : 0;
+    this.bank += (turn * Math.min(1, this.speed / 3) - this.bank) * Math.min(1, dt * 6);
     if (this.action !== 'none') {
       this.actionT += dt;
       if (this.actionT >= ACTION_TIME[this.action]) {
@@ -472,11 +508,16 @@ export class Figure {
     let hipsY = 0.93 + (moving ? Math.abs(c) * 0.035 * stride - 0.02 * stride : br);
     let hipsRx = sp * 0.16;
     let hipsRy = 0;
-    let hipsRz = 0;
+    let hipsRz = moving ? s * 0.05 * stride : 0;
     let torsoRx = sp * 0.1;
     let torsoRy = moving ? -s * 0.14 * stride : 0;
-    let torsoRz = 0;
+    let torsoRz = moving ? -s * 0.035 * stride : 0;
     let headRx = -sp * 0.12;
+    let headRy = 0;
+    let headRz = 0;
+    let mouth = 0;
+    let browUp = 0;
+    let hipX = 0;
     let lLx = -s * 0.78 * stride;
     let rLx = s * 0.78 * stride;
     let lSx = Math.max(0, c) * 1.25 * stride + (moving ? 0.1 : 0.04);
@@ -592,12 +633,111 @@ export class Figure {
         break;
       }
       case 'talk': {
-        const k = Math.sin(t * 2.6) * 0.5 + 0.5;
-        aLx = -0.5 - 0.35 * k;
-        fLx = -1.1 + 0.3 * Math.sin(t * 3.4);
-        aLz = 0.25;
-        headRx = Math.sin(t * 2) * 0.04;
-        torsoRy = Math.sin(t * 1.3) * 0.05;
+        // gestos em batidas: cada mão enfatiza em tempos diferentes, a cabeça acompanha o ritmo da fala
+        const beatL = Math.max(0, Math.sin(t * 2.7)) ** 2;
+        const beatR = Math.max(0, Math.sin(t * 2.1 + 1.7)) ** 2;
+        aLx = -0.45 - 0.7 * beatL;
+        fLx = -1.0 - 0.5 * beatL + 0.2 * Math.sin(t * 7);
+        aLz = 0.22 + 0.18 * beatL;
+        if (!hasStaff) {
+          aRx = -0.4 - 0.6 * beatR;
+          fRx = -0.9 - 0.45 * beatR;
+          aRz = -0.2 - 0.15 * beatR;
+        }
+        headRx = Math.sin(t * 2.4) * 0.05 + 0.04 * (beatL + beatR);
+        headRy = Math.sin(t * 1.1) * 0.1;
+        headRz = Math.sin(t * 0.8) * 0.05;
+        torsoRy = Math.sin(t * 1.3) * 0.07;
+        torsoRx = 0.03 + 0.05 * (beatL + beatR);
+        mouth = (Math.sin(t * 15) * 0.5 + 0.5) * (Math.sin(t * 3.3) > -0.4 ? 1 : 0.15);
+        browUp = beatL + beatR;
+        break;
+      }
+      case 'shrug': {
+        const k = Math.sin(Math.min(1, t / 1.5) * Math.PI);
+        aLz = 0.12 + 0.55 * k;
+        fLx = -0.8 * k - 0.1;
+        headRz = 0.12 * k;
+        headRx = -0.06 * k;
+        torsoRx = -0.04 * k;
+        browUp = k;
+        if (!hasStaff) {
+          aRz = -0.12 - 0.55 * k;
+          fRx = -0.8 * k - 0.1;
+          aRx = -0.2 * k;
+        }
+        break;
+      }
+      case 'think': {
+        const k = seg(t, 0, 0.5) * (1 - seg(t, 2.7, 3.2));
+        aLx = -1.25 * k;
+        aLz = 0.05;
+        fLx = -2.0 * k - 0.1;
+        headRx = 0.16 * k;
+        headRz = 0.1 * k;
+        headRy = Math.sin(t * 1.4) * 0.06 * k;
+        browUp = 0.6 * k;
+        break;
+      }
+      case 'nod': {
+        headRx = Math.sin(Math.min(1, t / 1.1) * Math.PI * 2) * 0.28;
+        torsoRx = 0.03;
+        break;
+      }
+      case 'listen': {
+        headRz = 0.07;
+        headRx = 0.03 + Math.max(0, Math.sin(this.idleT * 0.8)) * 0.1;
+        browUp = 0.3;
+        break;
+      }
+      case 'wave': {
+        const k = seg(t, 0, 0.3) * (1 - seg(t, 1.7, 2.0));
+        if (!hasStaff) {
+          aRx = -0.35 * k;
+          aRz = -0.16 - 2.15 * k;
+          fRx = -0.5 - 0.7 * k + Math.sin(t * 10) * 0.45 * k;
+        } else aLx = -2.4 * k;
+        headRz = -0.06 * k;
+        headRx = -0.04 * k;
+        mouth = 0.5 * k * (Math.sin(t * 9) > 0 ? 1 : 0.3);
+        browUp = 0.5 * k;
+        break;
+      }
+      case 'point': {
+        const k = seg(t, 0, 0.3) * (1 - seg(t, 1.2, 1.6));
+        aLx = -1.55 * k;
+        aLz = 0.1 + 0.08 * k;
+        fLx = -0.1 - 0.05 * k;
+        torsoRy = -0.12 * k;
+        headRy = -0.1 * k;
+        break;
+      }
+      case 'cheer': {
+        const k = seg(t, 0, 0.25) * (1 - seg(t, 1.2, 1.6));
+        aLx = -2.8 * k;
+        aLz = 0.3 * k + 0.1;
+        fLx = -0.3 * k - 0.1;
+        if (!hasStaff) {
+          aRx = -2.8 * k;
+          aRz = -0.3 * k - 0.1;
+          fRx = -0.3 * k - 0.1;
+        } else aRx -= 0.9 * k;
+        hipsY += Math.abs(Math.sin(t * 9)) * 0.08 * k;
+        headRx = -0.25 * k;
+        mouth = 0.8 * k;
+        browUp = k;
+        break;
+      }
+      case 'bow': {
+        const k = Math.sin(Math.min(1, t / 1.8) * Math.PI);
+        const hold = Math.min(1, k * 1.6);
+        hipsRx = 0.25 * hold;
+        torsoRx = 0.65 * hold;
+        headRx = 0.15 * hold;
+        hipsY -= 0.04 * hold;
+        aLx = 0.15 * hold;
+        aLz = 0.06;
+        if (!hasStaff) aRx = 0.15 * hold;
         break;
       }
       case 'sit': {
@@ -617,13 +757,71 @@ export class Figure {
         break;
     }
 
-    this.hips.position.y = hipsY;
+    // vida em repouso: troca de apoio, deriva do olhar e braços que não ficam congelados
+    const calm = !moving && (this.action === 'none' || this.action === 'listen' || this.action === 'talk');
+    const calmK = calm ? 1 : 0;
+    const it = this.idleT;
+    const shift = Math.sin(it * 0.43 + this.phase * 0.0) * calmK;
+    hipsRz += shift * 0.035;
+    torsoRz -= shift * 0.022;
+    hipX += shift * 0.014;
+    headRy += (Math.sin(it * 0.31) * 0.12 + Math.sin(it * 0.83 + 1) * 0.05) * calmK * (this.action === 'talk' ? 0.4 : 1);
+    headRx += Math.sin(it * 0.52) * 0.03 * calmK;
+    if (calm && this.action !== 'talk' && !hasStaff) {
+      aLx += Math.sin(it * 0.9) * 0.03;
+      aRx += Math.sin(it * 0.9 + 1.4) * 0.03;
+      fLx -= 0.12;
+      fRx -= 0.12;
+    }
+    const bk = this.bank;
+    hipsRz += bk * 0.05;
+    torsoRz += bk * 0.04;
+    headRz -= bk * 0.04;
+
+    const busyNow = this.busy;
+    const r = this.action === 'die' ? 9 : busyNow ? 30 : 17;
+    const d = dt || 0.016;
+    const sv = (k: string, v: number, rate = r): number => {
+      const o = this.smo[k];
+      const n = o === undefined ? v : o + (v - o) * Math.min(1, d * rate);
+      this.smo[k] = n;
+      return n;
+    };
+    hipsY = sv('hy', hipsY);
+    hipsRx = sv('hrx', hipsRx);
+    hipsRy = sv('hry', hipsRy);
+    hipsRz = sv('hrz', hipsRz);
+    torsoRx = sv('trx', torsoRx);
+    torsoRy = sv('try', torsoRy);
+    torsoRz = sv('trz', torsoRz);
+    headRx = sv('hdx', headRx);
+    headRy = sv('hdy', headRy, 10);
+    headRz = sv('hdz', headRz, 10);
+    lLx = sv('llx', lLx);
+    rLx = sv('rlx', rLx);
+    lSx = sv('lsx', lSx);
+    rSx = sv('rsx', rSx);
+    aLx = sv('alx', aLx);
+    aLz = sv('alz', aLz);
+    aRx = sv('arx', aRx);
+    aRy = sv('ary', aRy);
+    aRz = sv('arz', aRz);
+    fLx = sv('flx', fLx);
+    fRx = sv('frx', fRx);
+    stW = sv('stw', stW);
+    stRz = sv('str', stRz);
+    capeRx = sv('cpx', capeRx, 9);
+    skirtRx = sv('skx', skirtRx, 9);
+    rootRx = sv('rrx', rootRx);
+
+    this.hips.position.set(hipX, hipsY, 0);
     this.hips.rotation.set(hipsRx, hipsRy, hipsRz);
     this.torso.rotation.set(torsoRx - hipsRx * 0.5, torsoRy, torsoRz);
+    this.torso.scale.set(1 + br * 0.9, 1 + br * 1.4, 1 + br * 0.9);
     // olhar para um alvo (NPCs em conversa)
     const targetLook = this.lookTarget ?? 0;
     this.lookYaw += (targetLook - this.lookYaw) * Math.min(1, (dt || 0.016) * 5);
-    this.head.rotation.set(headRx, THREE.MathUtils.clamp(this.lookYaw, -1.1, 1.1) - torsoRy * 0.6, 0);
+    this.head.rotation.set(headRx, THREE.MathUtils.clamp(this.lookYaw, -1.1, 1.1) + headRy - torsoRy * 0.6, headRz);
     this.legL.rotation.x = lLx - hipsRx;
     this.legR.rotation.x = rLx - hipsRx;
     this.shinL.rotation.x = lSx;
@@ -636,6 +834,14 @@ export class Figure {
     this.skirt.rotation.x = skirtRx - hipsRx * 0.6;
     if (this.cape) this.cape.rotation.x = capeRx;
     this.body.rotation.x = rootRx;
+    this.body.rotation.z = this.bank * 0.03;
     this.body.position.y = rootY;
+
+    // rosto: piscar, boca e sobrancelhas
+    const lid = this.blink > 0 ? Math.sin((1 - this.blink / 0.16) * Math.PI) : 0;
+    for (const e of this.eyeParts) e.m.scale.y = Math.max(0.06, e.y * (1 - 0.94 * lid));
+    if (this.lips) this.lips.scale.x = sv('mouth', 1 + mouth * 3.2, 25);
+    const bu = sv('brow', browUp, 12);
+    this.brows.forEach((b) => (b.position.y = 0.04 + bu * 0.007));
   }
 }

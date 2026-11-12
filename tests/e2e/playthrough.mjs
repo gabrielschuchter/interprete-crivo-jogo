@@ -204,6 +204,7 @@ try {
   ok((await mode()) === 'ending', 'tela final exibida');
   await p.click('#ending button');
   await E(async () => { await T.settle(); await T.talk('anselmo'); });
+  if ((await step('paginas')) !== 'ok') console.log('diag', JSON.stringify(await E(() => { const g = __game; const n = g.npcs.find((x) => x.def.id === 'anselmo'); return { mode: g.mode, region: g.region.id, npc: n && [n.pos.x, n.pos.z, n.fig.action], pl: [g.player.pos.x, g.player.pos.z], near: g.nearest()?.label, errs: g.errors, scripting: g.scripting, busy: g.busy, frozen: g.player.frozen }; })));
   ok((await step('paginas')) === 'ok', 'as seis páginas entregues a Anselmo');
   const end = await E(() => ({ s: T.st(), err: __game.errors, log: T.log }));
   ok(end.err.length === 0, 'nenhum erro de execução registrado');
