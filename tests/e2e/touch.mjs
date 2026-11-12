@@ -17,7 +17,6 @@ const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftsha
 const fails = [];
 const ok = (c, m) => (c ? console.log('  ✓', m) : (fails.push(m), console.log('  ✗', m)));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
 async function session(W, H, full) {
   console.log(`Toque ${W}x${H}`);
   const ctx = await b.newContext({ viewport: { width: W, height: H }, hasTouch: true, isMobile: true, deviceScaleFactor: 1 });
@@ -25,6 +24,15 @@ async function session(W, H, full) {
   const cdp = await ctx.newCDPSession(p);
   p.on('pageerror', (e) => ok(false, 'erro de página: ' + e.message));
   const E = (f, a) => p.evaluate(f, a);
+  // espera em tempo de jogo, não de relógio: com a cena pesada o WebGL por software roda a poucos quadros por segundo
+  // e o dt é limitado a 50 ms, então 1,5 s de relógio podem valer bem menos de 1,5 s de simulação
+  const gsleep = async (ms) => {
+    const t0 = await E(() => __game.state.playtime);
+    for (let k = 0; k < 400; k++) {
+      if ((await E(() => __game.state.playtime)) - t0 >= ms / 1000) return;
+      await sleep(100);
+    }
+  };
   const mode = () => E(() => window.__game?.mode);
   const waitMode = async (m, ms = 240000) => {
     const t0 = Date.now();
@@ -53,7 +61,9 @@ async function session(W, H, full) {
   await p.fill('#create input', 'Marina');
   await p.click('#create [data-a=go]');
   await waitMode('play');
-  await sleep(1500);
+  // a interface de toque aparece quando o modo de jogo assenta; com a cena pesada isso leva mais de 1,5 s no software
+  await p.waitForFunction(() => document.getElementById('touch') && !document.getElementById('touch').classList.contains('hidden'), null, { timeout: 60000 }).catch(() => {});
+  await sleep(500);
   ok(await E(() => document.body.classList.contains('touch') && !document.getElementById('touch').classList.contains('hidden')), 'controles de toque ativos e visíveis em jogo');
 
   // layout: sem sobreposição, tudo dentro da tela, alvos de pelo menos 34px
@@ -74,25 +84,25 @@ async function session(W, H, full) {
   const sx = 110, sy = H - 110;
   await send('touchStart', [[sx, sy, 1]]);
   await send('touchMove', [[sx, sy - 30, 1]]);
-  await sleep(1500);
+  await gsleep(1500);
   let s = await st();
   ok(s.v > 1.5 && s.v < 3.2 && !s.run && s.my < -0.3 && s.my > -0.7, `joystick parcial anda sem correr (v ${s.v.toFixed(2)}, eixo ${s.my.toFixed(2)})`);
   const walk = s.v;
   await send('touchMove', [[sx, sy - 90, 1]]);
-  await sleep(1200);
+  await gsleep(1200);
   s = await st();
   ok(s.run && s.v > walk + 0.8, `empurrar até a borda corre (v ${s.v.toFixed(2)})`);
   await send('touchMove', [[sx, sy - 78, 1]]);
-  await sleep(900);
+  await gsleep(900);
   ok(!(await st()).run, 'histerese: voltar ao meio desliga a corrida');
   const y0 = (await st()).yaw;
   await send('touchStart', [[sx, sy - 78, 1], [W * 0.7, H * 0.4, 2]]);
   await send('touchMove', [[sx, sy - 78, 1], [W * 0.7 + 100, H * 0.4, 2]]);
-  await sleep(800);
+  await gsleep(800);
   s = await st();
   ok(Math.abs(s.yaw - y0 + 0.46) < 0.12 && s.v > 1, `arrasto de 100px gira ~0,46 rad com o outro dedo andando (Δ ${(s.yaw - y0).toFixed(2)})`);
   await send('touchEnd', []);
-  await sleep(900);
+  await gsleep(900);
   s = await st();
   ok(s.v < 0.3 && s.mx === 0 && s.my === 0, 'soltar o joystick para o personagem');
 
