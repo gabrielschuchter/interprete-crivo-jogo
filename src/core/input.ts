@@ -38,6 +38,18 @@ export const ACTION_LABEL: Record<ActionName, string> = {
   camEsq: 'Girar a câmera à esquerda', camDir: 'Girar a câmera à direita',
 };
 
+/** Botões do gamepad no mapa padrão do navegador (W3C "standard"). */
+export const DEFAULT_PAD: Partial<Record<ActionName, number>> = {
+  interagir: 0, esquiva: 1, ataque: 2, golpe: 3, trocarCrivo: 4, crivo: 5,
+  mapa: 8, pausa: 9, correr: 10, travar: 11, item: 12, dica: 13, diario: 14, inventario: 15,
+};
+
+const PAD_NAMES = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'Voltar', 'Start', 'L3', 'R3', 'Direcional ↑', 'Direcional ↓', 'Direcional ←', 'Direcional →'];
+export function padLabel(i: number | undefined): string {
+  if (i === undefined) return 'sem botão';
+  return PAD_NAMES[i] ?? `Botão ${i}`;
+}
+
 export function keyLabel(code: string): string {
   if (code.startsWith('Key')) return code.slice(3);
   if (code.startsWith('Digit')) return code.slice(5);
@@ -50,6 +62,9 @@ export function keyLabel(code: string): string {
 
 export class Input {
   keys = { ...DEFAULT_KEYS } as Record<ActionName, string[]>;
+  pad = { ...DEFAULT_PAD } as Partial<Record<ActionName, number>>;
+  /** zona morta radial dos analógicos, de 0 a 1 */
+  padDeadzone = 0.18;
   private down = new Set<string>();
   private pressed = new Set<ActionName>();
   mouseDX = 0;
@@ -64,24 +79,44 @@ export class Input {
   touchLookY = 0;
   touchRun = false;
   padLook = { x: 0, y: 0 };
+  /** navegação de menus pelo controle: analógico esquerdo ou direcional, -1, 0 ou 1 */
+  padNav = { x: 0, y: 0 };
+  /** verdadeiro enquanto a última entrada veio do gamepad; volta a falso ao usar teclado ou mouse */
   usingPad = false;
   private padPrev: boolean[] = [];
+  private padId = '';
+  private padHeld = new Set<ActionName>();
+  private lockFailed = false;
   onAnyKey: (() => void) | null = null;
+  /** Diz se há painel, menu ou conversa por cima do jogo. Com painel aberto, Tab, setas e espaço são do navegador. */
+  uiOpen: () => boolean = () => false;
+  /** Durante o remapeamento: recebe o próximo botão do gamepad em vez de disparar a ação. */
+  capturePad: ((button: number) => void) | null = null;
   private canvas: HTMLCanvasElement;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     window.addEventListener('keydown', (e) => {
-      if (e.code === 'Tab') e.preventDefault();
-      if (e.target instanceof HTMLInputElement) return;
-      if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
+      const t = e.target;
+      const form = t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement;
+      const menu = this.uiOpen();
+      this.usingPad = false;
+      // só o jogo em si captura Tab, espaço e setas; em painéis eles percorrem e acionam os controles
+      if (!menu && !form && (e.code === 'Tab' || e.code === 'Space' || e.code.startsWith('Arrow'))) e.preventDefault();
+      if (form) return;
       this.onAnyKey?.();
+      if (menu && (e.code === 'Tab' || e.code === 'Space' || e.code === 'Enter' || e.code.startsWith('Arrow'))) return;
       if (!e.repeat) this.press(e.code);
     });
     window.addEventListener('keyup', (e) => this.down.delete(e.code));
     canvas.addEventListener('mousedown', (e) => {
       this.onAnyKey?.();
-      if (!this.locked && this.enabled) this.requestLock();
+      this.usingPad = false;
+      if (!this.locked && this.enabled && !this.lockFailed) {
+        // este clique só captura o ponteiro: não vira golpe
+        this.requestLock();
+        return;
+      }
       this.press('Mouse' + e.button);
     });
     window.addEventListener('mouseup', (e) => this.down.delete('Mouse' + e.button));
@@ -90,20 +125,38 @@ export class Input {
       if (this.locked) {
         this.mouseDX += e.movementX;
         this.mouseDY += e.movementY;
+        if (e.movementX || e.movementY) this.usingPad = false;
       }
     });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === canvas;
+      if (this.locked) this.lockFailed = false;
     });
-    window.addEventListener('blur', () => this.down.clear());
+    // sem captura de ponteiro (navegador ou moldura que recusa): os cliques voltam a valer como golpes
+    document.addEventListener('pointerlockerror', () => (this.lockFailed = true));
+    window.addEventListener('blur', () => {
+      this.down.clear();
+      this.padHeld.clear();
+    });
+    window.addEventListener('gamepaddisconnected', () => this.clearPad());
+    window.addEventListener('gamepadconnected', () => this.clearPad());
+  }
+
+  private clearPad(): void {
+    this.padPrev = [];
+    this.padHeld.clear();
+    this.padId = '';
+    this.padMove.x = this.padMove.y = this.padLook.x = this.padLook.y = 0;
+    this.padNav.x = this.padNav.y = 0;
   }
 
   requestLock(): void {
     try {
       const p = this.canvas.requestPointerLock() as unknown as Promise<void> | undefined;
-      p?.catch?.(() => undefined);
+      p?.catch?.(() => (this.lockFailed = true));
     } catch {
-      /* navegadores sem pointer lock: a câmera segue pelas setas */
+      /* navegadores sem pointer lock: a câmera segue pelas teclas Z e C */
+      this.lockFailed = true;
     }
   }
 
@@ -126,7 +179,7 @@ export class Input {
   }
 
   held(a: ActionName): boolean {
-    return this.keys[a].some((k) => this.down.has(k));
+    return this.keys[a].some((k) => this.down.has(k)) || this.padHeld.has(a);
   }
 
   /** verdadeiro uma vez por pressionamento */
@@ -138,44 +191,103 @@ export class Input {
     return false;
   }
 
-  rebind(a: ActionName, code: string): void {
-    for (const k of Object.keys(this.keys) as ActionName[]) this.keys[k] = this.keys[k].filter((c) => c !== code);
+  /** Ação que hoje usa a tecla, se houver. */
+  owner(code: string, except?: ActionName): ActionName | null {
+    for (const k of Object.keys(this.keys) as ActionName[]) if (k !== except && this.keys[k].includes(code)) return k;
+    return null;
+  }
+
+  /**
+   * Atribui a tecla à ação. Se ela já era de outra ação, as duas trocam: a outra fica com a
+   * tecla principal que esta ação tinha, em vez de perder a tecla em silêncio.
+   */
+  rebind(a: ActionName, code: string): { other: ActionName; got: string | null } | null {
+    const other = this.owner(code, a);
+    const old = this.keys[a][0] ?? null;
+    let res: { other: ActionName; got: string | null } | null = null;
+    if (other) {
+      const give = old && old !== code && !this.owner(old, a) ? old : null;
+      this.keys[other] = this.keys[other].filter((c) => c !== code);
+      if (give) this.keys[other] = [give, ...this.keys[other]];
+      res = { other, got: this.keys[other][0] ?? null };
+    }
     this.keys[a] = [code];
+    return res;
+  }
+
+  /** Mesmo contrato de `rebind`, para botões do gamepad. */
+  rebindPad(a: ActionName, button: number): { other: ActionName; got: number | null } | null {
+    const other = (Object.keys(this.pad) as ActionName[]).find((k) => k !== a && this.pad[k] === button) ?? null;
+    const old = this.pad[a];
+    let res: { other: ActionName; got: number | null } | null = null;
+    if (other) {
+      if (old !== undefined && old !== button) this.pad[other] = old;
+      else delete this.pad[other];
+      res = { other, got: this.pad[other] ?? null };
+    }
+    this.pad[a] = button;
+    return res;
+  }
+
+  private activePad(): Gamepad | null {
+    const pads = navigator.getGamepads?.() ?? [];
+    return pads.find((g) => g && g.connected) ?? null;
+  }
+
+  /** zona morta radial com reescala: o eixo sai de 0 logo após a borda da zona, sem degrau */
+  private stick(x: number, y: number, out: { x: number; y: number }): void {
+    const m = Math.hypot(x, y);
+    const dz = this.padDeadzone;
+    if (m <= dz) {
+      out.x = out.y = 0;
+      return;
+    }
+    const k = Math.min(1, (m - dz) / (1 - dz)) / m;
+    out.x = x * k;
+    out.y = y * k;
   }
 
   pollGamepad(): void {
-    const pads = navigator.getGamepads?.() ?? [];
-    const p = pads.find((g) => g && g.connected);
+    const p = this.activePad();
     if (!p) {
-      this.padMove.x = this.padMove.y = this.padLook.x = this.padLook.y = 0;
+      if (this.padId) this.clearPad();
       return;
     }
-    const dz = (v: number) => (Math.abs(v) < 0.18 ? 0 : v);
-    this.padMove.x = dz(p.axes[0] ?? 0);
-    this.padMove.y = dz(p.axes[1] ?? 0);
-    this.padLook.x = dz(p.axes[2] ?? 0);
-    this.padLook.y = dz(p.axes[3] ?? 0);
-    const map: Array<[number, ActionName]> = [
-      [0, 'interagir'], [1, 'esquiva'], [2, 'ataque'], [3, 'golpe'], [4, 'trocarCrivo'], [5, 'crivo'],
-      [8, 'mapa'], [9, 'pausa'], [10, 'correr'], [11, 'travar'], [12, 'item'], [13, 'dica'], [14, 'diario'], [15, 'inventario'],
-    ];
-    for (const [i, a] of map) {
+    const id = p.index + ':' + p.id;
+    if (id !== this.padId) {
+      // controle novo ou reconectado: nada do anterior vale, e botões já apertados não disparam
+      this.clearPad();
+      this.padId = id;
+      p.buttons.forEach((b, i) => (this.padPrev[i] = !!b?.pressed));
+    }
+    this.stick(p.axes[0] ?? 0, p.axes[1] ?? 0, this.padMove);
+    this.stick(p.axes[2] ?? 0, p.axes[3] ?? 0, this.padLook);
+    const by = new Map<number, ActionName>();
+    for (const [a, i] of Object.entries(this.pad) as Array<[ActionName, number]>) by.set(i, a);
+    this.padHeld.clear();
+    for (let i = 0; i < p.buttons.length; i++) {
       const b = !!p.buttons[i]?.pressed;
+      const a = by.get(i);
       if (b && !this.padPrev[i]) {
-        this.pressed.add(a);
         this.usingPad = true;
         this.onAnyKey?.();
+        if (this.capturePad) this.capturePad(i);
+        else if (a) this.pressed.add(a);
       }
+      if (b && a) this.padHeld.add(a);
       this.padPrev[i] = b;
     }
-    if (this.padMove.x || this.padMove.y) this.usingPad = true;
+    if (this.padMove.x || this.padMove.y || this.padLook.x || this.padLook.y) this.usingPad = true;
+    const dp = (i: number) => (p.buttons[i]?.pressed ? 1 : 0);
+    const ax = (v: number) => (v > 0.6 ? 1 : v < -0.6 ? -1 : 0);
+    this.padNav.x = dp(15) - dp(14) || ax(this.padMove.x);
+    this.padNav.y = dp(13) - dp(12) || ax(this.padMove.y);
   }
 
   padRun(): boolean {
     if (this.touchRun) return true;
-    const pads = navigator.getGamepads?.() ?? [];
-    const p = pads.find((g) => g && g.connected);
-    return !!p && (!!p.buttons[10]?.pressed || (p.buttons[7]?.value ?? 0) > 0.4);
+    const p = this.activePad();
+    return !!p && (this.padHeld.has('correr') || (p.buttons[7]?.value ?? 0) > 0.4);
   }
 
   endFrame(): void {

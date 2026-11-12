@@ -137,12 +137,12 @@ export class CrivoModel {
       this.squash.add(mesh);
     }
     // topo claro e sem pelo
-    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.012, 24), new THREE.MeshStandardMaterial({ color: 0xb9a6a2, roughness: 0.9, envMapIntensity: 0.3 }));
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.012, 24), new THREE.MeshStandardMaterial({ color: 0x8c7b79, roughness: 1, envMapIntensity: 0.15 }));
     top.scale.set(1.2, 1, 0.78);
     top.position.set(0, 0.762 + FUR_LEN * 0.82, 0);
     this.squash.add(top);
     // olho: cápsula branca alongada, pupila vermelha brilhante
-    const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.22, emissive: 0xffffff, emissiveIntensity: 0.16 });
+    const eyeMat = new THREE.MeshStandardMaterial({ color: 0xece4de, roughness: 0.28, emissive: 0xffffff, emissiveIntensity: 0.05 });
     this.eye = new THREE.Mesh(new THREE.CapsuleGeometry(0.058, 0.2, 6, 16), eyeMat);
     this.eye.rotation.z = Math.PI / 2;
     this.eye.position.set(-0.035, 0.655, 0.165 + FUR_LEN * 0.4);

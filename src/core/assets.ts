@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
+import { report } from './diag';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 
 /**
@@ -30,7 +31,12 @@ export function loadGltf(path: string): Promise<GLTF | null> {
         ready.set(path, g);
         return g;
       })
-      .catch(() => null);
+      .catch((err: unknown) => {
+        // a falha não fica em cache: a próxima região ou a próxima abertura tentam de novo
+        gltfCache.delete(path);
+        report('modelo', path, String((err as Error)?.message ?? err).slice(0, 80));
+        return null;
+      });
     gltfCache.set(path, p);
   }
   return p;
@@ -112,6 +118,13 @@ export type PropName = (typeof PROPS)[number];
 
 const propPath = (n: string): string => `models/props/${n}.glb`;
 
+/** O que o Pátio e as peças comuns do kit usam: é o que precisa estar pronto antes do menu. */
+export const PROPS_FIRST: readonly PropName[] = [
+  'antique_estoc', 'gothic_statue', 'grass_medium_01', 'jacaranda_tree', 'large_castle_door', 'large_iron_gate', 'ornate_medieval_dagger',
+  'ornate_medieval_mace', 'ornate_war_hammer', 'planter_box_03', 'pocket_watch', 'vintage_pocket_watch', 'wooden_axe', 'wooden_barrels_01',
+  'wooden_handle_saber', 'wooden_stool_01', 'lantern_chandelier_01', 'marble_bust_01', 'street_lamp_01', 'wooden_crate_02',
+];
+
 /** Carrega todos os props. Chamado na abertura, com barra de progresso. */
 export async function preloadProps(progress?: (f: number) => void, names: readonly string[] = PROPS): Promise<void> {
   let done = 0;
@@ -131,11 +144,17 @@ export async function preloadProps(progress?: (f: number) => void, names: readon
  */
 export function prop(name: PropName, part?: string): THREE.Object3D | null {
   const g = ready.get(propPath(name));
-  if (!g) return null;
+  if (!g) {
+    report('modelo', propPath(name), 'não carregado; o cenário usa a peça de reserva ou fica sem ela');
+    return null;
+  }
   let src: THREE.Object3D = g.scene;
   if (part) {
     const found = g.scene.getObjectByName(part);
-    if (!found) return null;
+    if (!found) {
+      report('peça', `${name}:${part}`, 'nó ausente no kit');
+      return null;
+    }
     src = found;
   }
   const o = src.clone(true);

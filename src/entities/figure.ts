@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { fixMaterials, instanceSkinned, loadGltf } from '../core/assets';
 import { M } from '../world/mats';
+import { report } from '../core/diag';
 
 /**
  * Figura humana procedural: proporções plausíveis, casaco longo, capa curta,
@@ -424,7 +425,7 @@ export class Figure {
       const cage = new THREE.Mesh(new THREE.OctahedronGeometry(0.075, 0), new THREE.MeshStandardMaterial({ color: 0x7a5a2a, metalness: 0.8, roughness: 0.4, wireframe: true }));
       cage.position.y = 0.66;
       st.add(cage);
-      const glow = (this.staffGlow = new THREE.Mesh(new THREE.SphereGeometry(0.042, 10, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffc27a).multiplyScalar(2.6) })));
+      const glow = (this.staffGlow = new THREE.Mesh(new THREE.SphereGeometry(0.034, 10, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffc27a).multiplyScalar(1.5) })));
       glow.position.y = 0.66;
       st.add(glow);
       this.staffTip.position.y = 0.66;
@@ -503,7 +504,14 @@ export class Figure {
   }
 
   private pickClip(names: string[] | undefined): string | null {
-    for (const n of names ?? []) if (this.ext!.clips.has(n)) return n;
+    const list = names ?? [];
+    for (let i = 0; i < list.length; i++) {
+      if (!this.ext!.clips.has(list[i])) continue;
+      // o clipe próprio da ação não existe no modelo: registra, em vez de trocar em silêncio
+      if (i > 0) report('animação', `${this.action}`, `sem clipe "${list[0]}", usando "${list[i]}"`);
+      return list[i];
+    }
+    if (list.length) report('animação', `${this.action}`, `sem clipe "${list[0]}", usando idle`);
     return null;
   }
 

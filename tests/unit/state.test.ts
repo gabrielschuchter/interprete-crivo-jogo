@@ -129,3 +129,62 @@ describe('registro versionado', () => {
     expect(D.migrate({ foo: 1 })).toBeNull();
   });
 });
+
+import { sanitizeSettings, DEFAULT_SETTINGS } from '../../src/core/settings';
+import { Input } from '../../src/core/input';
+
+describe('registro e configurações resistem a dados corrompidos', () => {
+  it('valores numéricos e aninhados inválidos voltam a um estado jogável', () => {
+    const s = D.newGame('Ana', 'enfermagem', { skin: 1, hair: 0, coat: 0 });
+    const raw = JSON.parse(D.serialize(s));
+    raw.hp = 'muito';
+    raw.level = 9999;
+    raw.coins = -5;
+    raw.pos = { x: null, y: 0, z: 'a', yaw: 0 };
+    raw.inventory = { caldo: 'x', limao_lind: 2 };
+    raw.quests = { ponte: { status: 'talvez' }, chegada: { status: 'ativa', step: -3 } };
+    raw.flags = ['a', 3, null];
+    const back = D.deserialize(JSON.stringify(raw))!;
+    expect(back).not.toBeNull();
+    expect(back.hp).toBeGreaterThan(0);
+    expect(back.level).toBe(D.MAX_LEVEL);
+    expect(back.coins).toBe(0);
+    expect(Number.isFinite(back.pos.x) && Number.isFinite(back.pos.z)).toBe(true);
+    expect(back.inventory).toEqual({ limao_lind: 2 });
+    expect(back.quests.ponte).toBeUndefined();
+    expect(back.quests.chegada.step).toBe(0);
+    expect(back.flags).toEqual(['a']);
+  });
+  it('configuração fora da faixa ou de tipo errado cai no padrão', () => {
+    const s = sanitizeSettings({ quality: 'ultra', volGeral: 40, sens: 'rápida', fov: 5, textScale: 9, keys: { ataque: ['KeyJ', 7], voar: ['KeyV'] }, pad: { ataque: 2, esquiva: 'B' }, hud: 'sim' });
+    expect(s.quality).toBe(DEFAULT_SETTINGS.quality);
+    expect(s.volGeral).toBe(1);
+    expect(s.sens).toBe(DEFAULT_SETTINGS.sens);
+    expect(s.fov).toBe(48);
+    expect(s.textScale).toBe(1.6);
+    expect(s.keys).toEqual({ ataque: ['KeyJ'] });
+    expect(s.pad).toEqual({ ataque: 2 });
+    expect(s.hud).toBe(true);
+  });
+});
+
+describe('remapeamento', () => {
+  const mk = () => Object.create(Input.prototype, { keys: { value: { ataque: ['Mouse0', 'KeyJ'], golpe: ['Mouse2', 'KeyK'], esquiva: ['Space'] }, writable: true }, pad: { value: { ataque: 2, golpe: 3 }, writable: true } }) as Input;
+  it('tecla já usada troca de ação em vez de sumir', () => {
+    const i = mk();
+    const r = i.rebind('esquiva', 'KeyK');
+    expect(r).toEqual({ other: 'golpe', got: 'Space' });
+    expect(i.keys.esquiva).toEqual(['KeyK']);
+    expect(i.keys.golpe).toEqual(['Space', 'Mouse2']);
+  });
+  it('tecla livre não mexe nas outras ações', () => {
+    const i = mk();
+    expect(i.rebind('esquiva', 'KeyV')).toBeNull();
+    expect(i.keys.golpe).toEqual(['Mouse2', 'KeyK']);
+  });
+  it('botões do controle seguem a mesma regra', () => {
+    const i = mk();
+    expect(i.rebindPad('ataque', 3)).toEqual({ other: 'golpe', got: 2 });
+    expect(i.pad).toEqual({ ataque: 3, golpe: 2 });
+  });
+});

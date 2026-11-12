@@ -1,11 +1,12 @@
 # Retarget CMU (BVH MotionBuilder) -> rig cmu_mb do MPFB, exporta GLB animado.
-# Uso: python anim.py '<json>'  com {"blend":..., "out":..., "clips":[...], "tint":...}
+# Uso: python anim.py '<json>'  com {"blend":..., "out":..., "clips":[...], "tint":..., "cmu": "<pasta dos BVH>"}
 import bpy, sys, json, math, os
 import numpy as np
 from mathutils import Matrix, Quaternion, Vector
 
 cfg = json.loads(sys.argv[-1])
-CMU = '/home/user/cmu-mocap/data/'
+# origem dos BVH: campo "cmu" do JSON, variável CMU_MOCAP_DIR ou ./cmu-mocap/data (Windows e Linux)
+CMU = os.path.join(cfg.get('cmu') or os.environ.get('CMU_MOCAP_DIR') or os.path.join(os.getcwd(), 'cmu-mocap', 'data'), '')
 FPS = 30
 SRC_FT = 1 / 120
 

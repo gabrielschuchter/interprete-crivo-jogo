@@ -4,6 +4,8 @@
  * Origem e licença de cada arquivo em docs/game/REGISTRO_DE_ASSETS.md.
  * Só inicia após um gesto do usuário (política de autoplay).
  */
+import { report } from './diag';
+
 export type MusicMood = 'menu' | 'atrio' | 'bosque' | 'arquivo' | 'observatorio';
 export type Surface = 'pedra' | 'terra' | 'entulho' | 'agua';
 export type AmbienceLoop = 'sala' | 'salao' | 'agua' | 'poca';
@@ -52,6 +54,7 @@ export class AudioSys {
   private ambLoops = new Map<AmbienceLoop, { el: HTMLAudioElement; gain: GainNode }>();
   private ambWanted: Partial<Record<AmbienceLoop, number>> = {};
   private lastPick = new Map<string, number>();
+  private blocked = new Set<HTMLAudioElement>();
 
   /** Baixa os efeitos gravados (pequenos). Música e ambiência vêm por streaming. */
   async preload(): Promise<void> {
@@ -61,12 +64,17 @@ export class AudioSys {
       for (const [k, n] of Object.entries(idx)) for (let i = 1; i <= n; i++) files.push(`${k}-${i}`);
       await Promise.all(
         files.map(async (f) => {
-          const r = await fetch(BASE + `efeitos/${f}.mp3`);
-          if (r.ok) this.raw.set(f, await r.arrayBuffer());
+          try {
+            const r = await fetch(BASE + `efeitos/${f}.mp3`);
+            if (r.ok) this.raw.set(f, await r.arrayBuffer());
+            else report('áudio', `efeitos/${f}.mp3`, `HTTP ${r.status}; vale o efeito sintetizado`);
+          } catch {
+            report('áudio', `efeitos/${f}.mp3`, 'sem resposta; vale o efeito sintetizado');
+          }
         }),
       );
     } catch {
-      /* sem amostras: efeitos sintetizados */
+      report('áudio', 'efeitos/indice.json', 'índice ausente; todos os efeitos gravados caem na síntese');
     }
   }
 
@@ -81,7 +89,7 @@ export class AudioSys {
           list.push(b);
           this.bufs.set(key, list);
         })
-        .catch(() => undefined);
+        .catch(() => report('áudio', `efeitos/${f}.mp3`, 'não decodificou'));
     }
   }
 
@@ -119,7 +127,9 @@ export class AudioSys {
     } catch {
       return null;
     }
-    void el.play().catch(() => undefined);
+    // reprodução recusada (política de autoplay): fica na fila e toca no próximo gesto do jogador
+    void el.play().catch(() => this.blocked.add(el));
+    el.addEventListener('error', () => report('áudio', url.replace(BASE, ''), 'não carregou'));
     return { el, gain };
   }
 
@@ -146,7 +156,11 @@ export class AudioSys {
     }
     const mood = this.mood;
     this.musicEl = { ...m, mood };
-    this.fileMusic = true;
+    // a trilha gravada só substitui a generativa quando de fato começa a tocar
+    this.fileMusic = false;
+    m.el.addEventListener('playing', () => {
+      if (this.musicEl?.mood === mood) this.fileMusic = true;
+    });
     m.el.addEventListener('error', () => {
       if (this.musicEl?.mood === mood) this.fileMusic = false;
     });
@@ -188,6 +202,10 @@ export class AudioSys {
   start(): void {
     if (this.started) {
       void this.ctx?.resume();
+      for (const el of this.blocked) {
+        this.blocked.delete(el);
+        if (el.src) void el.play().catch(() => this.blocked.add(el));
+      }
       return;
     }
     const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;

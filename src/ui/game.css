@@ -454,3 +454,31 @@ body.touch #book nav .foot button::before { content: '× '; }
 @media (max-height: 520px), (max-width: 760px) {
   #shop .card > .btn[data-a='close'] { position: sticky; bottom: -2px; background: var(--g-panel-solid); }
 }
+
+/* auditoria de 12/11/2026: números nas barras, avisos de registro, remapeamento em duas colunas */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.meter .num { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); font: 500 9px/1 var(--font-mono); color: var(--g-paper); text-shadow: 0 0 3px #000, 0 0 3px #000; pointer-events: none; }
+.meter.vigor .num { font-size: 8px; right: -46px; }
+.status .xpn { font: 400 10px/1.2 var(--font-mono); color: var(--g-dim); margin-top: 2px; }
+.status .xpn:empty { display: none; }
+.warn { border-left: 2px solid var(--classic-crimson); padding: 6px 10px; background: rgba(214,40,57,0.12); color: var(--g-text); font-size: 14px; }
+.save-tools { gap: 8px; }
+.btn.small { padding: 7px 12px; font-size: 12px; width: auto; }
+.set .rng { display: flex; align-items: center; gap: 10px; }
+.set .rng output { min-width: 46px; text-align: right; font: 400 12px/1 var(--font-mono); color: var(--g-dim); }
+.set .binds { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.set .binds .btn { width: auto; min-width: 92px; }
+.btn.ghost { opacity: 0.45; pointer-events: none; border-style: dashed; }
+.case-src { font-size: 13px; }
+.case-src li { margin-bottom: 4px; }
+.log-list { list-style: none; padding: 0; margin: 0; }
+.log-list li { padding: 6px 0; border-bottom: 1px solid var(--g-line); font-size: 14px; }
+.log-list .label { display: block; margin-bottom: 2px; }
+.settings, .keys { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.set { min-width: 0; }
+.set > label { min-width: 0; flex: 1 1 auto; }
+.set .rng { flex: 0 1 210px; min-width: 0; }
+.set .rng input[type='range'] { flex: 1 1 80px; width: 80px; min-width: 50px; }
+/* texto muito ampliado: uma coluna só, para nada sair pela direita */
+body.big .settings, body.big .keys { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 760px) { .set .rng { flex-basis: 56vw; } }

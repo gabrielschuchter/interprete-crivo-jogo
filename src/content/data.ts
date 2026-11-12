@@ -182,6 +182,8 @@ export interface CodexEntry {
   body: string[];
   /** leitura opcional para curiosos; não é pré-requisito de nada */
   note?: string;
+  /** onde conferir: referência bibliográfica da obra citada no verbete */
+  refs?: string[];
 }
 
 export const CODEX: Record<string, CodexEntry> = {
@@ -348,14 +350,16 @@ export const CODEX: Record<string, CodexEntry> = {
       'O desenho era novo: comparar tratamentos entre pessoas parecidas, no mesmo navio, ao mesmo tempo.',
     ],
     note: 'Doze homens não fecham a questão e hoje seria um estudo muito pequeno. A marinha britânica só passou a distribuir suco de limão de forma regular décadas depois, em 1795. Evidência e adoção andam em ritmos diferentes.',
+    refs: ['Lind J. A Treatise of the Scurvy. Edimburgo, 1753.'],
   },
   nightingale: {
     id: 'nightingale', title: 'Florence Nightingale · o diagrama que convenceu', group: 'Mestres',
     body: [
       'Florence Nightingale (1820–1910) reuniu os números de mortalidade dos hospitais militares na Guerra da Crimeia e os desenhou em diagramas de área polar. O desenho mostrava que a maior parte das mortes vinha de doenças evitáveis ligadas às condições dos hospitais, e não dos ferimentos de batalha.',
-      'Ela sabia que ninguém lê tabela, mas todo mundo olha para uma figura.',
+      'Os diagramas foram feitos para leitores que não percorreriam as tabelas: ministros, parlamentares, a rainha.',
     ],
-    note: 'Foi eleita, em 1858, a primeira mulher membro da Royal Statistical Society. Comunicar o dado de um jeito que muda decisão faz parte do ofício, não é enfeite.',
+    note: 'Foi eleita, em 1858, a primeira mulher membro da Statistical Society of London, hoje Royal Statistical Society. Comunicar o dado de um jeito que muda decisão faz parte do ofício, não é enfeite.',
+    refs: ['Nightingale F. Notes on Matters Affecting the Health, Efficiency, and Hospital Administration of the British Army. Londres, 1858.'],
   },
   semmelweis: {
     id: 'semmelweis', title: 'Ignaz Semmelweis · mãos lavadas, ouvidos fechados', group: 'Mestres',
@@ -364,6 +368,7 @@ export const CODEX: Record<string, CodexEntry> = {
       'Muitos colegas resistiram. Ele tinha o padrão e não tinha o mecanismo.',
     ],
     note: 'A teoria dos germes, que explicaria o porquê, só se firmaria depois, com Pasteur e Lister. A lição é dupla: observação cuidadosa pode antecipar a explicação, e a falta de explicação é a desculpa favorita para não mudar a prática.',
+    refs: ['Semmelweis I. Die Aetiologie, der Begriff und die Prophylaxis des Kindbettfiebers. Pest, Viena e Leipzig, 1861.'],
   },
   fisher: {
     id: 'fisher', title: 'Ronald Fisher · a senhora do chá', group: 'Mestres',
@@ -372,6 +377,7 @@ export const CODEX: Record<string, CodexEntry> = {
       'Sortear a ordem das xícaras impede que o experimentador, sem querer, escolha.',
     ],
     note: 'A randomização não garante grupos idênticos em uma amostra pequena. Garante que as diferenças entre eles não vieram de quem decidiu quem recebia o quê, e é isso que permite calcular a probabilidade do acaso.',
+    refs: ['Fisher RA. The Design of Experiments. Edimburgo: Oliver and Boyd, 1935.'],
   },
   hill: {
     id: 'hill', title: 'Austin Bradford Hill · nove pontos de vista', group: 'Mestres',
@@ -379,7 +385,8 @@ export const CODEX: Record<string, CodexEntry> = {
       'Austin Bradford Hill (1897–1991) foi o estatístico do ensaio do Conselho de Pesquisa Médica sobre estreptomicina na tuberculose, em 1948, frequentemente citado como o primeiro ensaio randomizado moderno. Com Richard Doll, estudou a relação entre fumo e câncer de pulmão.',
       'Em 1965 listou nove aspectos para pensar se uma associação é causal: força, consistência, especificidade, temporalidade, gradiente, plausibilidade, coerência, experimento e analogia.',
     ],
-    note: 'O próprio Hill avisou que nenhum desses pontos prova causa, e que apenas a temporalidade (a causa vem antes do efeito) é indispensável. Não é uma lista de verificação. É um jeito de organizar a discussão.',
+    note: 'O próprio Hill avisou que nenhum desses pontos prova causa e que nenhum é exigência. Leitores posteriores notaram que só a temporalidade (a causa vem antes do efeito) é logicamente necessária. Não é uma lista de verificação. É um jeito de organizar a discussão.',
+    refs: ['Medical Research Council. Streptomycin treatment of pulmonary tuberculosis. BMJ 1948;2:769-82.', 'Hill AB. The environment and disease: association or causation? Proceedings of the Royal Society of Medicine 1965;58:295-300.'],
   },
   cochrane: {
     id: 'cochrane', title: 'Archie Cochrane · efetividade e eficiência', group: 'Mestres',
@@ -388,6 +395,7 @@ export const CODEX: Record<string, CodexEntry> = {
       'Em 1979 escreveu que era uma crítica à profissão não haver um resumo crítico, por especialidade e atualizado, de todos os ensaios relevantes. A Colaboração Cochrane, criada em 1993, leva o nome dele.',
     ],
     note: 'Cochrane também era cético com a própria tese: pedia que se perguntasse o que um tratamento custa, além do que ele alcança.',
+    refs: ['Cochrane AL. Effectiveness and Efficiency: Random Reflections on Health Services. Londres: Nuffield Provincial Hospitals Trust, 1972.'],
   },
   sackett: {
     id: 'sackett', title: 'David Sackett · evidência, perícia e a pessoa', group: 'Mestres',
@@ -396,6 +404,7 @@ export const CODEX: Record<string, CodexEntry> = {
       'No mesmo artigo explicou o que ela não é: nem um livro de receitas, nem uma regra que dispensa a perícia clínica e as preferências de quem é cuidado.',
     ],
     note: 'A frase de Sackett é a base de quase todo o resto: evidência externa, perícia clínica e valores da pessoa entram juntos na decisão, e nenhum dos três decide sozinho.',
+    refs: ['Sackett DL, Rosenberg WMC, Gray JAM, Haynes RB, Richardson WS. Evidence based medicine: what it is and what it isn\'t. BMJ 1996;312:71-2.'],
   },
   altman: {
     id: 'altman', title: 'Doug Altman · o escândalo da pesquisa ruim', group: 'Mestres',
@@ -404,6 +413,7 @@ export const CODEX: Record<string, CodexEntry> = {
       'Ajudou a criar o CONSORT, de 1996, uma lista do que um ensaio randomizado deve relatar, e depois a rede EQUATOR, que reúne guias de relato para outros tipos de estudo.',
     ],
     note: 'Relato claro não torna um estudo bom, mas sem ele não se consegue julgar se o estudo é bom.',
+    refs: ['Altman DG. The scandal of poor medical research. BMJ 1994;308:283-4.'],
   },
 
   // ---------- obras: estantes do Arquivo (autores vivos, citados pelas obras) ----------
@@ -414,6 +424,7 @@ export const CODEX: Record<string, CodexEntry> = {
       'Guyatt também integra o grupo que desenvolveu o GRADE, um sistema para classificar a certeza da evidência e a força das recomendações.',
     ],
     note: 'Obra citada, sem reprodução de texto. O GRADE parte do tipo de estudo e rebaixa ou eleva a certeza segundo risco de viés, inconsistência, evidência indireta, imprecisão e viés de publicação.',
+    refs: ['Guyatt GH. Evidence-based medicine. ACP Journal Club 1991;114:A-16.', 'Evidence-Based Medicine Working Group. Evidence-based medicine: a new approach to teaching the practice of medicine. JAMA 1992;268:2420-5.'],
   },
   obra_chalmers: {
     id: 'obra_chalmers', title: 'Cuidado efetivo na gravidez e no parto', group: 'Obras',
@@ -422,6 +433,7 @@ export const CODEX: Record<string, CodexEntry> = {
       'Mostrou que reunir os ensaios de forma sistemática podia apontar práticas úteis ignoradas e práticas disseminadas sem prova.',
     ],
     note: 'A James Lind Library, editada por Chalmers e colegas, conta a história dos ensaios comparativos em tratamentos.',
+    refs: ['Chalmers I, Enkin M, Keirse MJNC, organizadores. Effective Care in Pregnancy and Childbirth. Oxford: Oxford University Press, 1989.'],
   },
   obra_greenhalgh: {
     id: 'obra_greenhalgh', title: 'Como ler um artigo', group: 'Obras',
@@ -430,6 +442,7 @@ export const CODEX: Record<string, CodexEntry> = {
       'Em 2014, Greenhalgh e colegas publicaram no BMJ "Evidence based medicine: a movement in crisis?", um balanço crítico sobre o que a prática tem a corrigir.',
     ],
     note: 'Criticar a PBE por dentro é parte do método. Entre os pontos levantados estavam a influência de interesses comerciais, o excesso de diretrizes e a distância entre o resultado médio e a pessoa na consulta.',
+    refs: ['Greenhalgh T. How to Read a Paper: The Basics of Evidence-Based Medicine. Londres: BMJ Publishing, 1997.', 'Greenhalgh T, Howick J, Maskrey N. Evidence based medicine: a movement in crisis? BMJ 2014;348:g3725.'],
   },
   obra_gigerenzer: {
     id: 'obra_gigerenzer', title: 'Riscos em frequências naturais', group: 'Obras',
@@ -438,6 +451,7 @@ export const CODEX: Record<string, CodexEntry> = {
       'É por isso que o dossiê de Lia mostra benefício e dano em pessoas de cada 100.',
     ],
     note: 'Obra citada, sem reprodução de texto. Apresentar o risco absoluto, e não apenas o relativo, ajuda a decidir com menos distorção.',
+    refs: ['Gigerenzer G. Reckoning with Risk: Learning to Live with Uncertainty. Londres: Penguin, 2002.'],
   },
   obra_ioannidis: {
     id: 'obra_ioannidis', title: 'Por que tantos achados não se repetem', group: 'Obras',
@@ -446,6 +460,7 @@ export const CODEX: Record<string, CodexEntry> = {
       'O artigo é um argumento de modelagem, não uma medida direta. É muito citado e também muito debatido.',
     ],
     note: 'O recado prático é pedir replicação e pré-registro antes de tratar um achado novo como fato.',
+    refs: ['Ioannidis JPA. Why most published research findings are false. PLoS Medicine 2005;2(8):e124.'],
   },
   obra_cochrane_br: {
     id: 'obra_cochrane_br', title: 'Cochrane no Brasil', group: 'Obras',
@@ -566,9 +581,9 @@ export const QUESTS: Record<string, QuestDef> = {
 
 export const CASE_LIA: ClinicalCase = {
   id: 'lia-vertigem-de-torre',
-  version: '0.1.0',
-  reviewed_at: '2026-11-11',
-  reviewer: 'Sem revisão clínica: conteúdo inteiramente fictício, para teste de mecânica',
+  version: '0.2.0',
+  reviewed_at: '2026-11-12',
+  reviewer: 'Sem revisão clínica nem pedagógica independente: conteúdo inteiramente fictício, para teste de mecânica',
   fictional: true,
   discipline: 'Interprofissional',
   scope_of_practice: 'Aconselhar dentro da competência, encaminhar quando a opção exigir outro profissional e decidir junto com a pessoa.',
@@ -579,14 +594,24 @@ export const CASE_LIA: ClinicalCase = {
   intervention: 'Tintura de raiz-de-bruma, uso diário',
   comparison: 'Não usar a tintura; ou exercícios de equilíbrio',
   outcomes: 'Melhora das crises em 8 semanas; sonolência diurna; custo',
+  horizon_weeks: 8,
+  harm_label: 'sonolência de dia',
+  baseline_harm_per100: 6,
+  comparator: 'espera',
+  simulation_notes: [
+    'O desfecho é sorteado para as mesmas 8 semanas dos estudos. O retorno em 4 semanas é uma conversa no meio do caminho, não a medida do resultado.',
+    'O sorteio não usa o número do estudo como se fosse a chance exata de Lia. Primeiro sorteia a chance real dentro da faixa de incerteza de cada opção; depois sorteia o desfecho.',
+    'Para os exercícios, a faixa é mais larga porque o estudo não teve sorteio: parte da melhora observada pode vir de quem escolheu se exercitar, e não dos exercícios.',
+    'A sonolência também acontece em quem não toma nada. O sorteio usa o risco total de cada opção; o que a tintura acrescenta é a diferença.',
+  ],
   sources: [
     { label: 'Ensaio dos Sineiros de Valmor (fictício)', note: 'Comparação com sorteio, 240 pessoas, 8 semanas. Não incluiu quem trabalha em altura.' },
-    { label: 'Cadernos da Vila sobre exercícios de equilíbrio (fictício)', note: 'Acompanhamento sem sorteio, 60 pessoas. Quem fazia os exercícios já era mais ativo.' },
+    { label: 'Cadernos da Vila sobre exercícios de equilíbrio (fictício)', note: 'Acompanhamento sem sorteio, 60 pessoas, 8 semanas. Quem fazia os exercícios já era mais ativo. Não registrou efeitos indesejados, o que não é o mesmo que não haver.' },
   ],
   evidence_summary: [
     'Sem tintura: cerca de 30 em cada 100 pessoas melhoraram em 8 semanas.',
     'Com tintura: cerca de 42 em cada 100. São 12 a mais em cada 100, mas a faixa compatível com os dados vai de nenhuma a mais até 24 a mais.',
-    'Sonolência durante o dia: 9 pessoas a mais em cada 100 com a tintura.',
+    'Sonolência durante o dia: cerca de 6 em cada 100 sem tintura e 15 em cada 100 com ela. São 9 a mais em cada 100.',
     'Exercícios de equilíbrio: cerca de 38 em cada 100 melhoraram, em um acompanhamento sem sorteio. A incerteza aqui é maior.',
   ],
   quality_considerations: [
@@ -615,7 +640,7 @@ export const CASE_LIA: ClinicalCase = {
         aprendiz: 'Pedir à sua supervisora que avalie a tintura com Lia',
       },
       detail: 'Benefício possível, com sonolência como preço provável para algumas pessoas.',
-      improvePer100: 42, harmPer100: 9, costPerWeek: 6,
+      improvePer100: 42, improveRange: [30, 54], harmPer100: 15, costPerWeek: 6,
       fragileWithout: ['danos', 'preferencias'],
       fragileNote: 'A opção é defensável, mas foi escolhida sem pesar a sonolência com alguém que sobe uma torre todo dia. Era a informação que mais importava para ela.',
       reasonableNote: 'Opção defensável: vocês pesaram o ganho incerto contra a sonolência e combinaram rever em quatro semanas.',
@@ -629,25 +654,26 @@ export const CASE_LIA: ClinicalCase = {
         psicologia: 'Encaminhar para exercícios de equilíbrio e pedir um diário de crises',
         aprendiz: 'Sugerir, com sua supervisora, exercícios de equilíbrio e um diário de crises',
       },
-      detail: 'Sem sonolência; evidência mais incerta e três viagens à Vila por semana.',
-      improvePer100: 38, harmPer100: 0, costPerWeek: 0,
+      detail: 'Nenhuma sonolência a mais registrada; evidência mais incerta e três viagens à Vila por semana.',
+      improvePer100: 38, improveRange: [24, 52], harmPer100: 6, costPerWeek: 0,
       fragileWithout: ['custo'],
       fragileNote: 'A opção é defensável, mas ninguém perguntou se ela consegue ir à Vila três vezes por semana. Um plano que não cabe na vida da pessoa tende a ficar no papel.',
-      reasonableNote: 'Opção defensável: evita o efeito que ela mais teme e vocês conferiram se as idas à Vila cabem na rotina.',
+      reasonableNote: 'Opção defensável: evita o efeito que ela mais teme, e você perguntou pelas idas à Vila. A resposta dela ficou condicionada à ponte; vale combinar o que fazer se as viagens não couberem.',
     },
     {
       id: 'espera',
       label: 'Esperar com diário de crises e rever em 4 semanas',
-      detail: 'Sem custo e sem efeito indesejado; cerca de 30 em 100 melhoram sem fazer nada.',
-      improvePer100: 30, harmPer100: 0, costPerWeek: 0,
+      detail: 'Sem custo e sem efeito a mais; cerca de 30 em 100 melhoram em 8 semanas sem fazer nada.',
+      improvePer100: 30, harmPer100: 6, costPerWeek: 0,
       fragileWithout: ['preferencias'],
       fragileNote: 'Esperar é defensável, mas foi decidido sem saber o quanto as crises pesam para ela hoje. Esperar tem custo quando a pessoa está com medo de cair.',
-      reasonableNote: 'Opção defensável: ela preferiu observar por um mês, com um plano claro do que fazer se piorar.',
+      reasonableNote: 'Opção defensável: ela preferiu observar, sabendo o que as crises pesam hoje. O dossiê não chegou a combinar o que fazer se piorar antes do retorno; numa consulta de verdade, esse combinado faz parte de esperar.',
     },
   ],
   uncertainty: [
     'Não se sabe se a tintura funciona em quem trabalha em altura: essas pessoas ficaram fora do ensaio.',
     'Não se sabe o efeito além de 8 semanas.',
+    'Os Cadernos da Vila não anotaram efeitos indesejados dos exercícios. Falta de registro não é prova de que não existam.',
     'Os números descrevem grupos. Não dizem o que vai acontecer com Lia.',
   ],
   safety_note: 'Simulação não clínica. A condição, os tratamentos, os estudos e os números foram inventados para o jogo e não orientam nenhuma decisão de saúde real.',

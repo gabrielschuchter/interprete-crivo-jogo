@@ -1015,6 +1015,10 @@ export class Projectile {
     this.mesh.add(smoke, core);
     this.mesh.position.copy(pos);
   }
+  /** os dois materiais são próprios de cada projétil (as texturas, não): sem isto acumulam na GPU */
+  dispose(): void {
+    for (const c of this.mesh.children) ((c as THREE.Sprite).material as THREE.Material).dispose();
+  }
   update(dt: number): void {
     this.pos.addScaledVector(this.dir, this.speed * dt);
     this.mesh.position.copy(this.pos);
