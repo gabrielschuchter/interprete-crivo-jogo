@@ -56,7 +56,7 @@ export function buildObservatorio(ctx: RegionCtx): BuiltRegion {
   // casa da escada (de onde se chega)
   b.box(M.stone, 7, 6.5, 2.2, 0, 0, 15.9, 0, true);
   K.archWall(b, 0, 14.75, 0, 7, 6.5, 0.5, 2.8, 2.6, M.stone, 0, false);
-  b.box(M.woodDark, 2.8, 5, 0.2, 0, 0, 14.9, 0);
+  if (!b.place('large_castle_door', 0, 0, 14.7, Math.PI, { size: 2.9, fit: 'w', collide: false })) b.box(M.woodDark, 2.8, 5, 0.2, 0, 0, 14.9, 0);
   K.gableRoof(b, 0, 6.5, 15.9, 0, 7.4, 2.6, 2.4);
   K.wallLantern(b, 2.4, 3.2, 14.5, Math.PI);
   K.wallLantern(b, -2.4, 3.2, 14.5, Math.PI);
@@ -135,11 +135,14 @@ export function buildObservatorio(ctx: RegionCtx): BuiltRegion {
     b.box(M.stoneDark, 3.2, 1.05, 0.5, sx * 4.6, 0, -9.7, 0, true);
   }
   const gate = new THREE.Group();
-  for (let i = -7; i <= 7; i++) {
-    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 3.6, 14), M.iron);
-    bar.position.set(i * 0.28, 1.8, -9.7);
-    gate.add(bar);
-  }
+  const gateScan = b.place('large_iron_gate', 0, 0, -9.7, 0, { size: 4.25, fit: 'w', collide: false });
+  if (gateScan) gate.add(gateScan);
+  else
+    for (let i = -7; i <= 7; i++) {
+      const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 3.6, 14), M.iron);
+      bar.position.set(i * 0.28, 1.8, -9.7);
+      gate.add(bar);
+    }
   gate.visible = !openGate;
   b.dynamic(gate);
   if (!openGate) b.collideBox(0, -9.7, 2.2, 0.3, 0, -1, 5, 'grade_arena');
@@ -168,6 +171,22 @@ export function buildObservatorio(ctx: RegionCtx): BuiltRegion {
     [-30, -10, 7, 18, 14], [30, -4, 6, 14, 12], [-40, -40, 9, 26, 20], [42, -44, 9, 24, 18], [-24, 20, 6, 12, 10], [26, 22, 7, 16, 12], [0, -78, 11, 34, 26], [-58, 6, 8, 20, 14], [60, -20, 8, 18, 16],
   ] as Array<[number, number, number, number, number]>)
     K.spireTower(b, x, z, w, h, sp, -32, x * 0.01, false);
+
+  // guardiãs de pedra no fundo da arena, de frente para quem chega
+  for (const sx of [-1, 1]) {
+    b.box(M.stoneDark, 1.8, 0.8, 1.8, sx * 5.2, 0, -35.2, 0, true);
+    b.add(new THREE.BoxGeometry(1.94, 0.12, 1.94), M.carved, trs(sx * 5.2, 0.86, -35.2));
+    b.place('gothic_statue', sx * 5.2, 0.92, -35.2, sx * 0.3, { size: 2.6, collide: false });
+    K.candle(b, sx * 5.2 + 0.7, 0.92, -34.4, true);
+  }
+  // a muralha da cidade lá embaixo
+  b.place('modular_fort_01', -34, -32, -22, Math.PI / 2, { part: 'modular_fort_01_tower_round', size: 13, fit: 'w', collide: false });
+  b.place('modular_fort_01', -34, -32, -6, Math.PI / 2, { part: 'modular_fort_01_wall_thick_straight_01', size: 16, fit: 'w', collide: false });
+  b.place('modular_fort_01', 34, -32, -18, -Math.PI / 2, { part: 'modular_fort_01_wall_thin_gate_01', size: 10, fit: 'w', collide: false });
+  b.place('modular_fort_01', 34, -32, -4, -Math.PI / 2, { part: 'modular_fort_01_wall_thin_straight_01', size: 16, fit: 'w', collide: false });
+  // carga deixada junto à casa da escada
+  K.crate(b, -5.0, 13.3, 0.7, 0.3);
+  K.barrel(b, -4.2, 13.8);
 
   // marco de descanso
   b.add(new THREE.CylinderGeometry(0.34, 0.42, 1.0, 22), M.carved, trs(-4.4, 0.5, 9.4), false);

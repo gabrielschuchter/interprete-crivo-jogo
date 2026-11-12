@@ -72,6 +72,13 @@ export interface AttackEvent {
   arc: number;
 }
 
+/** razão entre o tom escolhido e o tom da textura base (pele clara) */
+function skinTint(c: number): number {
+  const a = new THREE.Color(c);
+  const b = new THREE.Color(SKINS[0]);
+  return new THREE.Color(Math.min(1, a.r / b.r), Math.min(1, a.g / b.g), Math.min(1, a.b / b.b)).getHex();
+}
+
 export class Player {
   fig: Figure;
   pos = new THREE.Vector3();
@@ -122,7 +129,10 @@ export class Player {
       cape: new THREE.Color(COAT_COLORS[look.coat % COAT_COLORS.length]).lerp(new THREE.Color(BRAND.darkAmaranth), 0.45).multiplyScalar(0.95).getHex(),
       staff: true,
       satchel: true,
-      model: 'player',
+      model: 'player_' + ((['curto', 'coque', 'longo', 'capuz'] as const)[Math.floor(look.hair / HAIRS.length) % 4] ?? 'curto'),
+      tintSkin: skinTint(SKINS[look.skin % SKINS.length]),
+      tintHair: new THREE.Color(HAIRS[look.hair % HAIRS.length]).multiplyScalar(2.4).getHex(),
+      tintCoat: new THREE.Color(COAT_COLORS[look.coat % COAT_COLORS.length]).multiplyScalar(2.2).getHex(),
     });
     this.light.castShadow = false;
   }

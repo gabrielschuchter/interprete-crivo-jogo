@@ -1,8 +1,14 @@
 /**
- * Áudio 100% sintetizado em Web Audio: ambiência, trilha generativa e efeitos.
- * Sem arquivos de terceiros. Só inicia após um gesto do usuário (política de autoplay).
+ * Áudio em Web Audio: trilha (arquivos CC-BY de Kevin MacLeod, com a trilha generativa como reserva),
+ * ambiência gravada em laço, passos por superfície e golpes gravados, mais efeitos sintetizados.
+ * Origem e licença de cada arquivo em docs/game/REGISTRO_DE_ASSETS.md.
+ * Só inicia após um gesto do usuário (política de autoplay).
  */
 export type MusicMood = 'menu' | 'atrio' | 'bosque' | 'arquivo' | 'observatorio';
+export type Surface = 'pedra' | 'terra' | 'entulho' | 'agua';
+export type AmbienceLoop = 'sala' | 'salao' | 'agua' | 'poca';
+
+const BASE = import.meta.env.BASE_URL + 'audio/';
 
 const SCALES: Record<MusicMood, { root: number; chords: number[][]; scale: number[]; tempo: number }> = {
   // graus em semitons a partir da tônica
@@ -38,6 +44,146 @@ export class AudioSys {
   private rainTarget = 0;
   private windTarget = 0.3;
   started = false;
+  /** amostras curtas: bytes baixados na abertura, decodificados quando o contexto nasce */
+  private raw = new Map<string, ArrayBuffer>();
+  private bufs = new Map<string, AudioBuffer[]>();
+  private musicEl: { el: HTMLAudioElement; gain: GainNode; mood: MusicMood } | null = null;
+  private fileMusic = false;
+  private ambLoops = new Map<AmbienceLoop, { el: HTMLAudioElement; gain: GainNode }>();
+  private ambWanted: Partial<Record<AmbienceLoop, number>> = {};
+  private lastPick = new Map<string, number>();
+
+  /** Baixa os efeitos gravados (pequenos). Música e ambiência vêm por streaming. */
+  async preload(): Promise<void> {
+    try {
+      const idx = (await (await fetch(BASE + 'efeitos/indice.json')).json()) as Record<string, number>;
+      const files: string[] = ['energia'];
+      for (const [k, n] of Object.entries(idx)) for (let i = 1; i <= n; i++) files.push(`${k}-${i}`);
+      await Promise.all(
+        files.map(async (f) => {
+          const r = await fetch(BASE + `efeitos/${f}.mp3`);
+          if (r.ok) this.raw.set(f, await r.arrayBuffer());
+        }),
+      );
+    } catch {
+      /* sem amostras: efeitos sintetizados */
+    }
+  }
+
+  private decodeAll(): void {
+    const ctx = this.ctx!;
+    for (const [f, ab] of this.raw) {
+      const key = f.replace(/-\d+$/, '');
+      void ctx
+        .decodeAudioData(ab.slice(0))
+        .then((b) => {
+          const list = this.bufs.get(key) ?? [];
+          list.push(b);
+          this.bufs.set(key, list);
+        })
+        .catch(() => undefined);
+    }
+  }
+
+  /** Toca uma amostra do grupo, sem repetir a última, com leve variação de altura. */
+  private sample(group: string, vol: number, rate = 1, spread = 0.08): boolean {
+    const ctx = this.ctx;
+    const list = this.bufs.get(group);
+    if (!ctx || ctx.state !== 'running' || !list?.length) return false;
+    let i = Math.floor(Math.random() * list.length);
+    if (list.length > 1 && i === this.lastPick.get(group)) i = (i + 1) % list.length;
+    this.lastPick.set(group, i);
+    const s = ctx.createBufferSource();
+    s.buffer = list[i];
+    s.playbackRate.value = rate * (1 - spread / 2 + Math.random() * spread);
+    const g = ctx.createGain();
+    g.gain.value = vol;
+    s.connect(g).connect(this.sfxBus);
+    s.start();
+    return true;
+  }
+
+  /** Elemento de áudio em laço ligado a um barramento (streaming, sem decodificar o arquivo inteiro). */
+  private stream(url: string, bus: GainNode, loop: boolean): { el: HTMLAudioElement; gain: GainNode } | null {
+    const ctx = this.ctx;
+    if (!ctx) return null;
+    const el = new Audio();
+    el.crossOrigin = 'anonymous';
+    el.preload = 'auto';
+    el.loop = loop;
+    el.src = url;
+    const gain = ctx.createGain();
+    gain.gain.value = 0;
+    try {
+      ctx.createMediaElementSource(el).connect(gain).connect(bus);
+    } catch {
+      return null;
+    }
+    void el.play().catch(() => undefined);
+    return { el, gain };
+  }
+
+  private fadeOut(x: { el: HTMLAudioElement; gain: GainNode }, secs: number): void {
+    const t = this.ctx!.currentTime;
+    x.gain.gain.cancelScheduledValues(t);
+    x.gain.gain.setTargetAtTime(0, t, secs / 4);
+    setTimeout(() => {
+      x.el.pause();
+      x.el.removeAttribute('src');
+      x.el.load();
+      x.gain.disconnect();
+    }, secs * 1000 + 200);
+  }
+
+  private startMusic(): void {
+    if (!this.ctx || this.musicEl?.mood === this.mood) return;
+    if (this.musicEl) this.fadeOut(this.musicEl, 3);
+    const m = this.stream(BASE + `musica/${this.mood}.mp3`, this.musicBus, true);
+    if (!m) {
+      this.fileMusic = false;
+      this.musicEl = null;
+      return;
+    }
+    const mood = this.mood;
+    this.musicEl = { ...m, mood };
+    this.fileMusic = true;
+    m.el.addEventListener('error', () => {
+      if (this.musicEl?.mood === mood) this.fileMusic = false;
+    });
+    m.gain.gain.setTargetAtTime(0.9, this.ctx.currentTime + 0.5, 1.2);
+  }
+
+  /** Laços gravados por região; volume 0 desliga. */
+  setLoops(want: Partial<Record<AmbienceLoop, number>>): void {
+    this.ambWanted = want;
+    this.syncLoops();
+  }
+
+  private syncLoops(): void {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    for (const k of ['sala', 'salao', 'agua', 'poca'] as AmbienceLoop[]) {
+      const v = this.ambWanted[k] ?? 0;
+      let cur = this.ambLoops.get(k);
+      if (v > 0 && !cur) {
+        cur = this.stream(BASE + `ambiente/${k}.mp3`, this.ambBus, true) ?? undefined;
+        if (cur) this.ambLoops.set(k, cur);
+      }
+      if (cur) {
+        cur.gain.gain.setTargetAtTime(v, ctx.currentTime, 1.0);
+        if (v <= 0) {
+          this.fadeOut(cur, 3);
+          this.ambLoops.delete(k);
+        }
+      }
+    }
+  }
+
+  /** Passo gravado por superfície; sem amostra, cai no ruído filtrado. */
+  step(surface: Surface, p = 1): void {
+    const group = surface === 'agua' ? 'passo-agua' : `passo-${surface}`;
+    if (!this.sample(group, 0.55 * p, 1, 0.14)) this.sfx(surface === 'agua' ? 'passoMolhado' : 'passo', p);
+  }
 
   start(): void {
     if (this.started) {
@@ -114,6 +260,9 @@ export class AudioSys {
     this.combatGain.connect(this.musicBus);
     this.applyVolumes();
     this.nextChord = this.nextNote = this.nextBeat = ctx.currentTime + 0.3;
+    this.decodeAll();
+    this.startMusic();
+    this.syncLoops();
   }
 
   private impulse(seconds: number): AudioBuffer {
@@ -147,6 +296,7 @@ export class AudioSys {
     if (m !== this.mood) {
       this.mood = m;
       this.chordI = 0;
+      this.startMusic();
     }
   }
 
@@ -168,6 +318,10 @@ export class AudioSys {
     this.windGain.gain.setTargetAtTime(this.windTarget * 0.5, t, 1.2);
     this.combatGain.gain.setTargetAtTime(this.combat, t, 0.5);
     const sc = SCALES[this.mood];
+    if (this.fileMusic) {
+      // trilha gravada no ar: o gerador só marca o tempo para a percussão de combate
+      this.nextChord = this.nextNote = t + 0.5;
+    }
     if (t > this.nextChord - 0.2) {
       const chord = sc.chords[this.chordI % sc.chords.length];
       this.pad(chord.map((n) => sc.root + n), this.nextChord, sc.tempo);
@@ -300,10 +454,11 @@ export class AudioSys {
         this.noise(0.05, 0.04 * p, 'highpass', 4000, 3000);
         break;
       case 'golpe':
-        this.noise(0.2, 0.2, 'bandpass', 500, 2600, 1.6);
+        if (!this.sample('espada', 0.5, 1.05, 0.12)) this.noise(0.2, 0.2, 'bandpass', 500, 2600, 1.6);
         break;
       case 'golpeFirme':
-        this.noise(0.34, 0.26, 'bandpass', 260, 2200, 1.3);
+        if (!this.sample('lamina', 0.62, 0.86, 0.06)) this.noise(0.34, 0.26, 'bandpass', 260, 2200, 1.3);
+        else this.noise(0.3, 0.12, 'bandpass', 260, 1800, 1.3);
         break;
       case 'impacto':
         this.noise(0.12, 0.4, 'lowpass', 2400, 300);
@@ -331,6 +486,7 @@ export class AudioSys {
         [0, 4, 7, 12].forEach((n, i) => this.tone(mtof(76 + n), 0.12, 0.09, 'sine', 1.02, i * 0.07));
         break;
       case 'pulso':
+        this.sample('energia', 0.42, 1.1, 0.1);
         this.tone(1300, 0.5, 0.2, 'sine', 0.16);
         this.noise(0.5, 0.18, 'bandpass', 3000, 240, 2);
         break;

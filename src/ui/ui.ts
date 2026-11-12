@@ -920,7 +920,13 @@ export class UI {
       <h4>Jogo</h4>${select('difficulty', 'Encontros', [['padrao', 'Padrão'], ['historia', 'História']], 'História reduz o dano recebido')}${range('sens', this.touch.enabled ? 'Sensibilidade da câmera e do toque' : 'Sensibilidade da câmera', 0.3, 2.5, 0.1)}${this.touch.enabled ? range('touchScale', 'Tamanho dos botões de toque', 0.8, 1.4, 0.05) : ''}${check('invertY', 'Inverter eixo vertical')}${check('hud', 'Mostrar interface durante o jogo')}
       <h4>Acessibilidade</h4>${select('textScale', 'Tamanho do texto', [['0.9', 'Menor'], ['1', 'Padrão'], ['1.15', 'Maior'], ['1.3', 'Muito maior']])}${check('highContrast', 'Alto contraste')}${check('reduceMotion', 'Reduzir movimento', 'Sem tremor de câmera, clarões e texto animado')}
       ${this.touch.enabled ? '' : '<h4>Controles · clique para remapear</h4>'}</div><div class="keys">${this.touch.enabled ? '' : acts.map((a) => `<div class="set"><label>${ACTION_LABEL[a]}</label><button class="btn" data-bind="${a}">${this.rebinding === a ? 'Pressione uma tecla' : this.g.input.keys[a].map(keyLabel).join(' · ') || 'sem tecla'}</button></div>`).join('')}</div>
-      <div class="settings"><h4>Gamepad</h4><div class="set"><label>Analógicos movem e olham. A interage, B esquiva, X golpe leve, Y golpe firme, RB Crivo, LB alterna, Start pausa.</label></div><div class="set"><button class="btn" data-a="reset">Restaurar padrões</button></div></div></div>`;
+      <div class="settings"><h4>Gamepad</h4><div class="set"><label>Analógicos movem e olham. A interage, B esquiva, X golpe leve, Y golpe firme, RB Crivo, LB alterna, Start pausa.</label></div><div class="set"><button class="btn" data-a="reset">Restaurar padrões</button></div>
+      <div class="settings credits"><h4>Créditos</h4>
+      <div class="set"><label>Música<small>"Night Vigil", "Equatorial Complex", "Aquarium", "Ether Vox" e "That Zen Moment", de Kevin MacLeod (incompetech.com). Licenciadas sob Creative Commons: By Attribution 4.0, creativecommons.org/licenses/by/4.0/</small></label></div>
+      <div class="set"><label>Captura de movimento<small>The data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217. Conversão BVH de B. Hahne.</small></label></div>
+      <div class="set"><label>Modelos, texturas e céu<small>Poly Haven (polyhaven.com), CC0. Humanos montados com MakeHuman e MPFB2, com roupas e cabelos CC0 de Donitz, MargaretToigo, Elvaerwyn, RehmanPolanski, jujube, frankyaye, grinsegold e WDG.</small></label></div>
+      <div class="set"><label>Sons<small>Freesound: dolineh, klankbeeld, isalreky, incrediblesgm, starsoundzzz, duranburrus, loganzsound.</small></label></div>
+      </div></div>`;
     page.querySelectorAll<HTMLElement>('input, select').forEach((x) =>
       x.addEventListener('input', () => {
         const k = x.dataset.k as keyof typeof st;

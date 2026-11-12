@@ -81,9 +81,19 @@ export function buildArquivo(ctx: RegionCtx): BuiltRegion {
   for (const z of zs) for (const x of [-7, 7]) K.column(b, x, z, 7.2, 0.42);
   for (let i = 0; i < zs.length - 1; i++) K.ribVault(b, 0, (zs[i] + zs[i + 1]) / 2, 14, 8, 7.2, 3.6);
   for (const z of [12, 4, -4, -12]) {
-    b.add(new THREE.CylinderGeometry(0.02, 0.02, 4.4, 4), M.iron, trs(0, 8.6, z));
-    b.add(new THREE.TorusGeometry(0.9, 0.04, 10, 28), M.bronze, trs(0, 6.4, z, 0, Math.PI / 2), false);
-    for (let k = 0; k < 6; k++) K.candle(b, Math.sin((k / 6) * Math.PI * 2) * 0.9, 6.42, z + Math.cos((k / 6) * Math.PI * 2) * 0.9, false);
+    // lustre de ferro escaneado pendurado por corrente; a roda procedural fica de reserva
+    if (b.place('chandelier_03', 0, 5.2, z, z * 0.3, { size: 2.2, collide: false })) {
+      b.add(new THREE.CylinderGeometry(0.025, 0.025, 3.7, 8), M.iron, trs(0, 9.2, z));
+      for (let k = 0; k < 6; k++) {
+        const hl = K.halo(0.8, 0xffb86a, 0.4);
+        hl.position.set(Math.sin((k / 6) * Math.PI * 2) * 0.62, 6.05, z + Math.cos((k / 6) * Math.PI * 2) * 0.62);
+        b.dynamic(hl);
+      }
+    } else {
+      b.add(new THREE.CylinderGeometry(0.02, 0.02, 4.4, 4), M.iron, trs(0, 8.6, z));
+      b.add(new THREE.TorusGeometry(0.9, 0.04, 10, 28), M.bronze, trs(0, 6.4, z, 0, Math.PI / 2), false);
+      for (let k = 0; k < 6; k++) K.candle(b, Math.sin((k / 6) * Math.PI * 2) * 0.9, 6.42, z + Math.cos((k / 6) * Math.PI * 2) * 0.9, false);
+    }
     b.lamp(0, 6.1, z, 0xffa860, 1.1, 17, 0.1);
   }
   // estantes de parede e janelas altas
@@ -104,8 +114,19 @@ export function buildArquivo(ctx: RegionCtx): BuiltRegion {
     K.deskLamp(b, x - 0.7, 0.92, z, true);
     b.add(new THREE.BoxGeometry(0.5, 0.06, 0.36), M.parchment, trs(x + 0.3, 0.95, z + 0.1, 0.3), false, false);
     K.bench(b, x, z + 1.2, 0);
+    // material de leitura sobre a mesa
+    b.place('binder_notebook', x + 0.85, 0.92, z - 0.2, 0.4 + x * 0.1, { collide: false });
+    b.place('magnifying_glass_01', x - 0.1, 0.92, z - 0.25, 1.2, { tilt: -Math.PI / 2, collide: false });
+    if (z > 0) b.place('vintage_pocket_watch', x + 0.35, 0.92, z - 0.3, 0.8, { tilt: -Math.PI / 2, collide: false });
   }
   K.table(b, 4.6, 19.2, 0, 2.2, 1.0);
+  b.place('binder_notebook', 4.0, 0.92, 19.35, 0.1, { collide: false });
+  b.place('pocket_watch', 5.6, 0.92, 19.0, -0.5, { tilt: -Math.PI / 2, collide: false });
+  b.place('woodenchair_01', 4.6, 0, 20.3, Math.PI, { size: 1.15, collide: 'box' });
+  // relógio de pêndulo da entrada e mobília de arquivo
+  b.place('vintage_grandfather_clock_01', 13.4, 0, 21.55, Math.PI, { size: 2.4 });
+  b.place('classicconsole_01', -9.6, 0, 21.6, Math.PI, { size: 1.8, fit: 'w' });
+  b.place('marble_bust_01', -9.6, 1.12, 21.65, Math.PI, { size: 0.55, collide: false });
   K.deskLamp(b, 5.2, 0.92, 19.2, false);
   b.add(new THREE.BoxGeometry(0.6, 0.05, 0.42), M.parchment, trs(4.3, 0.95, 19.2, -0.2), false, false);
 
@@ -178,6 +199,21 @@ export function buildArquivo(ctx: RegionCtx): BuiltRegion {
   b.collideCircle(-5.4, 18.6, 0.45, -1, 1.3);
   K.crate(b, -13.6, 19.6, 0.8, 0.2);
   K.crate(b, 13.4, -15.6, 0.7, 0.5);
+  // Sala dos Originais: carteiras de consulta, cômoda, criados e um relógio de bolso esquecido
+  for (const [x, z, rot] of [[-5.6, -25.5, 0.15], [-5.6, -29.5, -0.1], [5.6, -25.5, -0.12], [5.6, -29.5, 0.08]] as Array<[number, number, number]>) {
+    b.place('schooldesk_01', x, 0, z, rot + (x < 0 ? Math.PI / 2 : -Math.PI / 2), { size: 0.95 });
+    b.place('wooden_stool_01', x + (x < 0 ? -0.75 : 0.75), 0, z, rot, { collide: 'circle' });
+  }
+  b.place('binder_notebook', -5.5, 0.84, -25.4, 0.7, { collide: false });
+  b.place('gothiccommode_01', -9.6, 0, -40.2, 0, { size: 1.9, fit: 'w' });
+  b.place('gothiccommode_01', 9.6, 0, -40.2, 0, { size: 1.9, fit: 'w' });
+  b.place('marble_bust_01', -9.6, 1.91, -40.25, 0.3, { size: 0.6, collide: false });
+  b.place('marble_bust_01', 9.6, 1.91, -40.25, -0.3, { size: 0.6, collide: false });
+  if (b.place('chandelier_02', 0, 4.2, -30, 0, { size: 1.7, collide: false })) b.add(new THREE.CylinderGeometry(0.025, 0.025, 3.1, 8), M.iron, trs(0, 7.45, -30));
+  b.place('side_table_tall_01', 2.6, 0.24, -36.6, 0, { size: 0.95, collide: 'circle' });
+  b.place('vintage_pocket_watch', 2.6, 1.19, -36.6, 0.4, { tilt: -Math.PI / 2, collide: false });
+  b.place('classicnightstand_01', -2.8, 0.24, -36.6, 0, { size: 0.75 });
+  b.place('magnifying_glass_01', -2.8, 0.99, -36.6, 0.9, { tilt: -Math.PI / 2, collide: false });
 
   // estantes expositoras de obras (Passeio dos Mestres, parte do Arquivo)
   for (const o of OBRAS_ARQUIVO) {

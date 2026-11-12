@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { prop, type PropName } from '../core/assets';
 
 export interface Collider {
   kind: 'box' | 'circle';
@@ -139,6 +140,66 @@ export class RegionBuilder {
 
   lamp(x: number, y: number, z: number, color = 0xffb060, intensity = 1, range = 14, flicker = 0.08): void {
     this.lamps.push({ pos: new THREE.Vector3(x, y, z), color, intensity, range, flicker });
+  }
+
+  /**
+   * Prop glTF de alta resolução (precisa ter sido pré-carregado).
+   * `size` em metros: altura alvo se `fit` = 'h', maior lado horizontal se 'w'; omitido usa escala 1.
+   * Devolve null quando o arquivo não está disponível, para o chamador usar a versão procedural.
+   */
+  place(
+    name: PropName,
+    x: number,
+    y: number,
+    z: number,
+    rot = 0,
+    opts: { size?: number; fit?: 'h' | 'w' | 'l'; part?: string; collide?: 'box' | 'circle' | false; pad?: number; tint?: number; tilt?: number; roll?: number } = {},
+  ): THREE.Object3D | null {
+    let o = prop(name, opts.part);
+    if (!o) return null;
+    if (opts.tilt || opts.roll) {
+      // deitar o objeto (armas sobre a mesa): gira em x/z e volta a apoiar em y = 0
+      const w = new THREE.Group();
+      o.rotation.set(opts.tilt ?? 0, 0, opts.roll ?? 0);
+      w.add(o);
+      w.updateMatrixWorld(true);
+      const bx = new THREE.Box3().setFromObject(w);
+      o.position.set(-(bx.min.x + bx.max.x) / 2, -bx.min.y, -(bx.min.z + bx.max.z) / 2);
+      o = w;
+    }
+    o.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(o);
+    const sz = box.getSize(new THREE.Vector3());
+    let s = 1;
+    if (opts.size) s = opts.fit === 'w' ? opts.size / Math.max(sz.x, sz.z, 1e-3) : opts.fit === 'l' ? opts.size / Math.max(sz.x, sz.y, sz.z, 1e-3) : opts.size / Math.max(sz.y, 1e-3);
+    o.scale.setScalar(s);
+    o.position.set(x, y, z);
+    o.rotation.y = rot;
+    if (opts.tint !== undefined) {
+      const c = new THREE.Color(opts.tint);
+      o.traverse((m) => {
+        const me = m as THREE.Mesh;
+        if (!me.isMesh) return;
+        const mat = (me.material as THREE.MeshStandardMaterial).clone();
+        mat.color.multiply(c);
+        me.material = mat;
+      });
+    }
+    o.traverse((m) => {
+      m.matrixAutoUpdate = false;
+      m.updateMatrix();
+    });
+    o.updateMatrixWorld(true);
+    this.root.add(o);
+    const col = opts.collide ?? 'box';
+    if (col) {
+      const pad = opts.pad ?? 0;
+      const hx = (sz.x * s) / 2 + pad;
+      const hz = (sz.z * s) / 2 + pad;
+      if (col === 'circle') this.collideCircle(x, z, Math.max(hx, hz), y - 1, y + sz.y * s);
+      else this.collideBox(x, z, hx, hz, rot, y - 1, y + sz.y * s);
+    }
+    return o;
   }
 
   /** Objeto dinâmico (não fundido). */

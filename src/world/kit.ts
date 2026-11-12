@@ -303,6 +303,18 @@ export function halo(size: number, color = 0xffb86a, opacity = 0.75): THREE.Spri
 
 /** Poste de ferro com lampião. */
 export function lampPost(b: RegionBuilder, x: number, z: number, h = 3.6, y0 = 0, intensity = 1): void {
+  const H = h + 0.55;
+  if (b.place('street_lamp_01', x, y0, z, 0, { size: H, collide: false })) {
+    // poste de ferro fundido escaneado; a chama fica dentro da cúpula de vidro
+    const ly = y0 + H * 0.905;
+    b.add(new THREE.BoxGeometry(0.1, 0.16, 0.1), M.lampGlow, trs(x, ly, z), true, false);
+    const hl = halo(2.4, 0xffb86a, 0.5);
+    hl.position.set(x, ly, z);
+    b.dynamic(hl);
+    b.lamp(x, ly, z, 0xffa85a, 1.0 * intensity, 15);
+    b.collideCircle(x, z, 0.2, y0 - 1, y0 + H);
+    return;
+  }
   b.add(new THREE.CylinderGeometry(0.16, 0.24, 0.5, 22), M.iron, trs(x, y0 + 0.25, z));
   b.add(new THREE.CylinderGeometry(0.06, 0.09, h, 22), M.iron, trs(x, y0 + h / 2, z));
   b.add(new THREE.CylinderGeometry(0.12, 0.06, 0.2, 22), M.iron, trs(x, y0 + h, z));
@@ -311,6 +323,14 @@ export function lampPost(b: RegionBuilder, x: number, z: number, h = 3.6, y0 = 0
 }
 
 export function lantern(b: RegionBuilder, x: number, y: number, z: number, size = 0.4, intensity = 1, light = true): void {
+  if (b.place('lantern_chandelier_01', x, y - size * 1.05, z, x + z, { size: size * 2.3, collide: false })) {
+    b.add(new THREE.BoxGeometry(size * 0.22, size * 0.34, size * 0.22), M.lampGlow, trs(x, y - size * 0.3, z), true, false);
+    const hl = halo(size * 5, 0xffb86a, 0.45);
+    hl.position.set(x, y - size * 0.3, z);
+    b.dynamic(hl);
+    if (light) b.lamp(x, y - size * 0.3, z, 0xffa85a, 1.0 * intensity, 15);
+    return;
+  }
   b.add(new THREE.BoxGeometry(size * 0.62, size * 0.9, size * 0.62), M.lampGlow, trs(x, y, z), true, false);
   for (let k = 0; k < 4; k++) {
     const a = (k * Math.PI) / 2 + Math.PI / 4;
@@ -514,12 +534,14 @@ export function bench(b: RegionBuilder, x: number, z: number, rot: number, y0 = 
 }
 
 export function crate(b: RegionBuilder, x: number, z: number, size = 0.8, rot = 0, y0 = 0, collide = true): void {
+  if (b.place('wooden_crate_02', x, y0, z, rot, { size: size * 1.45, fit: 'w', collide: collide ? 'box' : false })) return;
   b.box(M.wood, size, size, size, x, y0, z, rot, collide);
   b.add(new THREE.BoxGeometry(size + 0.04, 0.08, size + 0.04), M.woodDark, trs(x, y0 + size * 0.15, z, rot));
   b.add(new THREE.BoxGeometry(size + 0.04, 0.08, size + 0.04), M.woodDark, trs(x, y0 + size * 0.85, z, rot));
 }
 
 export function barrel(b: RegionBuilder, x: number, z: number, y0 = 0): void {
+  if (b.place('wooden_barrels_01', x, y0, z, x * 1.7 + z, { part: 'wooden_barrels_01_barrel01', size: 1.0, collide: 'circle', pad: -0.04 })) return;
   b.add(new THREE.CylinderGeometry(0.36, 0.34, 1.0, 24), M.wood, trs(x, y0 + 0.5, z), false);
   for (const yy of [0.2, 0.8]) b.add(new THREE.CylinderGeometry(0.385, 0.385, 0.06, 24), M.iron, trs(x, y0 + yy, z));
   b.collideCircle(x, z, 0.42, y0 - 1, y0 + 1.1);
@@ -687,7 +709,10 @@ export function bust(b: RegionBuilder, x: number, z: number, rot = 0, y0 = 0, pl
   b.box(M.stoneDark, 0.78, 1.15, 0.78, x, y0, z, rot, true);
   place(new THREE.BoxGeometry(0.92, 0.1, 0.92), M.carved, 0, 1.2, 0);
   place(new THREE.BoxGeometry(0.84, 0.06, 0.84), M.stoneDark, 0, 1.12, 0);
+  // busto de mármore escaneado sobre o pedestal; a versão esculpida em primitivas fica de reserva
+  const scanned = b.place('marble_bust_01', x, y0 + 1.25, z, rot, { size: 0.66, collide: false });
   // ombros e peito cortados em lâmina
+  if (!scanned) {
   place(new THREE.SphereGeometry(0.34, 28, 16, 0, Math.PI * 2, 0, Math.PI / 2), M.carved, 0, 1.25, 0, 1.15, 0.9, 0.62);
   place(new THREE.CylinderGeometry(0.1, 0.13, 0.2, 22), M.carved, 0, 1.58, 0);
   // cabeça
@@ -700,6 +725,7 @@ export function bust(b: RegionBuilder, x: number, z: number, rot = 0, y0 = 0, pl
     place(new THREE.SphereGeometry(0.18, 26, 18, 0, Math.PI * 2, 0, Math.PI * 0.52), M.stone, 0, 1.86, -0.02, 0.9, 1.1, 1.02, -0.25);
     if (hair === 'longo') place(new THREE.CapsuleGeometry(0.13, 0.28, 6, 14), M.stone, 0, 1.62, -0.1, 1.05, 1, 0.6);
     if (hair === 'touca') place(new THREE.SphereGeometry(0.19, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.62), M.stone, 0, 1.87, -0.01, 0.95, 1.1, 1.06, -0.2);
+  }
   }
   if (plate) {
     const mat = new THREE.MeshStandardMaterial({ map: plaqueTexture(plate.name, plate.years), roughness: 0.45, metalness: 0.55 });

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import * as T from './textures';
 import { BRAND, WORLD, srgb } from './palette';
+import { pbrSet } from '../core/assets';
 
 /** Materiais PBR compartilhados. UV em metros; repeat = 1 / lado do ladrilho. */
 const cache = new Map<string, THREE.Material>();
@@ -17,27 +18,39 @@ function pbr(key: string, maps: () => T.MapSet, tile: number, opts: THREE.MeshSt
   return m;
 }
 
+/** Material de escaneamento PBR (Poly Haven, CC0). UV em metros; `tile` = lado do ladrilho em metros. */
+function scan(key: string, set: string, tile: number, opts: THREE.MeshStandardMaterialParameters = {}): THREE.MeshStandardMaterial {
+  let m = cache.get(key) as THREE.MeshStandardMaterial | undefined;
+  if (!m) {
+    const t = pbrSet(set, 1 / tile);
+    m = new THREE.MeshStandardMaterial({ ...t, roughness: 1, metalness: 0, ...opts });
+    m.name = key;
+    cache.set(key, m);
+  }
+  return m;
+}
+
 export const M = {
   get stone() {
-    return pbr('stone', () => T.ashlar(1024, 8, [0.62, 0.56, 0.5], 1, 0.4), 4);
+    return scan('stone', 'fort_wall', 3.2, { color: 0xc9bfb2 });
   },
   get stoneDark() {
-    return pbr('stoneDark', () => T.ashlar(1024, 10, [0.38, 0.34, 0.36], 21, 0.5), 3.4);
+    return scan('stoneDark', 'fort_wall', 2.8, { color: 0x77707a });
   },
   get stoneWarm() {
-    return pbr('stoneWarm', () => T.ashlar(512, 6, [0.72, 0.6, 0.48], 33, 0.15), 3);
+    return scan('stoneWarm', 'fort_wall', 2.6, { color: 0xe0c8a8 });
   },
   get carved() {
-    return pbr('carved', () => T.plaster(512, [0.6, 0.55, 0.5], 12), 2.5, { roughness: 0.85 });
+    return scan('carved', 'fort_plaster', 2.2, { color: 0xb8ada0, roughness: 0.9 });
   },
   get cobble() {
-    return pbr('cobble', () => T.cobble(1024, 20, 2, 0.55), 3.3, { envMapIntensity: 1.6 });
+    return scan('cobble', 'cobblestone_embedded_asphalt', 2.4, { envMapIntensity: 1.7, roughness: 0.62, color: 0xa8a4a8 });
   },
   get cobbleDry() {
-    return pbr('cobbleDry', () => T.cobble(1024, 20, 2, 0.12), 3.3);
+    return scan('cobbleDry', 'cobblestone_embedded_asphalt', 2.4);
   },
   get flag() {
-    return pbr('flag', () => T.ashlar(1024, 5, [0.42, 0.38, 0.36], 44, 0.2), 4.5, { envMapIntensity: 1.3 });
+    return scan('flag', 'fort_wall', 4.2, { color: 0x8c8486, envMapIntensity: 1.3, roughness: 0.8 });
   },
   get brick() {
     return pbr('brick', () => T.brick(1024, 22, 3), 3.2);
@@ -52,7 +65,13 @@ export const M = {
     return pbr('slate', () => T.slate(512, 10, 5), 3, { envMapIntensity: 1.2 });
   },
   get ground() {
-    return pbr('ground', () => T.ground(1024, 6, 0.7), 7);
+    return scan('ground', 'bark_debris_01', 3, { color: 0x9a9488 });
+  },
+  get rock() {
+    return scan('rock', 'coast_rocks_01', 4, { color: 0x8a8680 });
+  },
+  get road() {
+    return scan('road', 'road_damaged', 3, { color: 0x9a9690 });
   },
   get bark() {
     return pbr('bark', () => T.bark(512, 7), 1.6);
@@ -73,7 +92,7 @@ export const M = {
     return pbr('parchment', () => T.plaster(256, srgb(WORLD.ivory), 28), 0.8);
   },
   get plaster() {
-    return pbr('plaster', () => T.plaster(512, [0.5, 0.44, 0.38], 9), 3);
+    return scan('plaster', 'fort_plaster', 3, { color: 0x9a8e82 });
   },
   get books() {
     return pbr('books', () => bookSpines(), 2.4, { envMapIntensity: 0.6 });

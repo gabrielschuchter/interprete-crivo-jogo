@@ -4,14 +4,23 @@ window.T = {
   async sim(sec, fn) {
     const g = __game;
     g.engine.render = () => {};
+    // o laço de quadros do navegador fica parado durante a simulação: sem isso, o tempo real
+    // entre as pausas vira tempo de jogo sem o jogador automático, e o resultado passa a
+    // depender da velocidade da máquina
+    const tick = g.tick;
+    g.tick = () => {};
     const n = Math.round(sec * 30);
-    for (let i = 0; i < n; i++) {
-      if (fn && fn(i) === false) break;
-      g.tick(1 / 30);
-      g.input.endFrame();
-      if (i % 6 === 0) await new Promise((r) => setTimeout(r, 0));
+    try {
+      for (let i = 0; i < n; i++) {
+        if (fn && fn(i) === false) break;
+        tick.call(g, 1 / 30);
+        g.input.endFrame();
+        if (i % 6 === 0) await new Promise((r) => setTimeout(r, 0));
+      }
+    } finally {
+      delete g.tick;
+      delete g.engine.render;
     }
-    delete g.engine.render;
     await new Promise((r) => setTimeout(r, 0));
   },
   async settle() { for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0)); },
