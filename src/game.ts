@@ -683,6 +683,15 @@ export class Game {
     this.audio.sfx('pegar');
     this.save();
   }
+  /** Item da tecla rápida: caldo primeiro; sem caldo útil, o limão de Lind quando ele ainda ajuda */
+  quickItem(): string {
+    const s = this.state!;
+    const hurt = s.hp < this.stats.maxHp;
+    if (D.countItem(s, 'caldo') > 0 && (hurt || D.countItem(s, 'limao_lind') === 0)) return 'caldo';
+    const tired = !!this.player && this.player.vigor < this.stats.maxVigor;
+    if (D.countItem(s, 'limao_lind') > 0 && (hurt || tired)) return 'limao_lind';
+    return 'caldo';
+  }
   useItem(id: string): boolean {
     const s = this.state!;
     if (!D.countItem(s, id)) return false;
@@ -792,8 +801,16 @@ export class Game {
     this.ui.prompt(null);
   }
   closeOverlay(): void {
+    // Configurações abertas a partir da pausa voltam para a pausa, não direto ao jogo
+    const backToPause = this.mode === 'book' && this.ui.bookFromPause;
+    this.ui.bookFromPause = false;
     this.ui.closeAll();
     this.audio.sfx('ui');
+    if (backToPause) {
+      this.mode = 'pause';
+      this.ui.pause(true);
+      return;
+    }
     if (this.prevMode === 'menu' && !this.state) return this.openMenu();
     this.mode = 'play';
     if (!this.ui.instant) this.input.requestLock();
@@ -1294,7 +1311,7 @@ export class Game {
         } else this.ui.toast('O Crivo ainda só conhece o pulso.');
       }
       if (inp.took('dica')) this.askHint();
-      if (inp.took('item')) this.useItem('caldo');
+      if (inp.took('item')) this.useItem(this.quickItem());
     }
     if (this.pulseT > 0) {
       this.pulseT -= dt;

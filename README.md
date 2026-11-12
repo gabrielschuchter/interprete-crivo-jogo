@@ -18,7 +18,7 @@ npm run e2e        # campanha inteira em Chromium; exige npm run dev em outro te
 
 ## Controles
 
-WASD move, o mouse gira a câmera, Shift corre, Espaço esquiva, E interage, botão esquerdo ou J dá o golpe leve, botão direito ou K o golpe firme, Q aciona a habilidade ativa do Crivo, R troca a habilidade, F toma o caldo, H pede uma dica ao Crivo, T trava a mira, Tab abre o caderno (inventário, habilidades, mapa, diário, códice, ajustes; L, M e P abrem direto em diário, mapa e habilidades) e Esc pausa. Todas as teclas podem ser remapeadas em Ajustes. Gamepad padrão é reconhecido.
+WASD move, o mouse gira a câmera, Shift corre, Espaço esquiva, E interage, botão esquerdo ou J dá o golpe leve, botão direito ou K o golpe firme, Q aciona a habilidade ativa do Crivo, R troca a habilidade, F toma o caldo (ou o limão de Lind, quando o caldo não ajuda), Z e C giram a câmera pelo teclado quando o mouse não está capturado, H pede uma dica ao Crivo, T trava a mira, Tab abre o caderno (inventário, habilidades, mapa, diário, códice, ajustes; L, M e P abrem direto em diário, mapa e habilidades) e Esc pausa. Todas as teclas podem ser remapeadas em Ajustes. Gamepad padrão é reconhecido.
 
 ## Organização
 

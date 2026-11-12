@@ -163,6 +163,21 @@ try {
   ok(await E(() => __game.state.inventory.bussola_cochrane === 1), 'seis obras lidas: Bússola de Cochrane recebida');
   await E(() => { const g = __game; g.state.inventory.limao_lind = 1; g.state.hp = 40; g.useItem('limao_lind'); });
   ok(await E(() => __game.state.hp === 70), 'o Limão de Lind recupera 30 de fôlego');
+  console.log('Controles e atalhos');
+  await E(() => { const s = __game.state; s.inventory.caldo = 0; s.inventory.limao_lind = 1; s.hp = 40; });
+  ok((await E(() => __game.quickItem())) === 'limao_lind', 'F usa o limão quando não há caldo');
+  await E(() => { const s = __game.state; s.inventory.caldo = 2; s.hp = 30; });
+  ok((await E(() => __game.quickItem())) === 'caldo', 'F prefere o caldo quando há ferimento');
+  const yaw0 = await E(() => __game.player.camYaw);
+  await E(async () => { __game.input.hold('KeyZ', true); await T.sim(0.5); __game.input.hold('KeyZ', false); });
+  ok((await E(() => __game.player.camYaw)) > yaw0, 'Z gira a câmera sem pointer lock');
+  await E(() => { __game.pauseGame(); });
+  await p.locator('#pause [data-a=config]').click({ force: true, noWaitAfter: true });
+  ok((await mode()) === 'book', 'Configurações abrem pela pausa');
+  await E(() => __game.closeOverlay());
+  ok((await mode()) === 'pause', 'fechar Configurações volta à pausa');
+  await E(() => __game.closeOverlay());
+  ok((await mode()) === 'play', 'Continuar volta ao jogo');
   await travel('atrio', 'de_arquivo');
 
   console.log('Registro');

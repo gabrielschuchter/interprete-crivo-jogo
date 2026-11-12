@@ -177,6 +177,8 @@ export class Player {
       this.camYaw -= input.mouseDX * sens;
       this.camPitch += input.mouseDY * sens * (this.invertY ? -1 : 1);
       this.camYaw -= input.padLook.x * dt * 2.6 * this.sensitivity;
+      // sem pointer lock (touchpad, navegador embutido) a câmera ainda gira pelo teclado
+      this.camYaw += ((input.held('camEsq') ? 1 : 0) - (input.held('camDir') ? 1 : 0)) * dt * 2.2 * this.sensitivity;
       this.camPitch += input.padLook.y * dt * 1.6 * this.sensitivity * (this.invertY ? -1 : 1);
     }
     this.camPitch = THREE.MathUtils.clamp(this.camPitch, -0.5, 1.15);

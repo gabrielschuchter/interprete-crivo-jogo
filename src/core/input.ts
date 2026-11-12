@@ -4,7 +4,7 @@
  */
 export type ActionName =
   | 'frente' | 'tras' | 'esquerda' | 'direita' | 'correr' | 'esquiva' | 'interagir' | 'ataque' | 'golpe'
-  | 'crivo' | 'trocarCrivo' | 'dica' | 'item' | 'travar' | 'inventario' | 'diario' | 'mapa' | 'habilidades' | 'pausa';
+  | 'crivo' | 'trocarCrivo' | 'dica' | 'item' | 'travar' | 'inventario' | 'diario' | 'mapa' | 'habilidades' | 'pausa' | 'camEsq' | 'camDir';
 
 export const DEFAULT_KEYS: Record<ActionName, string[]> = {
   frente: ['KeyW', 'ArrowUp'],
@@ -26,13 +26,16 @@ export const DEFAULT_KEYS: Record<ActionName, string[]> = {
   mapa: ['KeyM'],
   habilidades: ['KeyP'],
   pausa: ['Escape'],
+  camEsq: ['KeyZ'],
+  camDir: ['KeyC'],
 };
 
 export const ACTION_LABEL: Record<ActionName, string> = {
   frente: 'Andar para a frente', tras: 'Andar para trás', esquerda: 'Andar para a esquerda', direita: 'Andar para a direita',
   correr: 'Correr', esquiva: 'Esquiva', interagir: 'Interagir', ataque: 'Golpe leve', golpe: 'Golpe firme',
-  crivo: 'Habilidade do Crivo', trocarCrivo: 'Alternar habilidade do Crivo', dica: 'Pedir dica ao Crivo', item: 'Usar caldo',
+  crivo: 'Habilidade do Crivo', trocarCrivo: 'Alternar habilidade do Crivo', dica: 'Pedir dica ao Crivo', item: 'Usar caldo ou limão',
   travar: 'Travar a mira', inventario: 'Inventário', diario: 'Diário', mapa: 'Mapa', habilidades: 'Habilidades', pausa: 'Pausa',
+  camEsq: 'Girar a câmera à esquerda', camDir: 'Girar a câmera à direita',
 };
 
 export function keyLabel(code: string): string {

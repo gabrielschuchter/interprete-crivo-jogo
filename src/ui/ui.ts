@@ -56,6 +56,8 @@ export class UI {
   private chooseResolve: ((i: number) => void) | null = null;
   private choiceCount = 0;
   bookTab: BookTab = 'inventario';
+  /** Configurações foram abertas pela pausa; Esc ou Fechar devolve à pausa */
+  bookFromPause = false;
   private sel: Record<string, string> = {};
   private skillTab: 'jogador' | 'crivo' = 'jogador';
   private rebinding: ActionName | null = null;
@@ -500,6 +502,7 @@ export class UI {
         if (b.dataset.a === 'resume') this.g.closeOverlay();
         else if (b.dataset.a === 'config') {
           this.show('pause', false);
+          this.bookFromPause = true;
           this.openBook('config');
         } else this.g.toTitle();
       }),
@@ -782,6 +785,7 @@ export class UI {
   private mapScale = 1;
   private drawMap(cv: HTMLCanvasElement): void {
     const r = this.g.region;
+    if (!cv.isConnected || cv.clientWidth < 80 || cv.clientHeight < 80) return;
     const w = (cv.width = cv.clientWidth * 2);
     const h = (cv.height = cv.clientHeight * 2);
     const c = cv.getContext('2d')!;
