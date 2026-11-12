@@ -9,3 +9,5 @@ Regras que não mudam sem autorização explícita do Gabriel: não tocar banco 
 Convenções de código: x é leste, z é sul, figuras olham para +Z. O estado de jogo vive em `src/domain/state.ts` e só muda por funções puras de lá. Diálogos são funções assíncronas em `src/story.ts`. Texto de jogo em português do Brasil, sem emoji, sem "jornada" e afins.
 
 Uma mudança de jogabilidade só está pronta quando `npm run e2e` passa.
+
+Skills: `.claude/skills/` traz skills de gamedev (origem e licença em `.claude/skills/CREDITOS.md`). Antes de mexer em câmera, entrada, interface, áudio, diálogos, saves, combate, level design, Three.js (cena, glTF, materiais) ou desempenho, carregue a skill correspondente e siga o que ela ensina. As regras acima e o `DESIGN.md` prevalecem sobre qualquer skill.
