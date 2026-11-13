@@ -129,7 +129,7 @@ export class Engine {
   private rainMat: THREE.ShaderMaterial;
   env!: EnvPreset;
   quality: Quality = 'alta';
-  /** camada PS2 opt-in (?arte=); null mantém o visual atual */
+  /** camada PS2 (padrão); null quando a Aparência é Limpa */
   ps2: Ps2 | null = null;
   time = 0;
   shake = 0;
@@ -137,7 +137,11 @@ export class Engine {
   private fogAmount = 1;
   settings = { vignette: true, grain: true, reduceMotion: false, highContrast: false, fov: 58 };
 
-  constructor(canvas: HTMLCanvasElement) {
+  /** Aparência com que a cena foi montada; trocar exige recarregar, porque a camada altera os materiais */
+  readonly aparencia: 'ps2' | 'limpa';
+
+  constructor(canvas: HTMLCanvasElement, aparencia: 'ps2' | 'limpa' = 'ps2') {
+    this.aparencia = aparencia;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.shadowMap.enabled = true;
@@ -214,13 +218,18 @@ export class Engine {
     this.grade = new ShaderPass(GradeShader);
     this.composer.addPass(new OutputPass());
     this.composer.addPass(this.grade);
-    const art = readPs2Preset();
+    const art = readPs2Preset(aparencia);
     if (art) {
       this.ps2 = new Ps2(art);
       this.composer.addPass(this.ps2.pass);
       this.scene.fog = new THREE.Fog(0x101418, 6, 70);
       canvas.style.imageRendering = art.ampliacao === 'pixel' ? 'pixelated' : 'auto';
       document.documentElement.dataset.arte = 'ps2';
+      // a camada PS2 já quantiza com dither: o do GradeShader sai para não pontilhar duas vezes
+      this.grade.uniforms.uLevels.value = 0;
+    } else {
+      // Aparência Limpa (ou ?arte=off): a interface também volta à versão sem moldura de época
+      document.documentElement.removeAttribute('data-arte');
     }
     this.resize();
     window.addEventListener('resize', () => this.resize());
