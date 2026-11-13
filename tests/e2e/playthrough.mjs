@@ -225,7 +225,8 @@ try {
   await travel('atrio', 'de_observatorio');
   await E(() => T.talk('heloisa'));
   ok((await mode()) === 'ending', 'tela final exibida');
-  await p.click('#ending button');
+  // no SwiftShader a cena do Pátio no fim da campanha roda a menos de um quadro por segundo, e o clique espera dois quadros estáveis
+  await p.click('#ending button', { timeout: 120000 });
   await E(async () => { await T.settle(); await T.talk('anselmo'); });
   if ((await step('paginas')) !== 'ok') console.log('diag', JSON.stringify(await E(() => { const g = __game; const n = g.npcs.find((x) => x.def.id === 'anselmo'); return { mode: g.mode, region: g.region.id, npc: n && [n.pos.x, n.pos.z, n.fig.action], pl: [g.player.pos.x, g.player.pos.z], near: g.nearest()?.label, errs: g.errors, scripting: g.scripting, busy: g.busy, frozen: g.player.frozen }; })));
   ok((await step('paginas')) === 'ok', 'as seis páginas entregues a Anselmo');
