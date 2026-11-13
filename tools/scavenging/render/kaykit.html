@@ -1,0 +1,35 @@
+<!doctype html><meta charset=utf8><body style="margin:0;background:#000">
+<canvas id=c width=1280 height=640 style="width:1280px;height:640px;image-rendering:pixelated"></canvas>
+<script type=importmap>{"imports":{"three":"./node_modules/three/build/three.module.js","three/addons/":"./node_modules/three/examples/jsm/"}}</script>
+<script type=module>
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const MODE = new URLSearchParams(location.search).get('m') || 'raw';
+const W = MODE==='raw'?1280:320, H = MODE==='raw'?640:160;
+const canvas = document.getElementById('c');
+const r = new THREE.WebGLRenderer({canvas, antialias: MODE==='raw'}); r.setPixelRatio(1);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(MODE==='raw'?0x8899aa:0x0b0d12);
+if (MODE!=='raw') scene.fog = new THREE.Fog(0x0b0d12, 4, 20);
+const cam = new THREE.PerspectiveCamera(50, 2, .1, 60); cam.position.set(0,2.2,7); cam.lookAt(0,1.2,0);
+const target = MODE==='raw'?null:new THREE.WebGLRenderTarget(W,H,{minFilter:THREE.NearestFilter,magFilter:THREE.NearestFilter});
+if (MODE==='raw') { scene.add(new THREE.HemisphereLight(0xffffff,0x667788,2.2)); const d=new THREE.DirectionalLight(0xffffff,2.5); d.position.set(3,6,4); scene.add(d); }
+else { scene.add(new THREE.AmbientLight(0x38405a,1.6)); const t1=new THREE.PointLight(0xffb060,60,14,1.6); t1.position.set(-2.4,2.6,1.2); scene.add(t1); const t2=new THREE.PointLight(0xffb060,40,12,1.6); t2.position.set(3.2,2.4,0.5); scene.add(t2); const m=new THREE.DirectionalLight(0x6f86b8,0.8); m.position.set(-3,5,2); scene.add(m);}
+const L = new GLTFLoader(); const load = f => new Promise(res => L.load('a/'+f, g => res(g)));
+function treat(o){ if(MODE==='raw') return; o.traverse(n=>{ if(n.isMesh){ const mats=Array.isArray(n.material)?n.material:[n.material]; mats.forEach(m=>{ if(m.map){m.map.minFilter=m.map.magFilter=THREE.NearestFilter; m.map.needsUpdate=true;} m.color.multiplyScalar(0.8); m.roughness=1; m.metalness=0; if(m.emissive&&m.emissiveMap==null&&m.emissive.getHex()===0){} }); } }); }
+const place = async (f,x,y,z,ry=0,s=1) => { const g=await load(f); const o=g.scene; o.position.set(x,y,z); o.rotation.y=ry; o.scale.setScalar(s); treat(o); scene.add(o); return g; };
+const K='.gltf.glb';
+for (let i=-3;i<=3;i++) for (let j=-1;j<=2;j++) await place('floor_tile_large'+K, i*4, 0, j*4-2);
+for (let i=-2;i<=2;i++) await place((i===0?'wall_arched':'wall')+K, i*4, 0, -4);
+await place('pillar_decorated'+K,-6,0,1); await place('pillar_decorated'+K,6,0,1);
+await place('torch_mounted'+K,-2.4,1.9,-3.6); await place('torch_mounted'+K,3.2,1.9,-3.6);
+await place('table_long_decorated_A'+K, 0,0,-2.2, 0, 1);
+await place('shelf_large'+K,-7.5,0,-3.4,0,1);
+const sw = await place('Skeleton_Warrior.glb',-1.2,0,1.6,0.4,1.25), sm = await place('Skeleton_Mage.glb',1.6,0,0.8,-0.5,1.25);
+const mixers=[sw,sm].map((g,i)=>{ const mx=new THREE.AnimationMixer(g.scene); const c=g.animations.find(a=>a.name===(i?'Spellcasting':'1H_Melee_Attack_Slice_Horizontal'))||g.animations[0]; mx.clipAction(c).play(); return mx; });
+mixers.forEach(m=>m.update(0.45));
+r.setSize(MODE==='raw'?1280:1280,640,false);
+const quad = new THREE.Mesh(new THREE.PlaneGeometry(2,2), new THREE.ShaderMaterial({uniforms:{t:{value:target&&target.texture},res:{value:new THREE.Vector2(W,H)}},vertexShader:'varying vec2 v;void main(){v=uv;gl_Position=vec4(position.xy,0.,1.);}',fragmentShader:`uniform sampler2D t;uniform vec2 res;varying vec2 v;float b(vec2 p){vec2 q=mod(p,4.);float x=q.x,y=q.y;float a=mod(x,2.),bb=mod(y,2.);float lo=(a==0.)?((bb==0.)?0.:2.):((bb==0.)?3.:1.);float hx=floor(x/2.),hy=floor(y/2.);float hi=(hx==0.)?((hy==0.)?0.:2.):((hy==0.)?3.:1.);return (lo*4.+hi)/16.;}void main(){vec2 px=floor(v*res);vec3 c=texture2D(t,(px+.5)/res).rgb;float l=dot(c,vec3(.299,.587,.114));c=mix(vec3(l),c,.62);c+=(b(px)-.5)*.7/32.;c=floor(c*32.+.5)/32.;gl_FragColor=vec4(c,1.);}`}));
+const qs=new THREE.Scene(); qs.add(quad); const qc=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+if (MODE==='raw'){ r.setSize(1280,640,false); r.render(scene,cam); } else { r.setRenderTarget(target); r.render(scene,cam); r.setRenderTarget(null); r.setSize(1280,640,false); r.render(qs,qc); }
+window.__done = true;
+</script>
