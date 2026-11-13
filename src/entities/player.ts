@@ -124,6 +124,8 @@ export class Player {
   onDodge: (() => void) | null = null;
   sensitivity = 1;
   invertY = false;
+  /** multiplicador do eixo vertical (Ajustes: sensibilidade vertical) */
+  sensitivityY = 1;
   /** velocidade horizontal atual, para o Crivo e a interface */
   speed = 0;
   /** queda em abismo */
@@ -250,16 +252,16 @@ export class Player {
     if (controls) {
       const sens = 0.0024 * this.sensitivity;
       this.camYaw -= input.mouseDX * sens;
-      this.camPitch += input.mouseDY * sens * (this.invertY ? -1 : 1);
+      this.camPitch += input.mouseDY * sens * this.sensitivityY * (this.invertY ? -1 : 1);
       // toque: deslocamento em px CSS por quadro; o teto por quadro evita saltos de câmera após travamento
       const tk = 0.0046 * this.sensitivity;
       const lim = 0.6;
       this.camYaw -= THREE.MathUtils.clamp(input.touchLookX * tk, -lim, lim);
-      this.camPitch += THREE.MathUtils.clamp(input.touchLookY * tk * 0.85, -lim, lim) * (this.invertY ? -1 : 1);
+      this.camPitch += THREE.MathUtils.clamp(input.touchLookY * tk * 0.85 * this.sensitivityY, -lim, lim) * (this.invertY ? -1 : 1);
       this.camYaw -= input.padLook.x * dt * 2.6 * this.sensitivity;
       // sem pointer lock (touchpad, navegador embutido) a câmera ainda gira pelo teclado
       this.camYaw += ((input.held('camEsq') ? 1 : 0) - (input.held('camDir') ? 1 : 0)) * dt * 2.2 * this.sensitivity;
-      this.camPitch += input.padLook.y * dt * 1.6 * this.sensitivity * (this.invertY ? -1 : 1);
+      this.camPitch += input.padLook.y * dt * 1.6 * this.sensitivity * this.sensitivityY * (this.invertY ? -1 : 1);
     }
     this.camPitch = THREE.MathUtils.clamp(this.camPitch, -0.5, 1.15);
 

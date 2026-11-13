@@ -225,3 +225,14 @@ describe('armas e armaduras', () => {
   });
 });
 
+
+describe('ajustes de câmera e interface', () => {
+  it('limita sensibilidade vertical, distância da câmera e escala da interface', () => {
+    const s = sanitizeSettings({ sensY: 9, camDist: 1, hudScale: 'grande' });
+    expect(s.sensY).toBe(2);
+    expect(s.camDist).toBe(3.2);
+    expect(s.hudScale).toBe(DEFAULT_SETTINGS.hudScale);
+    const d = sanitizeSettings({});
+    expect([d.sensY, d.camDist, d.hudScale]).toEqual([1, 4.6, 1]);
+  });
+});
