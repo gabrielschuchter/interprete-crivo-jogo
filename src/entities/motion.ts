@@ -20,6 +20,15 @@ const _hf = new THREE.Vector3();
 const _hn = new THREE.Vector3();
 const _hi = new THREE.Vector3();
 const _ax = new THREE.Vector3();
+const _qw = new THREE.Quaternion();
+/**
+ * Fração `w` da rotação `q`, no próprio `q`. Não usar `q.slerpQuaternions(_id, q, w)`: o three copia o primeiro
+ * argumento para `q` antes de interpolar e o resultado vira identidade (uma pose com peso menor que 1 sumia).
+ */
+function partial(q: THREE.Quaternion, w: number): THREE.Quaternion {
+  _qw.copy(q);
+  return q.copy(_id).slerp(_qw, w);
+}
 
 export const clamp = (x: number, a: number, b: number): number => (x < a ? a : x > b ? b : x);
 export const smooth = (x: number): number => {
@@ -138,7 +147,7 @@ export class Rig {
     if (_v2.lengthSq() < 1e-6) return;
     _v2.normalize();
     _q.setFromUnitVectors(_v, _v2);
-    if (w < 1) _q.slerpQuaternions(_id, _q, w);
+    if (w < 1) partial(_q, w);
     this.turnQ(name, _q);
   }
   /**
@@ -186,7 +195,7 @@ export class Rig {
     if (!this.hand(side, _hf, _hn, _hi)) return null;
     _q.setFromUnitVectors(_hi, _ax.copy(axis).normalize());
     const ang = 2 * Math.acos(clamp(Math.abs(_q.w), 0, 1));
-    if (ang > maxTwist) _q.slerpQuaternions(_id, _q, maxTwist / ang);
+    if (ang > maxTwist) partial(_q, maxTwist / ang);
     this.turnQ(side + 'Hand', _q);
     if (!this.pos(side + 'Hand', out) || !this.pos(side + 'FingerBase', _v)) return null;
     this.hand(side, _hf, _hn, _hi);

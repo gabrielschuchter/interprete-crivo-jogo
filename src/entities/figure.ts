@@ -4,7 +4,7 @@ import { fixMaterials, instanceSkinned, loadGltf } from '../core/assets';
 import { M } from '../world/mats';
 import { report } from '../core/diag';
 import { TorchModel, WEAPON_LOOKS, buildWeapon, orientWeapon, preloadWeapon, weaponDir } from './weapons';
-import { Face, Gaze, Rig, Spring, applyPose, approach, measureGait, smooth, type GaitInfo, forceMixerWrite } from './motion';
+import { Face, Gaze, Rig, Spring, applyPose, type Pose, approach, measureGait, smooth, type GaitInfo, forceMixerWrite } from './motion';
 import { personaFor, talkGesture, type Persona } from './personas';
 import { gesto, type Interaction } from './gestos';
 
@@ -48,7 +48,7 @@ export interface FigureOpts {
 
 export type Emblem = 'caderno' | 'estetoscopio' | 'relogio' | 'oculos' | 'fita';
 
-export type Action = 'none' | 'attack1' | 'attack2' | 'heavy' | 'dodge' | 'hit' | 'die' | 'interact' | 'cast' | 'talk' | 'sit' | 'shrug' | 'think' | 'nod' | 'wave' | 'point' | 'cheer' | 'bow' | 'listen' | Interaction;
+export type Action = 'none' | 'esgrima' | 'attack1' | 'attack2' | 'heavy' | 'dodge' | 'hit' | 'die' | 'interact' | 'cast' | 'talk' | 'sit' | 'shrug' | 'think' | 'nod' | 'wave' | 'point' | 'cheer' | 'bow' | 'listen' | Interaction;
 const INTERACTIONS = new Set<string>(['pickup', 'examine', 'pull', 'open', 'push', 'reach']);
 
 // tons de pele: média do rosto das texturas de textures/ps2/pele (tools/chars/peles.py), do mais claro ao mais escuro
@@ -57,6 +57,7 @@ export const HAIRS = [0x1a1210, 0x3d2416, 0x6b3f22, 0x8a8078, 0xb9482e, 0xd8c8a8
 
 const ACTION_TIME: Record<Action, number> = {
   none: 0,
+  esgrima: 0.5,
   attack1: 0.46,
   attack2: 0.5,
   heavy: 0.86,
@@ -136,6 +137,8 @@ export async function preloadModels(keys?: readonly string[]): Promise<void> {
 
 /** Clipes de captura de movimento por ação. Ações sem clipe próprio usam o vizinho mais próximo. */
 const CLIP_FOR: Partial<Record<Action, string[]>> = {
+  // esgrima: o clipe parado sustenta as pernas; braços, tronco e base vêm das poses de esgrima.ts
+  esgrima: ['idle'],
   attack1: ['attack'],
   attack2: ['attack2', 'attack'],
   heavy: ['heavy', 'attack'],
@@ -531,10 +534,18 @@ export class Figure {
     return true;
   }
 
-  play(a: Action): void {
+  /** duração da ação em curso (a esgrima passa a duração de cada golpe) */
+  private actDur = 0;
+  play(a: Action, dur?: number): void {
     this.action = a;
     this.actionT = 0;
+    this.actDur = dur ?? ACTION_TIME[a];
   }
+  /**
+   * Camada de esgrima (esgrima.ts): pose e lâmina impostas por cima de tudo, com peso. O protagonista escreve
+   * isto a cada quadro antes de `update`: golpe, guarda, postura de raiz, esquiva, mergulho.
+   */
+  combat: { pose: Pose; arma: { yaw: number; elev: number; roll: number }; w: number; armaW?: number } | null = null;
 
   get busy(): boolean {
     // gestos sociais não bloqueiam o jogador: só combate, esquiva, dano, morte e uso de objetos
@@ -543,7 +554,7 @@ export class Figure {
 
   /** progresso 0..1 da ação atual */
   get progress(): number {
-    return this.action === 'none' ? 1 : Math.min(1, this.actionT / ACTION_TIME[this.action]);
+    return this.action === 'none' ? 1 : Math.min(1, this.actionT / Math.max(1e-3, this.actDur || ACTION_TIME[this.action]));
   }
 
   setTint(emissive: number, intensity: number): void {
@@ -724,7 +735,7 @@ export class Figure {
     const restart = this.action !== 'none' && (this.action !== e.curAction || this.actionT < this.lastActT);
     this.lastActT = this.actionT;
     e.curAction = this.action;
-    const timed = TIMED.includes(this.action);
+    const timed = TIMED.includes(this.action) || this.action === 'esgrima';
     if (this.action !== 'none' && restart) {
       const want = this.clipName(base, this.pickClip(CLIP_FOR[this.action]) ?? 'idle');
       const a = e.clips.get(want);
@@ -740,7 +751,7 @@ export class Figure {
         act.setLoop(LOOPED.has(want.replace('torch_', '')) ? THREE.LoopRepeat : THREE.LoopOnce, Infinity);
         act.clampWhenFinished = true;
         act.reset().play();
-        act.setEffectiveTimeScale(timed ? act.getClip().duration / ACTION_TIME[this.action] : this.action === 'talk' || this.action === 'listen' ? per.tempo : 1);
+        act.setEffectiveTimeScale(this.action === 'esgrima' ? 1 : timed ? act.getClip().duration / (this.actDur || ACTION_TIME[this.action]) : this.action === 'talk' || this.action === 'listen' ? per.tempo : 1);
         e.acts.push({ a: act, w: 0, rate: timed ? 16 : 6 });
         e.actName = want;
         e.cur = want;
@@ -849,7 +860,16 @@ export class Figure {
     }
     if (this.weapon && e.hand) {
       const act = this.action;
-      orientWeapon(this.weapon, weaponDir(act, act === 'none' ? 0 : this.progress));
+      const base = weaponDir(act, act === 'none' ? 0 : this.progress);
+      const cb = this.combat;
+      const aw = cb ? (cb.armaW ?? cb.w) : 0;
+      if (cb && aw > 0.001) {
+        // a lâmina da esgrima manda; o peso mistura com a orientação de base (fora de golpe)
+        base.yaw += (cb.arma.yaw - base.yaw) * aw;
+        base.elev += (cb.arma.elev - base.elev) * aw;
+        base.roll += (cb.arma.roll - base.roll) * aw;
+      }
+      orientWeapon(this.weapon, base);
       // o punho gira para o cabo: a lâmina sai do lado do polegar e a mão fecha em volta da empunhadura
       _v2.set(0, 1, 0).applyQuaternion(this.weapon.quaternion);
       const sh = e.sheath ?? 0;
@@ -967,6 +987,23 @@ export class Figure {
       rig.turn('LeftLeg', ld * 0.24, 0, 0);
       rig.turn('RightLeg', ld * 0.24, 0, 0);
     }
+    // esgrima: pose do golpe, da guarda ou da carga por cima do que o clipe e a postura deixaram
+    const cb = this.combat;
+    if (cb && cb.w > 0.001) {
+      applyPose(rig, cb.pose, cb.w);
+      if (cb.pose.drop) {
+        const hips = rig.get('Hips');
+        if (hips) hips.position.y -= (cb.pose.drop * cb.w) / e.scale;
+        // sem pernas na pose, os joelhos dobram o bastante para os pés ficarem no chão
+        if (!cb.pose.lL && !cb.pose.lR) {
+          const al = Math.sqrt((cb.pose.drop * cb.w) / (0.45 * (this.height / 1.75)));
+          rig.turn('LeftUpLeg', -al, 0, 0);
+          rig.turn('RightUpLeg', -al, 0, 0);
+          rig.turn('LeftLeg', al * 2, 0, 0);
+          rig.turn('RightLeg', al * 2, 0, 0);
+        }
+      }
+    }
     // interações: pose desenhada por cima do idle, mão que fecha no contato, arma na bainha
     let gripI: number | undefined;
     e.sheath = approach(e.sheath ?? 0, 0, 8, dt);
@@ -991,7 +1028,7 @@ export class Figure {
     const fw = e.face.want;
     const bf = per.face ?? {};
     fw.sobrancelha_erguer = (bf.sobrancelha_erguer ?? 0) + (act === 'talk' ? 0.25 * Math.max(0, Math.sin(t * 2.6 + e.seed)) : 0) + (act === 'listen' ? 0.2 : 0) + (act === 'shrug' ? 0.6 : 0);
-    fw.sobrancelha_franzir = (bf.sobrancelha_franzir ?? 0) + (act === 'hit' ? 0.8 : 0) + (act === 'think' ? 0.4 : 0) + (act === 'attack1' || act === 'attack2' || act === 'heavy' ? 0.6 : 0);
+    fw.sobrancelha_franzir = (bf.sobrancelha_franzir ?? 0) + (act === 'hit' ? 0.8 : 0) + (act === 'think' ? 0.4 : 0) + (act === 'attack1' || act === 'attack2' || act === 'heavy' || act === 'esgrima' ? 0.6 : 0);
     fw.sorriso = (bf.sorriso ?? 0) + (act === 'wave' || act === 'cheer' ? 0.6 : 0);
     fw.tristeza = bf.tristeza ?? 0;
     fw.boca_abrir = act === 'hit' ? 0.5 : act === 'heavy' ? 0.3 * this.progress : act === 'die' ? 0.4 : 0;
@@ -1002,7 +1039,7 @@ export class Figure {
     if (this.ext) {
       if (this.action !== 'none') {
         this.actionT += dt;
-        if (this.actionT >= ACTION_TIME[this.action] && this.action !== 'die' && this.action !== 'sit') this.action = 'none';
+        if (this.actionT >= (this.actDur || ACTION_TIME[this.action]) && this.action !== 'die' && this.action !== 'sit') this.action = 'none';
       }
       return this.updateExternal(dt);
     }
@@ -1025,7 +1062,7 @@ export class Figure {
     this.bank += (turn * Math.min(1, this.speed / 3) - this.bank) * Math.min(1, dt * 6);
     if (this.action !== 'none') {
       this.actionT += dt;
-      if (this.actionT >= ACTION_TIME[this.action]) {
+      if (this.actionT >= (this.actDur || ACTION_TIME[this.action])) {
         if (this.action === 'die') this.actionT = ACTION_TIME.die;
         else if (this.action !== 'sit') this.action = 'none';
       }

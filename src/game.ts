@@ -8,7 +8,7 @@ import { Input, DEFAULT_KEYS, type ActionName } from './core/input';
 import { AudioSys, type AmbienceLoop, type Surface } from './core/audio';
 import { DEFAULT_SETTINGS, loadSettings, storeSettings, type Settings } from './core/settings';
 import { UI, type BookTab } from './ui/ui';
-import { Player } from './entities/player';
+import { Player, type AttackEvent } from './entities/player';
 import { loadExternalModel, preloadModels, playerModelKey, HAIRS, type Action } from './entities/figure';
 import { DEFAULT_PAD } from './core/input';
 import { loadGltf, preloadProps, PROPS_FIRST } from './core/assets';
@@ -112,6 +112,8 @@ export class Game {
   private adapter: SaveAdapter = localAdapter;
   private last = performance.now();
   private hitstop = 0;
+  /** câmera lenta curta (esquiva perfeita, golpe resoluto), em segundos reais */
+  private slowmo = 0;
   private sparks: Spark[] = [];
   private sparkTex = glowSprite(64, 'rgba(255,255,255,1)', 'rgba(255,255,255,0)');
   private pulseRing: THREE.Mesh;
@@ -523,9 +525,34 @@ export class Game {
     s.hp = Math.min(Math.max(1, s.hp), st.maxHp);
     const surf = REGION_SOUND[r.id].surface;
     p.onStep = () => this.audio.step(r.env.rain > 0.5 && !r.env.interior ? 'agua' : surf, 0.7);
-    p.onSwing = (h) => this.audio.sfx(h ? 'golpeFirme' : 'golpe');
+    p.onSwing = (g) => this.audio.sfx(g.som.nome, g.som.taxa);
     p.onDodge = () => this.audio.sfx('esquiva');
-    p.onAttack = (e) => this.resolveAttack(e.heavy, e.origin, e.dir, e.range, e.arc);
+    p.onAttack = (e) => this.resolveAttack(e);
+    p.onFoco = (n, carga) => {
+      this.audio.sfx(carga ? 'carga' : 'foco', n);
+      if (carga) this.engine.flash = Math.max(this.engine.flash, 0.05 + 0.03 * n);
+    };
+    p.calmCam = this.settings.reduceMotion;
+    // assistência de mira: quem está mais à frente na direção pedida, até 4,5 m e 70 graus
+    p.assist = (dir) => {
+      let best: Enemy | null = null;
+      let bs = 1e9;
+      for (const e of this.enemies) {
+        if (!e.alive) continue;
+        const dx = e.pos.x - p.pos.x;
+        const dz = e.pos.z - p.pos.z;
+        const d = Math.hypot(dx, dz) - e.radius;
+        if (d > 4.5 || Math.abs(e.pos.y - p.pos.y) > 2.5) continue;
+        const c = (dx * dir.x + dz * dir.z) / (Math.hypot(dx, dz) || 1);
+        if (c < 0.34 && d > 1.2) continue;
+        const sc = d + (1 - c) * 3;
+        if (sc < bs) {
+          bs = sc;
+          best = e;
+        }
+      }
+      return best;
+    };
     p.onFall = () => this.fell();
     this.crivo.model.root.visible = true;
     this.crivo.model.setCosmetics(s.crivoLook.laco, s.crivoLook.capa);
@@ -1103,9 +1130,13 @@ export class Game {
     }
   }
 
-  private resolveAttack(heavy: boolean, origin: THREE.Vector3, dir: THREE.Vector3, range: number, arc: number): void {
+  /** Resolve um contato da esgrima: alcance e arco do golpe, dano pelo peso do contato, foco, pausa e tremor. */
+  private resolveAttack(ev: AttackEvent): void {
     const st = this.stats;
-    let hit = false;
+    const p = this.player!;
+    const { origin, dir, range, arc } = ev;
+    let hit = 0;
+    let boss = false;
     for (const e of this.enemies) {
       if (!e.alive) continue;
       const dx = e.pos.x - origin.x;
@@ -1114,19 +1145,31 @@ export class Game {
       // alcance da arma equipada; o Martelo da Síntese fecha o círculo no golpe firme
       const reach = range + (st.reach - 2.5);
       if (d - e.radius > reach || Math.abs(e.pos.y - (origin.y - 1)) > 2.6) continue;
-      const fullCircle = heavy && st.special === 'sintese';
-      if (!fullCircle && d > 0.6 && (dx * dir.x + dz * dir.z) / d < Math.cos(arc)) continue;
-      const dealt = e.damage(this.weaponDamage(e, heavy), heavy, st.heavyStagger);
+      const fullCircle = ev.circulo || (ev.base === 'firme' && st.special === 'sintese');
+      // o arco conta da borda do corpo do inimigo, não do centro: um chefe largo não escapa pela quina
+      const half = Math.min(Math.PI, arc + Math.atan2(e.radius, Math.max(0.5, d)));
+      if (!fullCircle && d > 0.6 && (dx * dir.x + dz * dir.z) / d < Math.cos(half)) continue;
+      const dealt = e.damage(this.weaponDamage(e, ev.base === 'firme') * ev.mult, ev.heavy, st.heavyStagger);
       if (dealt > 0) {
-        hit = true;
-        this.burst(new THREE.Vector3(e.pos.x, e.pos.y + 1.1 * e.cfg.scale, e.pos.z), e.cfg.eye, heavy ? 12 : 7, heavy ? 4.5 : 3);
+        hit++;
+        boss ||= !!e.cfg.boss;
+        this.burst(new THREE.Vector3(e.pos.x, e.pos.y + 1.1 * e.cfg.scale, e.pos.z), e.cfg.eye, ev.heavy ? 12 : 7, ev.heavy ? 4.5 : 3);
       }
     }
     if (hit) {
-      this.hitstop = heavy ? 0.1 : 0.055;
-      this.engine.shake = Math.max(this.engine.shake, heavy ? 0.55 : 0.25);
-      this.audio.sfx('impacto', heavy ? 1.2 : 1);
-    } else if (heavy) this.audio.sfx('impactoChao');
+      // foco: os leves enchem; o contracorte e o fecho da sequência enchem mais
+      const ganho: Partial<Record<string, number>> = { l1: 0.2, l2: 0.2, l3: 0.3, l4: 0.35, contra: 0.4, queda: 0.3 };
+      const g = ganho[ev.golpe];
+      if (g) p.addFoco(g * Math.min(2, hit));
+      // pausa de impacto: a mais longa vence, nunca soma
+      this.hitstop = Math.max(this.hitstop, ev.pausa * (boss ? 1.15 : 1));
+      this.engine.shake = Math.max(this.engine.shake, ev.tremor);
+      if (ev.heavy) p.punch(Math.min(1, ev.tremor + 0.2));
+      this.audio.sfx('impacto', ev.heavy ? 1.2 : 1);
+    } else if (ev.heavy && ev.base === 'firme') {
+      this.audio.sfx('impactoChao');
+      this.engine.shake = Math.max(this.engine.shake, ev.tremor * 0.5);
+    }
   }
 
   private nntCount = 0;
@@ -1159,10 +1202,30 @@ export class Game {
     return Math.max(1, Math.round(dmg));
   }
 
-  private hitPlayer(dmg: number, from: THREE.Vector3): void {
+  private hitPlayer(dmg: number, from: THREE.Vector3, kind: 'golpe' | 'sopro' | 'anel' | 'projetil' = 'projetil'): void {
     const p = this.player!;
     const s = this.state!;
-    if (p.dead || this.mode !== 'play' || p.iframes > 0) return;
+    if (p.dead || this.mode !== 'play') return;
+    // golpe resoluto: a postura de raiz no instante do golpe corpo a corpo desvia a arma e responde
+    if (kind === 'golpe' && p.deflecting) {
+      const foe = this.enemies.find((e) => e.pos === from) ?? null;
+      foe?.deflected();
+      p.deflect(this.stats);
+      this.slowmo = 0.3;
+      this.hitstop = Math.max(this.hitstop, 0.08);
+      this.engine.flash = Math.max(this.engine.flash, 0.1);
+      this.audio.sfx('aparo');
+      this.burst(p.pos.clone().setY(p.pos.y + 1.3).lerp(from, 0.35), 0xffe2b0, 14, 4);
+      return;
+    }
+    // esquiva perfeita: o golpe passou pelo começo da esquiva
+    if (p.iframes > 0 && p.perfectWindow) {
+      p.perfectDodge();
+      this.slowmo = 0.35;
+      this.audio.sfx('esquivaPerfeita');
+      return;
+    }
+    if (p.iframes > 0) return;
     let d = D.damageTaken(dmg, this.stats, this.settings.difficulty);
     if (s.hp - d <= 0 && s.crivoSkills.includes('abrigo') && this.abrigoCd <= 0) {
       this.abrigoCd = 90;
@@ -1498,6 +1561,9 @@ export class Game {
         if (this.hitstop > 0) {
           this.hitstop -= dt;
           wdt = dt * 0.06;
+        } else if (this.slowmo > 0) {
+          this.slowmo -= dt;
+          wdt = dt * 0.35;
         }
         this.updateWorld(wdt, this.mode === 'play');
       }
@@ -1692,7 +1758,7 @@ export class Game {
       playerAlive: !p.dead && this.mode !== 'dialogue',
       colliders: r.colliders,
       groundAt: (x, z, y) => groundAt(r, x, z, y),
-      hitPlayer: (dmg, from) => this.hitPlayer(dmg, from),
+      hitPlayer: (dmg, from, kind) => this.hitPlayer(dmg, from, kind),
       shoot: (from, dir, dmg, speed) => {
         const pr = new Projectile(from.clone(), dir.clone(), dmg, speed);
         this.engine.scene.add(pr.mesh);
@@ -1709,6 +1775,7 @@ export class Game {
       others: this.enemies,
     };
     const frozenWorld = this.mode === 'dialogue' || this.mode === 'transition';
+    p.combatNear = !frozenWorld && this.enemies.some((e) => e.alive && e.aggro && e.pos.distanceTo(p.pos) < 10);
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const e = this.enemies[i];
       if (!frozenWorld || !e.alive) e.update(dt, ctx, cam.quaternion, this.engine.time);
@@ -1724,7 +1791,7 @@ export class Game {
       const dz = pr.pos.z - p.pos.z;
       let gone = pr.life <= 0 || pointBlocked(r.colliders, pr.pos.x, pr.pos.y, pr.pos.z, 0.1);
       if (!gone && Math.hypot(dx, dz) < 0.75 && Math.abs(pr.pos.y - (p.pos.y + 1)) < 1.3) {
-        this.hitPlayer(pr.dmg, pr.pos);
+        this.hitPlayer(pr.dmg, pr.pos, 'projetil');
         gone = true;
       }
       if (gone) {
@@ -1739,7 +1806,7 @@ export class Game {
       this.combatSeen = true;
       if (!s.flags.includes('tutorial_combate')) {
         D.setFlag(s, 'tutorial_combate');
-        this.ui.hint(this.ui.isTouch ? 'Golpe, Firme, Esquiva, Pulso e Mira ficam nos botões à direita. Com a mira travada, arraste o olhar para o lado para trocar de alvo. Esquive no instante em que o aviso vermelho aparece.' : `${this.ui.key('ataque')} golpe leve · ${this.ui.key('golpe')} golpe firme · ${this.ui.key('esquiva')} esquiva · ${this.ui.key('crivo')} pulso do Crivo · ${this.ui.key('travar')} trava a mira (${this.ui.key('camEsq')} e ${this.ui.key('camDir')} trocam de alvo)`, 'Encontro', 10);
+        this.ui.hint(this.ui.isTouch ? 'Golpe, Firme, Esquiva, Pulso e Mira ficam nos botões à direita. Toques seguidos em Golpe fazem a sequência de quatro cortes; segure Firme para concentrar foco e solte para descarregar. Com a mira travada, arraste o olhar para o lado para trocar de alvo.' : `${this.ui.key('ataque')} golpe leve, em sequência de quatro · ${this.ui.key('golpe')} golpe firme (segure para concentrar foco) · ${this.ui.key('esquiva')} esquiva · ${this.ui.key('crivo')} pulso do Crivo · ${this.ui.key('travar')} trava a mira (${this.ui.key('camEsq')} e ${this.ui.key('camDir')} trocam de alvo)`, 'Encontro', 10);
       }
     }
     this.inCombat = fighting;
@@ -1880,6 +1947,7 @@ export class Game {
       hp: s.hp,
       maxHp: st.maxHp,
       vigor: p.vigor,
+      foco: p.foco,
       maxVigor: st.maxVigor,
       xp: s.level >= D.MAX_LEVEL ? 1 : (s.xp - D.xpForLevel(s.level)) / (D.xpForLevel(s.level + 1) - D.xpForLevel(s.level)),
       xpLeft: s.level >= D.MAX_LEVEL ? 0 : D.xpForLevel(s.level + 1) - s.xp,

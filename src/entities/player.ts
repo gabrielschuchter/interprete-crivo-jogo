@@ -11,6 +11,8 @@ import type { Emblem } from './figure';
 const USING = new Set(['pickup', 'examine', 'pull', 'open', 'push', 'reach', 'interact']);
 const EMBLEM: Record<string, Emblem> = { nutricao: 'caderno', medicina: 'estetoscopio', enfermagem: 'relogio', psicologia: 'oculos', fisioterapia: 'fita' };
 import { BRAND } from '../world/palette';
+import { GOLPES, GUARDA, ARMA_GUARDA, RAIZ, ARMA_RAIZ, ESQUIVA, ARMA_ESQUIVA, MERGULHO, ARMA_MERGULHO, amostra, fixa, avancoAte, giroAte, saltoEm, firmePorFoco, danoPorFoco, type Golpe, type GolpeId } from './esgrima';
+import { approach } from './motion';
 
 /** Rastro luminoso do cajado: leitura clara do golpe (Atlas H-06). */
 class Trail {
@@ -28,7 +30,7 @@ class Trail {
     const mat = new THREE.ShaderMaterial({
       uniforms: { uColor: { value: new THREE.Color(0xffc27a).multiplyScalar(2.2) } },
       vertexShader: `attribute float alpha; varying float vA; void main(){ vA = alpha; gl_Position = projectionMatrix * viewMatrix * vec4(position,1.0); }`,
-      fragmentShader: `uniform vec3 uColor; varying float vA; void main(){ gl_FragColor = vec4(uColor, vA * 0.75); }`,
+      fragmentShader: `uniform vec3 uColor; varying float vA; void main(){ gl_FragColor = vec4(uColor, vA * 0.5); }`,
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,
@@ -36,6 +38,10 @@ class Trail {
     });
     this.mesh = new THREE.Mesh(this.geo, mat);
     this.mesh.frustumCulled = false;
+  }
+  /** rastro do firme: mais claro e mais branco */
+  heavy(on: boolean): void {
+    (this.mesh.material as THREE.ShaderMaterial).uniforms.uColor.value.set(on ? 0xffe2b0 : 0xffc27a).multiplyScalar(on ? 1.6 : 1.1);
   }
   push(a: THREE.Vector3, b: THREE.Vector3): void {
     this.pts.unshift({ a: a.clone(), b: b.clone(), t: 0 });
@@ -72,6 +78,14 @@ export interface AttackEvent {
   dir: THREE.Vector3;
   range: number;
   arc: number;
+  /** golpe de origem e peso do contato (esgrima.ts) */
+  golpe: GolpeId;
+  mult: number;
+  base: 'leve' | 'firme';
+  pausa: number;
+  tremor: number;
+  circulo: boolean;
+  ultimo: boolean;
 }
 
 /** razão entre o tom escolhido e o tom da textura base (pele clara) */
@@ -90,9 +104,42 @@ export class Player {
   iframes = 0;
   private dodgeT = 0;
   private dodgeDir = new THREE.Vector3();
-  private comboNext = 1;
-  private attackQueued: 'leve' | 'firme' | null = null;
-  private attackFired = false;
+  // ---- esgrima ----
+  /** pontos de foco, de 0 a 3: os leves enchem, o firme gasta */
+  foco = 0;
+  /** foco gasto pelo firme em curso (dano) */
+  private spent = 0;
+  golpe: Golpe | null = null;
+  golpeT = 0;
+  private hitsFired = 0;
+  private swung = false;
+  private advDone = 0;
+  private golpeTarget: { pos: THREE.Vector3; alive: boolean; radius: number } | null = null;
+  private comboNext: GolpeId = 'l1';
+  private comboT = 0;
+  private bufLeve = 0;
+  private bufEsq = 0;
+  private heavyHold = -1;
+  charging = false;
+  private chargeLvl = 0;
+  private deflectT = 0;
+  private sinceDodge = 9;
+  private dodgeAge = 9;
+  private dodgeBack = false;
+  private perfectUsed = false;
+  private plunge = false;
+  private plungeT = 0;
+  private ovW = 0;
+  private guardW = 0;
+  /** há adversário desperto por perto: o corpo assume a guarda (o jogo atualiza) */
+  combatNear = false;
+  /** alvo para onde o golpe vira e até onde avança (o jogo responde: travado ou o mais próximo à frente) */
+  assist: ((dir: THREE.Vector3) => { pos: THREE.Vector3; alive: boolean; radius: number } | null) | null = null;
+  onFoco: ((pontos: number, carga: boolean) => void) | null = null;
+  /** câmera: aproximação na carga e tranco no impacto; desligado com movimento reduzido */
+  calmCam = false;
+  private camPull = 0;
+  private camKick = 0;
   private vigorDelay = 0;
   private stepAcc = 0;
   private hurtT = 0;
@@ -120,7 +167,7 @@ export class Player {
   frozen = false;
   onStep: (() => void) | null = null;
   onAttack: ((e: AttackEvent) => void) | null = null;
-  onSwing: ((heavy: boolean) => void) | null = null;
+  onSwing: ((g: Golpe) => void) | null = null;
   onDodge: (() => void) | null = null;
   sensitivity = 1;
   invertY = false;
@@ -218,6 +265,10 @@ export class Player {
     this.falling = false;
     this.air = false;
     this.vy = 0;
+    this.endGolpe(false);
+    this.charging = false;
+    this.heavyHold = -1;
+    this.plunge = false;
     this.fig.root.position.copy(this.pos);
     this.fig.root.rotation.y = yaw;
   }
@@ -226,10 +277,128 @@ export class Player {
     return this.dodgeT > 0;
   }
 
+  /** dano recebido: interrompe golpe e carga, salvo na janela de armadura dos firmes carregados */
   hurt(from?: THREE.Vector3, force = 1): void {
+    const g = this.golpe;
+    if (g?.armadura && this.golpeT >= g.armadura[0] && this.golpeT < g.armadura[1]) {
+      if (from) this.fig.flinch(from, force * 0.4);
+      return;
+    }
     this.hurtT = 0.36;
+    this.endGolpe(false);
+    this.charging = false;
+    this.heavyHold = -1;
+    this.plunge = false;
     if (from) this.fig.flinch(from, force);
-    if (!this.fig.busy || this.fig.action === 'hit') this.fig.play('hit');
+    this.fig.play('hit');
+  }
+
+  /** a postura de raiz está no instante de desviar (golpe resoluto) */
+  get deflecting(): boolean {
+    return this.charging && this.deflectT > 0;
+  }
+  /** desvio aceito: entra no golpe resoluto na hora e ganha um ponto de foco */
+  deflect(stats: Stats): void {
+    this.charging = false;
+    this.heavyHold = -1;
+    this.deflectT = 0;
+    this.iframes = Math.max(this.iframes, 0.35);
+    this.addFoco(1);
+    this.startGolpe(GOLPES.resoluto, stats, new THREE.Vector3());
+  }
+  /** a esquiva está no começo (até 0,22 s): um golpe que passa por ela conta como esquiva perfeita, uma vez */
+  get perfectWindow(): boolean {
+    return this.dodging && this.dodgeAge < 0.22 && !this.perfectUsed;
+  }
+  perfectDodge(): void {
+    this.perfectUsed = true;
+    this.iframes = Math.max(this.iframes, 0.4);
+    this.addFoco(1);
+  }
+  addFoco(n: number): void {
+    const before = Math.floor(this.foco + 1e-6);
+    this.foco = Math.min(3, this.foco + n);
+    const after = Math.floor(this.foco + 1e-6);
+    if (after > before) this.onFoco?.(after, false);
+  }
+
+  /** tranco de câmera no impacto (0..1) */
+  punch(a: number): void {
+    if (!this.calmCam) this.camKick = Math.max(this.camKick, a);
+  }
+
+  private aim(wish: THREE.Vector3): void {
+    // mira: alvo travado; senão quem o jogo aponta na direção pedida; senão a direção pedida; parado, para onde já olha
+    const dir = wish.lengthSq() > 0.01 ? wish.clone().normalize() : new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+    const t = this.lockTarget?.alive ? this.lockTarget : (this.assist?.(dir) ?? null);
+    this.golpeTarget = t;
+    if (t) this.yaw = Math.atan2(t.pos.x - this.pos.x, t.pos.z - this.pos.z);
+    else if (wish.lengthSq() > 0.01) this.yaw = Math.atan2(wish.x, wish.z);
+  }
+
+  private startGolpe(G: Golpe, stats: Stats, wish: THREE.Vector3): void {
+    const heavyFam = G.id === 'firme' || G.id === 'lua' || G.id === 'pilar';
+    const cost = stats.attackCost * G.vigor;
+    this.vigor = Math.max(0, this.vigor - cost);
+    if (cost > 0) this.vigorDelay = 0.6;
+    if (heavyFam) {
+      this.spent = Math.floor(this.foco + 1e-6);
+      this.foco = Math.max(0, this.foco - this.spent);
+    }
+    if (G.id !== 'resoluto') this.aim(wish);
+    this.golpe = G;
+    this.golpeT = 0;
+    this.hitsFired = 0;
+    this.advDone = 0;
+    this.vel.set(0, 0, 0);
+    this.swung = false;
+    this.fig.play('esgrima', G.dur);
+  }
+
+  private endGolpe(done: boolean): void {
+    const G = this.golpe;
+    if (!G) return;
+    this.golpe = null;
+    if (this.fig.action === 'esgrima') this.fig.action = 'none';
+    // a sequência de leves espera meio segundo pelo próximo toque
+    if (done && G.next && G.id !== 'l4') {
+      this.comboNext = G.next;
+      this.comboT = 0.5;
+    } else this.comboT = 0;
+    if (done) this.guardW = 1;
+  }
+
+  /** escreve na figura a pose de esgrima deste quadro (golpe, carga, esquiva, mergulho ou guarda) */
+  private overlay(dt: number): void {
+    const fig = this.fig;
+    const guardGoal = this.combatNear && !this.dead && !this.air && this.speed < 4 && !USING.has(fig.action) && fig.action !== 'hit' ? (this.speed > 0.4 ? 0.5 : 1) : 0;
+    this.guardW = approach(this.guardW, guardGoal, 5, dt);
+    let a = null as ReturnType<typeof amostra> | null;
+    let w = 0;
+    if (this.golpe) {
+      a = amostra(this.golpe, this.golpeT);
+      w = 1;
+    } else if (this.charging) {
+      a = fixa(RAIZ, ARMA_RAIZ);
+      w = 1;
+    } else if (this.plunge) {
+      a = fixa(MERGULHO, ARMA_MERGULHO);
+      w = 1;
+    } else if (this.dodging) {
+      a = fixa(ESQUIVA, ARMA_ESQUIVA);
+      w = Math.sin(Math.min(1, this.dodgeAge / 0.42) * Math.PI) * 0.9;
+    } else if (this.guardW > 0.01) {
+      a = fixa(GUARDA, ARMA_GUARDA);
+      w = this.guardW;
+    }
+    // entra rápido (o golpe sai do quadro em que foi pedido) e sai devagar
+    this.ovW = approach(this.ovW, w, w > this.ovW ? 30 : 9, dt);
+    if (!a) {
+      if (this.ovW < 0.01) fig.combat = null;
+      else if (fig.combat) fig.combat.w = fig.combat.armaW = this.ovW;
+      return;
+    }
+    fig.combat = { pose: a.pose, arma: a.arma, w: this.ovW, armaW: this.ovW };
   }
 
   die(): void {
@@ -238,6 +407,10 @@ export class Player {
   }
 
   revive(): void {
+    this.endGolpe(false);
+    this.charging = false;
+    this.heavyHold = -1;
+    this.plunge = false;
     this.dead = false;
     this.fig.action = 'none';
     this.iframes = 1.5;
@@ -283,27 +456,51 @@ export class Player {
       const r = new THREE.Vector3(-f.z, 0, f.x);
       wish.addScaledVector(f, mz / Math.max(1, ml)).addScaledVector(r, mx / Math.max(1, ml));
     }
-    const running = controls && (input.held('correr') || input.padRun()) && wish.lengthSq() > 0 && this.vigor > 1;
-    const acting = fig.action === 'attack1' || fig.action === 'attack2' || fig.action === 'heavy';
+    const running = controls && (input.held('correr') || input.padRun()) && wish.lengthSq() > 0 && this.vigor > 1 && !this.charging;
+    const free = controls && !this.dead && !this.frozen;
+    const g = this.golpe;
+    const gt = this.golpeT;
+    this.sinceDodge += dt;
+    this.dodgeAge += dt;
+    this.deflectT = Math.max(0, this.deflectT - dt);
+    this.comboT = Math.max(0, this.comboT - dt);
 
-    // esquiva. Regra de vigor, de propósito tolerante: com 60% do custo ainda sai uma última esquiva,
-    // e o vigor vai a zero. Golpes pedem metade do custo. A dica "último fôlego" explica isso ao jogador.
-    if (controls && !this.dead && !this.frozen && input.took('esquiva') && this.dodgeT <= 0 && this.vigor >= stats.dodgeCost * 0.6 && fig.action !== 'hit') {
+    // ---------- fila de entrada: cada toque vale por 0,4 s ----------
+    this.bufLeve = Math.max(0, this.bufLeve - dt);
+    this.bufEsq = Math.max(0, this.bufEsq - dt);
+    if (free && input.took('ataque')) this.bufLeve = 0.4;
+    if (free && input.took('esquiva')) this.bufEsq = 0.3;
+    const heavyDown = free && input.took('golpe');
+    const heavyHeld = free && input.held('golpe');
+
+    // ---------- esquiva ----------
+    // Regra de vigor, de propósito tolerante: com 60% do custo ainda sai uma última esquiva, e o vigor vai a
+    // zero. Golpes pedem metade do custo. A esquiva cancela golpes fora da janela de compromisso (`lock`) e a
+    // carga do firme, sem perder o foco.
+    const locked = !!g && !!g.lock && gt >= g.lock[0] && gt < g.lock[1];
+    if (this.bufEsq > 0 && free && this.dodgeT <= 0.12 && !locked && !this.air && this.vigor >= stats.dodgeCost * 0.6 && fig.action !== 'hit') {
+      this.bufEsq = 0;
+      this.endGolpe(false);
+      this.charging = false;
+      this.heavyHold = -1;
       this.dodgeT = 0.42;
+      this.dodgeAge = 0;
+      this.perfectUsed = false;
       this.iframes = Math.max(this.iframes, stats.dodgeIframes);
       this.vigor = Math.max(0, this.vigor - stats.dodgeCost);
       this.vigorDelay = 0.7;
-      this.dodgeDir.copy(wish.lengthSq() > 0.01 ? wish.clone().normalize() : new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)));
-      this.yaw = Math.atan2(this.dodgeDir.x, this.dodgeDir.z);
-      this.attackQueued = null;
+      this.dodgeDir.copy(wish.lengthSq() > 0.01 ? wish.clone().normalize() : new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw)));
+      // sem direção, a esquiva vai para trás e o corpo continua de frente para o adversário
+      this.dodgeBack = wish.lengthSq() <= 0.01;
+      if (!this.dodgeBack) this.yaw = Math.atan2(this.dodgeDir.x, this.dodgeDir.z);
       fig.play('dodge');
       this.onDodge?.();
     }
 
     // pulo: o toque vale por 0,14 s antes de tocar o chão e por 0,1 s depois de sair da borda
-    if (controls && !this.dead && !this.frozen && input.took('pular')) this.jumpBuf = 0.14;
+    if (free && input.took('pular')) this.jumpBuf = 0.14;
     this.jumpBuf = Math.max(0, this.jumpBuf - dt);
-    if (this.jumpBuf > 0 && !this.air && !this.falling && !this.dodging && fig.action !== 'hit' && fig.action !== 'heavy' && !this.dead && this.groundedRecently > 0) {
+    if (this.jumpBuf > 0 && !this.golpe && !this.charging && !this.air && !this.falling && !this.dodging && fig.action !== 'hit' && !this.dead && this.groundedRecently > 0) {
       this.air = true;
       this.vy = 6.4;
       this.jumpBuf = 0;
@@ -312,56 +509,128 @@ export class Player {
     }
     this.groundedRecently = this.air || this.falling ? 0 : 0.1;
 
-    // ataques (com fila curta para o combo)
-    if (controls && !this.dead && !this.frozen) {
-      if (input.took('ataque')) this.attackQueued = 'leve';
-      if (input.took('golpe')) this.attackQueued = 'firme';
+    // ---------- golpe aéreo: no ar, o leve vira mergulho com a lâmina para baixo ----------
+    if (this.air && this.bufLeve > 0 && !this.plunge && !this.golpe && this.vigor >= stats.attackCost * 0.5) {
+      this.bufLeve = 0;
+      this.plunge = true;
+      this.plungeT = 0;
+      this.vy = Math.max(this.vy, 1.6);
+      this.vigor = Math.max(0, this.vigor - stats.attackCost);
+      this.vigorDelay = 0.6;
+      this.aim(wish);
+      this.onSwing?.(GOLPES.queda);
     }
-    if (this.attackQueued && !this.dodging && fig.action !== 'hit' && (!acting || fig.progress > 0.72)) {
-      const heavy = this.attackQueued === 'firme';
-      const cost = heavy ? stats.attackCost * 2.6 : stats.attackCost;
-      if (this.vigor >= cost * 0.5) {
-        this.vigor = Math.max(0, this.vigor - cost);
-        this.vigorDelay = 0.6;
-        // mira: alvo travado; senão a direção do movimento; parado e sem alvo, o golpe sai para onde o corpo já olha
-        if (this.lockTarget?.alive) this.yaw = Math.atan2(this.lockTarget.pos.x - this.pos.x, this.lockTarget.pos.z - this.pos.z);
-        else if (wish.lengthSq() > 0.01) this.yaw = Math.atan2(wish.x, wish.z);
-        if (heavy) fig.play('heavy');
-        else {
-          fig.play(this.comboNext === 1 ? 'attack1' : 'attack2');
-          this.comboNext = this.comboNext === 1 ? 2 : 1;
+    if (this.plunge) {
+      this.plungeT += dt;
+      // um instante parado no alto e depois a queda
+      if (this.plungeT > 0.12) this.vy = Math.min(this.vy, -17);
+    }
+
+    // ---------- firme: apertar entra na postura de raiz; soltar libera com o foco que houver ----------
+    const canHeavy = !this.air && !this.dodging && fig.action !== 'hit' && (!g || gt >= g.heavyFrom);
+    if (heavyDown && canHeavy && this.heavyHold < 0) {
+      this.endGolpe(false);
+      this.heavyHold = 0;
+      this.charging = true;
+      this.chargeLvl = 0;
+      // as primeiras 0,2 s da postura desviam um golpe corpo a corpo (golpe resoluto)
+      this.deflectT = 0.2;
+      this.aim(wish);
+    }
+    if (this.charging) {
+      this.heavyHold += dt;
+      // segurar acumula foco: um ponto a cada 0,6 s depois da primeira fração, até três
+      if (heavyHeld && this.heavyHold > 0.25) {
+        const before = Math.floor(this.foco + 1e-6);
+        if (before < 3) this.foco = Math.min(3, this.foco + dt / 0.6);
+        const after = Math.floor(this.foco + 1e-6);
+        if (after > before) {
+          this.chargeLvl++;
+          this.onFoco?.(after, true);
         }
-        this.attackFired = false;
-        this.onSwing?.(heavy);
       }
-      this.attackQueued = null;
-    }
-    // instante do golpe
-    if (acting && !this.attackFired) {
-      const heavy = fig.action === 'heavy';
-      const at = heavy ? 0.5 : 0.42;
-      if (fig.progress >= at) {
-        this.attackFired = true;
-        this.onAttack?.({
-          heavy,
-          origin: this.pos.clone().setY(this.pos.y + 1),
-          dir: new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)),
-          range: heavy ? 2.9 : 2.5,
-          arc: heavy ? 1.15 : 1.5,
-        });
+      if (!heavyHeld || this.heavyHold > 2.6) {
+        this.charging = false;
+        this.heavyHold = -1;
+        this.startGolpe(GOLPES[firmePorFoco(this.foco)], stats, wish);
       }
     }
 
+    // ---------- leves: a sequência de quatro, o contracorte depois da esquiva ----------
+    if (this.bufLeve > 0 && !this.air && !this.charging && fig.action !== 'hit' && (!this.dodging || this.dodgeAge > 0.26) && (!g || gt >= g.chain)) {
+      let id: GolpeId;
+      if (this.dodging || this.sinceDodge < 0.4) id = 'contra';
+      else if (g?.next) id = g.next;
+      else if (this.comboT > 0) id = this.comboNext;
+      else id = 'l1';
+      if (this.dodging) this.dodgeT = 0;
+      if (this.vigor >= stats.attackCost * GOLPES[id].vigor * 0.5) {
+        this.bufLeve = 0;
+        this.startGolpe(GOLPES[id], stats, wish);
+      } else this.bufLeve = 0;
+    }
+
+    // ---------- golpe em curso: contatos, avanço, fim ----------
+    if (this.golpe) {
+      const G = this.golpe;
+      this.golpeT += dt;
+      const t = this.golpeT;
+      // o som do corte sai quando a lâmina começa a andar, não quando o botão é apertado
+      if (!this.swung && t >= G.som.t) {
+        this.swung = true;
+        this.onSwing?.(G);
+      }
+      for (let i = this.hitsFired; i < G.hits.length; i++) {
+        const h = G.hits[i];
+        if (t < h.t) break;
+        this.hitsFired = i + 1;
+        const yaw = this.yaw + giroAte(G, t);
+        const heavyFam = G.id === 'firme' || G.id === 'lua' || G.id === 'pilar';
+        this.onAttack?.({
+          heavy: h.firme,
+          origin: this.pos.clone().setY(this.pos.y + 1),
+          dir: new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)),
+          range: h.alcance ?? G.alcance,
+          arc: h.circulo ? Math.PI : G.arco,
+          golpe: G.id,
+          mult: h.dano * (heavyFam ? danoPorFoco(this.spent) : 1),
+          base: heavyFam || G.id === 'resoluto' || G.id === 'queda' ? 'firme' : 'leve',
+          pausa: h.pausa,
+          tremor: h.tremor,
+          circulo: !!h.circulo,
+          ultimo: i === G.hits.length - 1,
+        });
+      }
+      if (t >= G.dur) this.endGolpe(true);
+    }
+
     let speed = 0;
-    if (this.dodging) {
+    if (this.golpe) {
+      // avanço do golpe, medido: para a meio metro do alvo em vez de atravessá-lo
+      const G = this.golpe;
+      let want = avancoAte(G, this.golpeT) - this.advDone;
+      if (this.golpeTarget?.alive) {
+        const d = Math.hypot(this.golpeTarget.pos.x - this.pos.x, this.golpeTarget.pos.z - this.pos.z) - this.golpeTarget.radius - 0.75;
+        want = Math.min(want, Math.max(0, d));
+      }
+      this.advDone += want;
+      const v = dt > 0 ? want / dt : 0;
+      this.vel.set(Math.sin(this.yaw) * v, 0, Math.cos(this.yaw) * v);
+    } else if (this.dodging) {
       this.dodgeT -= dt;
       const k = Math.max(0, this.dodgeT / 0.42);
       speed = 4.5 + 7.5 * k;
       this.vel.copy(this.dodgeDir).multiplyScalar(speed);
-    } else if (acting) {
-      // pequeno avanço no golpe
-      const adv = fig.progress > 0.25 && fig.progress < 0.55 ? 2.4 : 0;
-      this.vel.set(Math.sin(this.yaw) * adv, 0, Math.cos(this.yaw) * adv);
+      if (this.dodgeT <= 0) this.sinceDodge = 0;
+    } else if (this.charging) {
+      // na postura de raiz anda devagar, sempre de frente para o alvo
+      const tv = wish.lengthSq() > 0.01 ? wish.clone().normalize().multiplyScalar(stats.walkSpeed * 0.4) : new THREE.Vector3();
+      this.vel.lerp(tv, 1 - Math.exp(-dt * 10));
+      const ty = this.lockTarget?.alive ? Math.atan2(this.lockTarget.pos.x - this.pos.x, this.lockTarget.pos.z - this.pos.z) : wish.lengthSq() > 0.01 ? Math.atan2(wish.x, wish.z) : this.yaw;
+      let d = ty - this.yaw;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      this.yaw += d * (1 - Math.exp(-dt * 8));
     } else if (this.hurtT > 0 || this.dead || fig.action === 'die' || USING.has(fig.action)) {
       this.vel.multiplyScalar(Math.exp(-dt * 8));
     } else if (wish.lengthSq() > 0.01) {
@@ -416,6 +685,10 @@ export class Player {
           this.lastSafe.copy(this.pos);
           this.fig.land(hard);
           this.onLand?.(hard);
+          if (this.plunge) {
+            this.plunge = false;
+            this.startGolpe(GOLPES.queda, stats, new THREE.Vector3());
+          }
         } else if (g === null && this.pos.y < Math.min(this.lastSafe.y, 0) - 1.4) {
           this.air = false;
           this.falling = true;
@@ -462,6 +735,7 @@ export class Player {
     if (this.vigorDelay <= 0) this.vigor = Math.min(stats.maxVigor, this.vigor + stats.vigorRegen * dt);
 
     // passos
+    const acting = !!this.golpe || this.charging;
     if (!this.dodging && !acting && this.speed > 0.8) {
       this.stepAcc += this.speed * dt;
       if (this.stepAcc > (running ? 1.5 : 1.05)) {
@@ -474,10 +748,16 @@ export class Player {
     // olhar: o alvo travado manda; senão, quem o jogo apontou por perto (morador, objeto)
     if (this.lockTarget?.alive) fig.lookAt = this.lookP.set(this.lockTarget.pos.x, this.lockTarget.pos.y + 1.4, this.lockTarget.pos.z);
     else fig.lookAt = this.lookHint;
-    fig.speed = acting || this.dodging ? 0 : fig.airborne ? Math.max(this.speed, 3.6) : this.speed;
+    fig.speed = this.golpe || this.dodging ? 0 : fig.airborne ? Math.max(this.speed, 3.6) : this.speed;
+    this.overlay(dt);
     fig.update(dt);
     fig.root.position.copy(this.pos);
     fig.root.rotation.y = this.yaw;
+    if (this.golpe) {
+      // giro e salto são do corpo visível; posição e mira de jogo seguem no chão
+      fig.root.rotation.y += giroAte(this.golpe, this.golpeT);
+      fig.root.position.y += saltoEm(this.golpe, this.golpeT);
+    }
     fig.setTint(this.iframes > 0 && this.dodging ? 0x6688aa : this.hurtT > 0 ? 0xd62839 : 0x000000, this.hurtT > 0 ? 0.6 : this.dodging ? 0.25 : 0);
 
     // luz da tocha e rastro da lâmina
@@ -485,12 +765,14 @@ export class Player {
     if (fig.torch) fig.torch.tip.getWorldPosition(tip);
     else tip.set(this.pos.x, this.pos.y + 1.6, this.pos.z);
     this.light.position.copy(tip);
-    if (acting && fig.weapon && fig.progress > 0.2 && fig.progress < 0.66) {
+    const G = this.golpe;
+    if (((G && this.golpeT >= G.trail[0] && this.golpeT <= G.trail[1]) || (this.plunge && this.plungeT > 0.1)) && fig.weapon) {
+      this.trail.heavy(!!G && (G.id === 'firme' || G.id === 'lua' || G.id === 'pilar' || G.id === 'resoluto'));
       const bt = new THREE.Vector3();
       const base = new THREE.Vector3();
       fig.weaponTip.getWorldPosition(bt);
-      fig.weapon.getWorldPosition(base);
-      this.trail.push(bt, base.lerp(bt, 0.4));
+      fig.weapon!.getWorldPosition(base);
+      this.trail.push(bt, base.lerp(bt, 0.62));
     }
     this.trail.update(dt);
 
@@ -530,7 +812,10 @@ export class Player {
     const right = new THREE.Vector3(Math.cos(this.camYaw), 0, -Math.sin(this.camYaw));
     pivot.addScaledVector(right, 0.0);
     // colisão: encurta o braço da câmera até o primeiro ponto livre
-    const arm = this.camDist * (1 - 0.38 * fk) * (1 - 0.24 * fws);
+    // carga do firme: a câmera chega um pouco mais perto; o impacto dá um tranco curto para dentro
+    this.camPull = approach(this.camPull, this.charging && !this.calmCam ? 1 : 0, 3, dt);
+    this.camKick = Math.max(0, this.camKick - dt * 5);
+    const arm = this.camDist * (1 - 0.38 * fk) * (1 - 0.24 * fws) * (1 - 0.12 * this.camPull) * (1 - 0.09 * this.camKick * this.camKick);
     let dist = arm;
     const steps = 14;
     for (let i = 1; i <= steps; i++) {

@@ -478,6 +478,42 @@ export class AudioSys {
         if (!this.sample('lamina', 0.62, 0.86, 0.06)) this.noise(0.34, 0.26, 'bandpass', 260, 2200, 1.3);
         else this.noise(0.3, 0.12, 'bandpass', 260, 1800, 1.3);
         break;
+      // esgrima: corte leve com a velocidade de cada golpe, corte pesado, giro, carga, foco, aparo, esquiva perfeita
+      case 'espada':
+        if (!this.sample('espada', 0.5, p, 0.1)) this.noise(0.18, 0.2, 'bandpass', 600 * p, 2800 * p, 1.6);
+        break;
+      case 'lamina':
+        if (!this.sample('lamina', 0.62, p, 0.06)) this.noise(0.34, 0.26, 'bandpass', 260, 2200, 1.3);
+        else this.noise(0.3, 0.12, 'bandpass', 220 * p, 1700, 1.3);
+        this.tone(55 * p, 0.3, 0.14, 'sine', 0.8);
+        break;
+      case 'giro':
+        if (!this.sample('espada', 0.45, 0.82, 0.05)) this.noise(0.22, 0.18, 'bandpass', 400, 2400, 1.4);
+        this.noise(0.4, 0.14, 'bandpass', 2400, 380, 0.9);
+        break;
+      case 'carga':
+        // um degrau por ponto de foco: grave, médio, agudo; o metal da lâmina responde
+        this.tone([0, 220, 294, 392][Math.min(3, Math.max(1, Math.round(p)))], 0.5, 0.12, 'triangle', 1.01);
+        this.tone([0, 880, 1176, 1568][Math.min(3, Math.max(1, Math.round(p)))], 0.9, 0.04, 'sine', 1);
+        this.noise(0.25, 0.06, 'highpass', 5200, 3800);
+        break;
+      case 'foco':
+        this.tone(1320, 0.5, 0.05, 'sine', 1);
+        this.tone(1980, 0.4, 0.025, 'sine', 1, 0.04);
+        break;
+      case 'aparo':
+        // metal contra metal: dois parciais desafinados que soam longo, e o estalo do contato
+        this.noise(0.06, 0.45, 'highpass', 3200, 1800);
+        this.tone(1240, 1.1, 0.16, 'triangle', 0.995);
+        this.tone(1867, 0.9, 0.09, 'sine', 0.99);
+        this.tone(2710, 0.6, 0.05, 'sine', 1);
+        this.tone(140, 0.25, 0.25, 'sine', 0.5);
+        break;
+      case 'esquivaPerfeita':
+        this.noise(0.42, 0.16, 'bandpass', 380, 2600, 0.7);
+        this.tone(660, 0.6, 0.06, 'sine', 0.5);
+        this.tone(990, 0.5, 0.035, 'sine', 0.5, 0.05);
+        break;
       case 'impacto':
         this.noise(0.12, 0.4, 'lowpass', 2400, 300);
         this.tone(170, 0.18, 0.32, 'triangle', 0.5);

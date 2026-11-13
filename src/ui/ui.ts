@@ -32,6 +32,8 @@ export interface HudData {
   hp: number;
   maxHp: number;
   vigor: number;
+  /** pontos de foco da esgrima, de 0 a 3 (fração é o ponto que enche) */
+  foco?: number;
   maxVigor: number;
   xp: number;
   coins: number;
@@ -60,6 +62,9 @@ const TIPS = [
   'Nenhuma missão tem cronômetro. Ler com calma nunca é penalizado.',
   'Um desfecho ruim não torna ruim, por si só, uma decisão bem conduzida.',
   'O pulso do Crivo interrompe quem está se preparando para atacar.',
+  'Os golpes leves enchem os losangos de foco. O golpe firme gasta todo o foco que houver: com um ponto vira o Corte da lua, com três, a Queda do pilar.',
+  'Firme apertado no instante em que o golpe inimigo chega desvia a arma dele e responde na hora. Cedo ou tarde demais, o golpe entra.',
+  'Esquivar no último instante desacelera o tempo e rende foco. Um golpe leve logo depois da esquiva sai como contracorte.',
   'Três vozes repetindo a mesma fonte não são três confirmações.',
 ];
 
@@ -102,6 +107,7 @@ export class UI {
           <div class="who"><span class="lvl" data-k="lvl"></span><span class="nm" data-k="nm"></span></div>
           <div class="meter" role="meter" aria-label="Vida" aria-valuemin="0" data-k="hpM"><b class="lag" data-k="hplag"></b><b data-k="hp"></b><span class="num" data-k="hpN"></span></div>
           <div class="meter vigor" role="meter" aria-label="Vigor" aria-valuemin="0" data-k="vigorM"><b data-k="vigor"></b><span class="num" data-k="vigorN"></span></div>
+          <div class="foco" role="meter" aria-label="Foco" aria-valuemin="0" aria-valuemax="3" data-k="focoM"><i></i><i></i><i></i></div>
           <div class="meter xp" role="meter" aria-label="Experiência" aria-valuemin="0" aria-valuemax="100" data-k="xpM"><b data-k="xp"></b></div>
           <div class="xpn" data-k="xpN"></div>
         </div>
@@ -388,6 +394,22 @@ export class UI {
     });
   }
 
+  private focoLast = -1;
+  /** três losangos de foco: cheios, o que enche (fração) e vazios */
+  private focoPips(f: number): void {
+    const q = Math.round(f * 20) / 20;
+    if (q === this.focoLast) return;
+    this.focoLast = q;
+    const el = this.root.querySelector<HTMLElement>('[data-k=focoM]');
+    if (!el) return;
+    el.querySelectorAll('i').forEach((pip, i) => {
+      const k = Math.max(0, Math.min(1, q - i));
+      pip.style.setProperty('--k', k.toFixed(2));
+      pip.classList.toggle('cheio', k >= 1);
+    });
+    el.setAttribute('aria-valuenow', String(Math.floor(q)));
+  }
+
   // ---------- HUD ----------
   hudVisible(on: boolean): void {
     this.show('hud', on);
@@ -400,6 +422,7 @@ export class UI {
     this.set('hplag', f, 'width');
     this.set('vigor', `${Math.max(0, (d.vigor / d.maxVigor) * 100).toFixed(1)}%`, 'width');
     this.set('xp', `${(d.xp * 100).toFixed(1)}%`, 'width');
+    this.focoPips(d.foco ?? 0);
     const hp = Math.ceil(d.hp);
     const vg = Math.round(d.vigor);
     const nums = this.g.settings.hudNumbers;

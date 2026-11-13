@@ -27,7 +27,7 @@ fs.mkdirSync(out, { recursive: true });
 fs.mkdirSync(tmp, { recursive: true });
 const want = process.argv.slice(2);
 const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
-const p = await b.newPage({ viewport: { width: 480, height: 300 } });
+const p = await b.newPage({ viewport: { width: Number(process.env.LARG ?? 480), height: Number(process.env.ALT ?? 300) } });
 p.on('pageerror', (e) => console.log('  erro de página:', e.message));
 p.on('console', (m) => m.type() === 'error' && console.log('  console:', m.text().slice(0, 300)));
 const E = (fn, a) => p.evaluate(fn, a);
@@ -171,6 +171,49 @@ const CENAS = {
       return out;
     });
     strip('golpes', fr, 8);
+  },
+  // esgrima: a sequência de leves, o firme, a carga com foco, a esquiva com contracorte e o mergulho, de perto
+  async esgrima() {
+    await clearEnemies();
+    const fr = await E(async () => {
+      const g = __game; const p = g.player; const I = g.input;
+      p.teleport(0, 0, 8, Math.PI / 2);
+      p.camYaw = 0; p.camPitch = 0.12;
+      await T.sim(0.5);
+      const V = p.pos.constructor;
+      for (const n of g.npcs) n.fig.root.visible = false;
+      // três quartos de frente, à direita dele (lado da espada), perto o bastante para ler braço e tronco
+      const side = (c) => { const f = new V(Math.sin(p.yaw), 0, Math.cos(p.yaw)); const r = new V(-f.z, 0, f.x); c.position.set(p.pos.x + f.x * 2.6 - r.x * 1.6, p.pos.y + 1.4, p.pos.z + f.z * 2.6 - r.z * 1.6); c.lookAt(new V(p.pos.x + f.x * 0.6, p.pos.y + 1.0, p.pos.z + f.z * 0.6)); };
+      let out = [];
+      const k = (code, on) => I.hold(code, on);
+      // quatro leves em sequência
+      for (let i = 0; i < 4; i++) {
+        I.inject('ataque');
+        out = out.concat(await FILM(i === 3 ? 0.95 : 0.4, 2, null, side));
+      }
+      out = out.concat(await FILM(0.3, 3, null, side));
+      // firme com o foco que os leves deram
+      I.inject('golpe');
+      out = out.concat(await FILM(1.0, 2, null, side));
+      // carga: segura o firme 1,5 s e solta
+      p.foco = 0;
+      I.inject('golpe'); k('KeyK', true);
+      out = out.concat(await FILM(1.5, 5, null, side));
+      k('KeyK', false);
+      out = out.concat(await FILM(1.2, 2, null, side));
+      // esquiva e contracorte
+      I.inject('esquiva');
+      out = out.concat(await FILM(0.3, 2, null, side));
+      I.inject('ataque');
+      out = out.concat(await FILM(0.55, 2, null, side));
+      // pulo e golpe em queda
+      I.inject('pular');
+      out = out.concat(await FILM(0.25, 2, null, side));
+      I.inject('ataque');
+      out = out.concat(await FILM(0.8, 2, null, side));
+      return out;
+    });
+    strip('esgrima', fr, 10);
   },
   // conversa com moradores: quem fala, quem escuta
   async conversa() {

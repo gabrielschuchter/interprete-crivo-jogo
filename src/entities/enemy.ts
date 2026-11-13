@@ -712,6 +712,26 @@ export class Enemy {
     this.t = 0;
   }
 
+  /**
+   * Golpe desviado pelo golpe resoluto do jogador: o comum perde o equilíbrio (quase um segundo aberto); o
+   * chefe recua e demora meio segundo a mais para voltar a atacar.
+   */
+  deflected(): void {
+    if (!this.alive) return;
+    this.flash = 0.25;
+    this.combo = 0;
+    if (this.cfg.boss) {
+      this.set('recover');
+      this.t = -0.5;
+      this.attackCd = Math.max(this.attackCd, 0.8);
+    } else {
+      this.set('stunned');
+      this.t = 0.1;
+      this.vulnerable = 1.2;
+    }
+    this.ring.visible = false;
+  }
+
   /** Interrupção pelo pulso do Crivo. */
   stun(seconds: number): boolean {
     if (!this.alive) return false;
