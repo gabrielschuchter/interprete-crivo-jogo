@@ -53,7 +53,7 @@ export const ITEMS: Record<string, ItemDef> = {
   caldo: {
     id: 'caldo', name: 'Caldo da cantina', type: 'consumivel', glyph: 'caldo', price: 14,
     desc: 'Quente, salgado e honesto. A cantina não promete nada além disso.',
-    effect: 'Recupera 45 de fôlego de aventura. Efeito de jogo, sem pretensão clínica.',
+    effect: 'Recupera fôlego de aventura (45 de base; a dificuldade ajusta). Efeito de jogo, sem pretensão clínica.',
   },
   selo_pergunta: {
     id: 'selo_pergunta', name: 'Selo da Pergunta', type: 'consumivel', glyph: 'selo', price: 18,
@@ -109,7 +109,7 @@ export const ITEMS: Record<string, ItemDef> = {
   limao_lind: {
     id: 'limao_lind', name: 'Limão de Lind', type: 'consumivel', glyph: 'caldo', price: 16,
     desc: 'Um entre seis tratamentos testados no convés do Salisbury. Foi o que deu certo.',
-    effect: 'Recupera 30 de fôlego de aventura e todo o vigor.', ref: 'James Lind, 1747',
+    effect: 'Recupera fôlego de aventura (30 de base; a dificuldade ajusta) e todo o vigor.', ref: 'James Lind, 1747',
   },
   cha_fisher: {
     id: 'cha_fisher', name: 'Xícara de Fisher', type: 'consumivel', glyph: 'caldo', price: 12,

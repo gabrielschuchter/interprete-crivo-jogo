@@ -11,6 +11,7 @@
     "test": "vitest run",
     "e2e": "node tests/e2e/playthrough.mjs",
     "e2e:touch": "node tests/e2e/touch.mjs",
+    "e2e:dificuldade": "node tests/e2e/dificuldade.mjs",
     "e2e:controles": "node tests/e2e/controles.mjs",
     "e2e:elenco": "node tests/e2e/elenco.mjs"
   },

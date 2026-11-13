@@ -59,6 +59,13 @@ async function session(W, H, full) {
   await p.click('#menu [data-a=new]');
   await waitMode('create');
   await p.fill('#create input', 'Marina');
+  // dificuldade por toque: escolhe Rigor, confere, volta ao Padrão e confere que o botão cabe na tela
+  await tapEl('#create [data-diff=rigor]');
+  ok((await p.getAttribute('#create [data-diff=rigor]', 'aria-pressed')) === 'true', 'tocar em Rigor na criação seleciona Rigor');
+  await tapEl('#create [data-diff=padrao]');
+  ok((await p.getAttribute('#create [data-diff=padrao]', 'aria-pressed')) === 'true', 'tocar em Padrão volta ao Padrão');
+  const chipBox = await p.locator('#create [data-diff=rigor]').boundingBox();
+  ok(chipBox.x >= 0 && chipBox.x + chipBox.width <= W + 0.5 && chipBox.height >= 30, `botões de dificuldade cabem na tela e são tocáveis (${Math.round(chipBox.width)}x${Math.round(chipBox.height)})`);
   await p.click('#create [data-a=go]');
   await waitMode('play');
   // a interface de toque aparece quando o modo de jogo assenta; com a cena pesada isso leva mais de 1,5 s no software
@@ -136,6 +143,11 @@ async function session(W, H, full) {
   ok((await mode()) === 'book', 'botão Caderno abre o caderno');
   await tapEl('#book nav [data-tab=mapa]'); await sleep(300);
   ok((await E(() => __game.ui.bookTab)) === 'mapa', 'aba por toque');
+  await tapEl('#book nav [data-tab=config]'); await sleep(300);
+  await p.selectOption('#cfg-difficulty', 'historia'); await sleep(200);
+  ok((await E(() => __game.state.difficulty)) === 'historia', 'Configurações trocam a dificuldade da partida em curso');
+  await p.selectOption('#cfg-difficulty', 'padrao'); await sleep(200);
+  ok((await E(() => __game.state.difficulty)) === 'padrao', 'e a devolvem ao Padrão');
   await tapEl('#book nav [data-a=close]'); await sleep(400);
   ok((await mode()) === 'play', 'fechar o caderno por toque');
   await btn('pausa'); await sleep(400);

@@ -2,9 +2,11 @@
 
 Direção de arte (Gabriel, 12/11/2026, substitui a regra anterior de ultrarrealismo): dark fantasy gótica de PS2 (2003 a 2006) com dark academia. Low-poly estilizado com proporção humana correta (personagens de 1,5 a 8 mil triângulos), texturas pequenas (até 512 px no cenário), granuladas e levemente borradas, resolução interna baixa ampliada com filtro suave, pontilhado de 16 bits, névoa, luz baixa com poucos pontos quentes e sombras fortes. Paleta: preto, vinho profundo, cinza frio ou azulado, verde-musgo, marrom escuro, bege envelhecido e dourado gasto. Nada de realismo AAA, escaneamento de pessoa real, cartoon, cor vibrante ou cara de celular. Personagens novos saem da forja em `tools/chars/` (receitas em `elenco.py`, lote em `lote.sh`; ver `docs/game/PIPELINE_DE_PERSONAGENS.md`); os sete NPCs da história ainda vêm de `tools/pipeline/ps2_cast.py`; detalhes em `docs/game/DIRECAO_DE_ARTE.md`.
 
-Documento completo da direção (identidade "Luz de estudo", leis visuais, paleta, tipografia, interface, som, técnica de render): `docs/game/DIRECAO_DE_ARTE_PS2.md`; tokens em `design/ps2/ps2.tokens.json`; o regime de render PS2 do protótipo liga com `?arte=ps2`.
+Documento completo da direção (identidade "Luz de estudo", leis visuais, paleta, tipografia, interface, som, técnica de render): `docs/game/DIRECAO_DE_ARTE_PS2.md`; tokens em `design/ps2/ps2.tokens.json`; o padrão é a PS2 tardia (`?arte=tardia`, God of War e RE4 como teto); `?arte=ps2` é a Era PS2 crua e Ajustes, Imagem, Aparência alterna as duas e a Limpa.
 
 Ler `DESIGN.md` antes de tocar em interface e `docs/game/DECISOES_TECNICAS.md` antes de tocar em arquitetura.
+
+Dificuldade: três níveis (História, Padrão, Rigor), todos os valores em `src/domain/difficulty.ts`, escolhidos na criação e em Configurações e gravados no registro (versão 3). O Padrão é o jogo difícil. Ler `docs/game/DIFICULDADE.md` antes de mexer em vida e dano de criaturas, XP, moedas, preços, curas ou janelas de desvio; `npm run e2e:dificuldade` mede mortes por nível.
 
 Comandos: `npm run dev`, `npm run build`, `npm run test`, `npm run e2e` (com o servidor de desenvolvimento no ar).
 

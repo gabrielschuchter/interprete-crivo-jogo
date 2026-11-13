@@ -9,6 +9,7 @@ import { CODEX, COAT_COLORS, CRIVO_SKILLS, ITEMS, PLAYER_SKILLS, PROFESSIONS, QU
 import { canUnlock, countItem, isEquipped, xpForLevel, type ProfessionId, type SkillDef } from '../domain/state';
 import { HAIRS, SKINS } from '../entities/figure';
 import { RARITY_LABEL } from '../domain/gear';
+import { DIFFICULTIES, DIFFICULTY_IDS, isDifficulty, type DifficultyId } from '../domain/difficulty';
 import { icon } from './icons';
 import { problems } from '../core/diag';
 import { CaseView } from './caseview';
@@ -86,7 +87,7 @@ export class UI {
   private skillTab: 'jogador' | 'crivo' = 'jogador';
   private rebinding: ActionName | null = null;
   private cache: Record<string, string> = {};
-  private create = { prof: 'nutricao' as ProfessionId, body: 'fem' as 'fem' | 'masc', skin: 1, hair: 1, style: 1, coat: 0, name: '' };
+  private create = { prof: 'nutricao' as ProfessionId, body: 'fem' as 'fem' | 'masc', skin: 1, hair: 1, style: 1, coat: 0, name: '', diff: 'padrao' as DifficultyId };
   private hintTimer = 0;
   private bannerTimer = 0;
   private titleTimer = 0;
@@ -674,6 +675,7 @@ export class UI {
     this.show('create', on);
     if (!on) return;
     const c = this.create;
+    c.diff = this.g.settings.difficulty;
     const render = () => {
       const prof = PROFESSIONS.find((p) => p.id === c.prof)!;
       const coats = COAT_COLORS;
@@ -686,6 +688,8 @@ export class UI {
         <div class="row"><span class="label">Cabelo</span>${HAIRS.map((s, i) => `<button class="swatch" data-hair="${i}" aria-pressed="${i === c.hair}" aria-label="Cabelo: ${HAIR_NAMES[i] ?? `cor ${i + 1}`}" title="${HAIR_NAMES[i] ?? ``}" style="background:${hex(s)}"></button>`).join('')}</div>
         <div class="row"><span class="label">Corte</span>${['Curto', 'Coque', 'Longo', 'Capuz'].map((s, i) => `<button class="chip" data-style="${i}" aria-pressed="${i === c.style}">${s}</button>`).join('')}</div>
         <div class="row"><span class="label">Casaco</span>${coats.map((s, i) => `<button class="swatch" data-coat="${i}" aria-pressed="${i === c.coat}" aria-label="Casaco: ${COAT_NAMES[i] ?? `cor ${i + 1}`}" title="${COAT_NAMES[i] ?? ``}" style="background:${hex(s)}"></button>`).join('')}</div>
+        <div style="flex:none"><div class="label" style="margin-bottom:8px">Dificuldade</div><div class="row" role="group" aria-label="Dificuldade">${DIFFICULTY_IDS.map((id) => `<button class="chip" data-diff="${id}" aria-pressed="${id === c.diff}">${DIFFICULTIES[id].name}</button>`).join('')}</div></div>
+        <div class="prof-line" style="flex:none" aria-live="polite">${esc(DIFFICULTIES[c.diff].line)}<br><span class="label" style="font-style:normal">Muda em Configurações, a qualquer hora</span></div>
         <div class="row" style="margin-top:auto"><button class="btn" data-a="back">Voltar</button><button class="btn primary" data-a="go" style="margin-left:auto">Entrar no Pátio</button></div>
         <div class="foot" style="color:var(--g-mute);font-size:12px">Nenhum ofício é melhor que outro. Mudam algumas falas e o que cabe a você fazer em cada caso.</div></div><div></div>`;
       const inp = this.$.create.querySelector('input') as HTMLInputElement;
@@ -696,12 +700,13 @@ export class UI {
           const d = b.dataset;
           this.sfx('ui');
           if (d.a === 'back') return this.g.openMenu();
-          if (d.a === 'go') return this.g.startNew(c.name, c.prof, this.look());
+          if (d.a === 'go') return this.g.startNew(c.name, c.prof, this.look(), c.diff);
           if (d.prof) {
             c.prof = d.prof as ProfessionId;
             c.coat = Math.max(0, COAT_COLORS.indexOf(PROFESSIONS.find((x) => x.id === c.prof)!.coat));
           }
           if (d.body === 'fem' || d.body === 'masc') c.body = d.body;
+          if (isDifficulty(d.diff)) c.diff = d.diff;
           if (d.skin) c.skin = Number(d.skin);
           if (d.hair) c.hair = Number(d.hair);
           if (d.style) c.style = Number(d.style);
@@ -724,7 +729,7 @@ export class UI {
     this.show('pause', on);
     if (!on) return;
     const p = this.$.pause;
-    p.innerHTML = `<div class="card"><div class="label">Pausa</div><h2>O Pátio espera.</h2><p>O caminho é registrado ao descansar, ao mudar de região, a cada objetivo cumprido e, fora de combate, a cada 45 segundos.</p>${this.g.saveFailed ? '<p class="warn" role="alert">O navegador recusou a última gravação (armazenamento cheio, bloqueado ou janela anônima). Baixe uma cópia do registro para não perder esta sessão.</p>' : ''}
+    p.innerHTML = `<div class="card"><div class="label">Pausa</div><h2>O Pátio espera.</h2><p class="label" data-diff-now>Dificuldade: ${esc(DIFFICULTIES[this.g.difficultyId].name)}</p><p>O caminho é registrado ao descansar, ao mudar de região, a cada objetivo cumprido e, fora de combate, a cada 45 segundos.</p>${this.g.saveFailed ? '<p class="warn" role="alert">O navegador recusou a última gravação (armazenamento cheio, bloqueado ou janela anônima). Baixe uma cópia do registro para não perder esta sessão.</p>' : ''}
       <button class="btn primary" data-a="resume" data-focus>Continuar</button><button class="btn" data-a="config">Configurações</button>${document.fullscreenEnabled ? '<button class="btn" data-a="full">Tela cheia</button>' : ''}<button class="btn" data-a="export">Baixar cópia do registro</button><button class="btn" data-a="title">Registrar e voltar ao título</button></div>`;
     p.querySelectorAll<HTMLElement>('button').forEach((b) =>
       b.addEventListener('click', () => {
@@ -1157,7 +1162,7 @@ export class UI {
     page.innerHTML = `<div class="label">Valem para este navegador</div><h2>Configurações</h2><div class="scroll"><div class="settings">
       <h4>Imagem</h4>${select('aparencia', 'Aparência', [['tardia', 'PS2 tardia'], ['crua', 'Era PS2 crua'], ['limpa', 'Limpa']], 'PS2 tardia: o fim da geração, com mais linhas, filtro de textura melhor, bordas amaciadas e névoa rasteira. Era PS2 crua: 448 linhas e pontilhado grosso. Limpa: sem a camada de época. A troca recarrega o jogo.')}${select('quality', 'Qualidade', [['baixa', 'Baixa'], ['media', 'Média'], ['alta', 'Alta']], 'Baixa desliga sombras e brilho. A troca pode levar um instante.')}${range('fov', 'Campo de visão', 48, 75, 1)}${check('grain', 'Grão de filme')}${check('vignette', 'Vinheta')}
       <h4>Som</h4>${range('volGeral', 'Volume geral', 0, 1, 0.05)}${range('volMusica', 'Música', 0, 1, 0.05)}${range('volEfeitos', 'Efeitos', 0, 1, 0.05)}${range('volAmbiente', 'Ambiente', 0, 1, 0.05)}
-      <h4>Jogo</h4>${select('difficulty', 'Encontros', [['padrao', 'Padrão'], ['historia', 'História']], 'História reduz o dano recebido')}${range('sens', this.touch.enabled ? 'Sensibilidade da câmera e do toque' : 'Sensibilidade da câmera', 0.3, 2.5, 0.1)}${range('sensY', 'Sensibilidade vertical', 0.4, 2, 0.1, 'Multiplica a sensibilidade só no eixo de cima e baixo')}${range('camDist', 'Distância da câmera', 3.2, 6.5, 0.1)}${range('touchScale', 'Tamanho dos botões de toque', 0.8, 1.4, 0.05, this.touch.enabled ? '' : 'Vale quando a tela for tocada')}${check('touchEasyRun', 'Correr sem levar o dedo à borda', 'No toque, a corrida começa a 60% do curso do analógico, em vez de 94%')}${check('invertY', 'Inverter eixo vertical')}${check('hud', 'Mostrar interface durante o jogo')}${range('hudScale', 'Tamanho da interface em jogo', 0.8, 1.4, 0.05, 'Barras, objetivo, moedas e atalhos')}${check('hudNumbers', 'Números nas barras', 'Vida, vigor e experiência que falta, em números')}
+      <h4>Jogo</h4><div class="set"><label for="cfg-difficulty">Dificuldade${this.g.state ? ' desta partida' : ' das novas partidas'}<small data-diffnote>${esc(DIFFICULTIES[this.g.difficultyId].detail)}</small></label><select id="cfg-difficulty" data-k="difficulty">${DIFFICULTY_IDS.map((id) => `<option value="${id}" ${this.g.difficultyId === id ? 'selected' : ''}>${DIFFICULTIES[id].name}</option>`).join('')}</select></div>${range('sens', this.touch.enabled ? 'Sensibilidade da câmera e do toque' : 'Sensibilidade da câmera', 0.3, 2.5, 0.1)}${range('sensY', 'Sensibilidade vertical', 0.4, 2, 0.1, 'Multiplica a sensibilidade só no eixo de cima e baixo')}${range('camDist', 'Distância da câmera', 3.2, 6.5, 0.1)}${range('touchScale', 'Tamanho dos botões de toque', 0.8, 1.4, 0.05, this.touch.enabled ? '' : 'Vale quando a tela for tocada')}${check('touchEasyRun', 'Correr sem levar o dedo à borda', 'No toque, a corrida começa a 60% do curso do analógico, em vez de 94%')}${check('invertY', 'Inverter eixo vertical')}${check('hud', 'Mostrar interface durante o jogo')}${range('hudScale', 'Tamanho da interface em jogo', 0.8, 1.4, 0.05, 'Barras, objetivo, moedas e atalhos')}${check('hudNumbers', 'Números nas barras', 'Vida, vigor e experiência que falta, em números')}
       <h4>Acessibilidade</h4>${select('textScale', 'Tamanho do texto', [['0.9', 'Menor'], ['1', 'Padrão'], ['1.15', 'Maior'], ['1.3', 'Muito maior'], ['1.6', 'Máximo']])}${check('highContrast', 'Alto contraste')}${check('reduceMotion', 'Reduzir movimento', 'Sem tremor de câmera, clarões e texto animado. Começa igual à preferência do sistema.')}${range('noticeTime', 'Duração de avisos e dicas', 0.5, 4, 0.5, 'Avisos passados ficam no Diário')}
       <h4>Controles · acione para remapear</h4><div class="set"><label>Teclado e mouse à esquerda, controle à direita<small>Depois de acionar, pressione a tecla, o botão do mouse ou o botão do controle. Esc cancela. Se a escolha já for de outra ação, as duas trocam e um aviso diz o que mudou.</small></label></div></div><div class="keys">${acts.map(bindRow).join('')}</div>
       <div class="settings"><h4>Controle</h4>${range('padDeadzone', 'Zona morta dos analógicos', 0.05, 0.45, 0.01, 'Aumente se o personagem ou a câmera andarem sozinhos')}<div class="set"><label>Analógico esquerdo move, direito olha, RT também corre. Nos menus, direcional ou analógico percorrem, A aciona e B volta.</label></div><div class="set"><button class="btn" data-a="reset">Restaurar padrões</button></div>
@@ -1173,6 +1178,14 @@ export class UI {
         const k = x.dataset.k as keyof typeof st;
         const inp = x as HTMLInputElement;
         const v = inp.type === 'checkbox' ? inp.checked : inp.type === 'range' || k === 'textScale' ? Number(inp.value) : inp.value;
+        if ((k as string) === 'difficulty') {
+          if (isDifficulty(v)) {
+            this.g.setDifficulty(v);
+            const note = page.querySelector('[data-diffnote]');
+            if (note) note.textContent = DIFFICULTIES[v].detail;
+          }
+          return;
+        }
         (st as unknown as Record<string, unknown>)[k] = v;
         if (k === 'reduceMotion') st.reduceMotionSet = true;
         if (inp.type === 'range') {

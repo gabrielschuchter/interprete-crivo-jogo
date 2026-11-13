@@ -5,8 +5,9 @@
  */
 
 import { GEAR, STARTING_WEAPON, type WeaponEffect } from './gear';
+import { DEFAULT_DIFFICULTY, difficultyDef, isDifficulty, scaleXp, type DifficultyDef, type DifficultyId } from './difficulty';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 export type ProfessionId = 'nutricao' | 'medicina' | 'enfermagem' | 'psicologia' | 'fisioterapia' | 'aprendiz';
 export type EquipSlot = 'arma' | 'ferramenta' | 'traje' | 'calcado' | 'amuleto';
@@ -41,6 +42,8 @@ export interface GameState {
   name: string;
   profession: ProfessionId;
   look: Look;
+  /** nível de dificuldade desta partida; registros anteriores à versão 3 recebem o da preferência em Configurações */
+  difficulty: DifficultyId;
   region: string;
   pos: { x: number; y: number; z: number; yaw: number };
   level: number;
@@ -66,12 +69,13 @@ export interface GameState {
   savedAt: number;
 }
 
-export function newGame(name: string, profession: ProfessionId, look: Look): GameState {
+export function newGame(name: string, profession: ProfessionId, look: Look, difficulty: DifficultyId = DEFAULT_DIFFICULTY): GameState {
   return {
     version: SAVE_VERSION,
     name: name.trim().slice(0, 18) || 'Viajante',
     profession,
     look,
+    difficulty: isDifficulty(difficulty) ? difficulty : DEFAULT_DIFFICULTY,
     region: 'atrio',
     pos: { x: 0, y: 0, z: 17.5, yaw: Math.PI },
     level: 1,
@@ -111,6 +115,7 @@ export interface XpResult {
   leveled: number;
 }
 
+/** Soma experiência exatamente como dada, sem o ajuste de dificuldade (use `gainXp` para recompensas de jogo). */
 export function addXp(s: GameState, amount: number): XpResult {
   if (amount <= 0) return { leveled: 0 };
   s.xp += Math.round(amount);
@@ -121,6 +126,12 @@ export function addXp(s: GameState, amount: number): XpResult {
     leveled++;
   }
   return { leveled };
+}
+
+/** Experiência de uma recompensa de jogo: ajustada pelo nível de dificuldade antes de somar. */
+export function gainXp(s: GameState, amount: number): XpResult & { xp: number } {
+  const xp = scaleXp(amount, difficultyDef(s.difficulty));
+  return { ...addXp(s, xp), xp };
 }
 
 // ---------- flags, coleções, recompensas ----------
@@ -150,16 +161,16 @@ export interface Reward {
 }
 
 /** Concede uma recompensa uma única vez, mesmo que chamada de novo após recarregar. */
-export function grantReward(s: GameState, r: Reward): { granted: boolean; leveled: number } {
-  if (s.rewards.includes(r.id)) return { granted: false, leveled: 0 };
+export function grantReward(s: GameState, r: Reward): { granted: boolean; leveled: number; xp: number } {
+  if (s.rewards.includes(r.id)) return { granted: false, leveled: 0, xp: 0 };
   s.rewards.push(r.id);
   if (r.coins) s.coins += r.coins;
   if (r.items) for (const [k, v] of Object.entries(r.items)) addItem(s, k, v);
   if (r.crivoPoints) s.crivoPoints += r.crivoPoints;
   if (r.skillPoints) s.skillPoints += r.skillPoints;
   if (r.codex) for (const c of r.codex) unlockCodex(s, c);
-  const { leveled } = addXp(s, r.xp ?? 0);
-  return { granted: true, leveled };
+  const { leveled, xp } = gainXp(s, r.xp ?? 0);
+  return { granted: true, leveled, xp };
 }
 
 export function unlockCodex(s: GameState, id: string): boolean {
@@ -323,6 +334,9 @@ export interface Stats {
   crit: number;
   critMult: number;
   special: WeaponEffect | null;
+  /** duração, em segundos, da janela do golpe resoluto e da esquiva perfeita (variam com a dificuldade) */
+  deflectWindow: number;
+  perfectWindow: number;
 }
 
 export function computeStats(s: GameState): Stats {
@@ -354,6 +368,8 @@ export function computeStats(s: GameState): Stats {
     crit: 0.05,
     critMult: 1.6,
     special: null,
+    deflectWindow: 0.2,
+    perfectWindow: 0.22,
   };
   // arma: substitui o dano-base; o nível continua somando
   const w = s.equipment.arma ? GEAR[s.equipment.arma] : undefined;
@@ -416,13 +432,18 @@ export function computeStats(s: GameState): Stats {
     st.pulseRadius = 8.5;
     st.pulseCooldown = 9;
   }
+  // dificuldade por último: vale sobre o que habilidades e equipamentos já deram
+  const df = difficultyDef(s.difficulty);
+  st.vigorRegen *= df.vigorRegen;
+  st.deflectWindow *= df.deflect;
+  st.perfectWindow *= df.perfect;
   return st;
 }
 
-/** Dano recebido após defesa; nunca abaixo de 1. */
-export function damageTaken(raw: number, st: Stats, difficulty: 'historia' | 'padrao'): number {
-  const mult = difficulty === 'historia' ? 0.45 : 1;
-  return Math.max(1, Math.round(raw * (1 - Math.min(0.6, st.defense)) * mult));
+/** Dano recebido após defesa e dificuldade; nunca abaixo de 1. */
+export function damageTaken(raw: number, st: Stats, difficulty: DifficultyId | DifficultyDef): number {
+  const d = typeof difficulty === 'string' ? difficultyDef(difficulty) : difficulty;
+  return Math.max(1, Math.round(raw * (1 - Math.min(0.6, st.defense)) * d.foeDmg));
 }
 
 // ---------- save ----------
@@ -439,13 +460,15 @@ export function serialize(s: GameState): string {
 }
 
 /** Migra saves antigos. v1 não tinha crivoLook, cases nem rewards idempotentes. */
-export function migrate(raw: unknown): GameState | null {
+export function migrate(raw: unknown, legacyDifficulty: DifficultyId = DEFAULT_DIFFICULTY): GameState | null {
   if (!raw || typeof raw !== 'object') return null;
   const d = raw as Record<string, unknown>;
   if (typeof d.version !== 'number' || typeof d.name !== 'string') return null;
   if (d.version > SAVE_VERSION) return null;
   const base = newGame(String(d.name), (d.profession as ProfessionId) ?? 'aprendiz', (d.look as Look) ?? { skin: 1, hair: 0, coat: 0 });
   const out = { ...base, ...(d as Partial<GameState>) } as GameState;
+  // versão 3: a dificuldade passou a morar no registro; os anteriores seguem a preferência que a pessoa tinha
+  out.difficulty = isDifficulty(d.difficulty) ? d.difficulty : isDifficulty(legacyDifficulty) ? legacyDifficulty : DEFAULT_DIFFICULTY;
   if (d.version < 2) {
     out.crivoLook = base.crivoLook;
     out.cases = [];
@@ -500,11 +523,21 @@ export function migrate(raw: unknown): GameState | null {
   return out;
 }
 
-export function deserialize(text: string | null): GameState | null {
+export function deserialize(text: string | null, legacyDifficulty?: DifficultyId): GameState | null {
   if (!text) return null;
   try {
-    return migrate(JSON.parse(text));
+    return migrate(JSON.parse(text), legacyDifficulty);
   } catch {
     return null;
+  }
+}
+
+/** O texto gravado já trazia a dificuldade? Falso em registros anteriores à versão 3. */
+export function hasDifficulty(text: string | null): boolean {
+  if (!text) return false;
+  try {
+    return isDifficulty((JSON.parse(text) as { difficulty?: unknown })?.difficulty);
+  } catch {
+    return false;
   }
 }

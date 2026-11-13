@@ -35,3 +35,9 @@ Bateria com toque real emulado (Chromium, CDP): joystick parcial e corrida com h
 `npm run e2e:controles` confere 39 pontos com teclas reais e um controle simulado (troca de `navigator.getGamepads`): controle desde a tela de abertura, direcional e botões A e B nos menus, volta ao teclado, Tab e Shift+Tab dentro de Configurações sem abrir o Inventário, setas em barra e em seletor, valor da barra em texto, remapeamento com conflito, com botão do mouse, com Esc e com botão do controle, restauração dos padrões, reconexão com botão apertado, zona morta, analógico direito, falha de gravação avisada, cópia exportada, registro truncado recuperado, importação válida e inválida, e o dossiê de Lia (decisão compartilhada, risco de base, fontes, persistência, confirmação, horizonte). Estado: 39 de 39, com campanha (`npm run e2e`) e toque (`npm run e2e:touch`) também sem falhas depois das mudanças.
 
 Limite: o controle é simulado. Nenhum controle físico foi ligado, nenhum leitor de tela foi usado, e o áudio continua sem escuta.
+
+## Dificuldade (13/11/2026)
+
+`npm run test` passou a rodar 78 testes: os de dificuldade (tabela, registro versão 3 e migração, configurações, economia, sorte de queda) e a tabela de equilíbrio por encontro e perfil (`tests/unit/balance.test.ts`). `npm run e2e` joga a campanha no Padrão, que agora é difícil, e antes de cada seção faz o que uma pessoa faria: recolhe as peças que caíram, gasta pontos de habilidade, compra e equipa; confere também a dificuldade na criação, a troca em Configurações e a gravação no registro. `npm run e2e:dificuldade` joga a campanha em cada nível e perfil e mede mortes (`E2E_DIFICULDADE=historia|padrao|rigor`, `E2E_PERFIL=completo|direto`). `npm run e2e:touch` toca nos botões de dificuldade da criação e troca o nível em Configurações. Resultados e limites em `docs/game/DIFICULDADE.md`.
+
+Sem jogo humano nos três níveis: os números de morte vêm de um jogador automático cru.

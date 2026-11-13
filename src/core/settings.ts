@@ -1,6 +1,7 @@
 import type { Quality } from './engine';
 import type { Aparencia } from './ps2';
 import { DEFAULT_KEYS, type ActionName } from './input';
+import { DEFAULT_DIFFICULTY, isDifficulty, type DifficultyId } from '../domain/difficulty';
 
 export interface Settings {
   quality: Quality;
@@ -23,7 +24,8 @@ export interface Settings {
   reduceMotion: boolean;
   highContrast: boolean;
   textScale: number;
-  difficulty: 'historia' | 'padrao';
+  /** dificuldade das novas partidas; a de uma partida em curso mora no registro (GameState.difficulty) */
+  difficulty: DifficultyId;
   fov: number;
   hud: boolean;
   /** tamanho dos botões de toque */
@@ -60,7 +62,7 @@ export const DEFAULT_SETTINGS: Settings = {
   reduceMotion: false,
   highContrast: false,
   textScale: 1,
-  difficulty: 'padrao',
+  difficulty: DEFAULT_DIFFICULTY,
   fov: 58,
   hud: true,
   touchScale: 1,
@@ -88,7 +90,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     if (typeof d[k] === 'boolean') (s as unknown as Record<string, unknown>)[k] = d[k];
   };
   if (QUALITIES.includes(d.quality as string)) s.quality = d.quality as Quality;
-  if (d.difficulty === 'historia' || d.difficulty === 'padrao') s.difficulty = d.difficulty;
+  if (isDifficulty(d.difficulty)) s.difficulty = d.difficulty;
   // 'ps2' era o padrão antigo, gravado por quem nunca escolheu nada: passa ao padrão novo, a PS2 tardia
   if (d.aparencia === 'tardia' || d.aparencia === 'crua' || d.aparencia === 'limpa') s.aparencia = d.aparencia;
   else if (d.aparencia === 'ps2') s.aparencia = 'tardia';

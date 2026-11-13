@@ -583,8 +583,9 @@ export async function useProp(g: G, p: PropPlacement): Promise<void> {
     }
     if (!g.openChest(p.id)) return;
     if (data.coins) {
-      s.coins += Number(data.coins);
-      g.toast(`+${data.coins} moedas`);
+      const n = g.coinGain(Number(data.coins));
+      s.coins += n;
+      g.toast(`+${n} moedas`);
     }
     if (data.item) g.give(String(data.item), Number(data.qty ?? 1));
     if (data.item2) g.give(String(data.item2));

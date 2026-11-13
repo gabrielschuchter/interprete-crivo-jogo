@@ -26,6 +26,7 @@ import type { GameState, Look, ProfessionId, Reward, SaveAdapter, SkillDef, Stat
 import type { CaseFeedback, ClinicalCase } from './domain/clinical';
 import * as Story from './story';
 import { GEAR, RARITY_COLOR, RARITY_LABEL, rollDrop } from './domain/gear';
+import { DIFFICULTIES, DIFFICULTY_IDS, coinsLostOnDeath, difficultyDef, scaleCoins, scaleHeal, scalePrice, type DifficultyDef, type DifficultyId } from './domain/difficulty';
 import { buildWeapon, WEAPON_LOOKS } from './entities/weapons';
 
 /** Piso e laços gravados de cada região. */
@@ -247,6 +248,30 @@ export class Game {
     return D.computeStats(this.state!);
   }
 
+  // ---------- dificuldade ----------
+  /** Tabela em vigor: a do registro em jogo, a da preferência fora dele. */
+  get diff(): DifficultyDef {
+    return difficultyDef(this.state?.difficulty ?? this.settings.difficulty);
+  }
+  get difficultyId(): DifficultyId {
+    return this.diff.id;
+  }
+  /** Troca a dificuldade da partida em curso (se houver) e a das próximas; as criaturas já na cena mantêm o que têm até o próximo descanso. */
+  setDifficulty(id: DifficultyId): void {
+    if (!DIFFICULTY_IDS.includes(id)) return;
+    this.settings.difficulty = id;
+    storeSettings(this.settings);
+    const s = this.state;
+    if (!s || s.difficulty === id) return;
+    s.difficulty = id;
+    this.ui.toast(`${DIFFICULTIES[id].name}. ${DIFFICULTIES[id].line} Vale a partir dos próximos encontros.`, 'Dificuldade');
+    this.save();
+  }
+  /** Moedas ajustadas pela dificuldade e pelo bônus de habilidades e equipamentos. */
+  coinGain(n: number): number {
+    return scaleCoins(n, this.diff, this.stats.coinBonus);
+  }
+
   // ---------- configurações ----------
   applySettings(): void {
     const s = this.settings;
@@ -374,10 +399,12 @@ export class Game {
     this.crivo.yaw = 0.2;
   }
 
-  async startNew(name: string, prof: ProfessionId, look: Look): Promise<void> {
+  async startNew(name: string, prof: ProfessionId, look: Look, difficulty: DifficultyId = this.settings.difficulty): Promise<void> {
     if (this.busy) return;
     this.busy = true;
-    this.state = D.newGame(name, prof, look);
+    this.settings.difficulty = difficulty;
+    storeSettings(this.settings);
+    this.state = D.newGame(name, prof, look, difficulty);
     this.tracked = null;
     this.mode = 'transition';
     await this.ui.fade(true);
@@ -397,10 +424,12 @@ export class Game {
   }
 
   async continueGame(): Promise<void> {
-    const s = D.deserialize(this.adapter.load());
+    const raw = this.adapter.load();
+    const s = D.deserialize(raw, this.settings.difficulty);
     if (!s || this.busy) return;
     this.busy = true;
     this.state = s;
+    const legacy = !D.hasDifficulty(raw);
     this.mode = 'transition';
     await this.ui.fade(true);
     this.ui.closeAll();
@@ -413,6 +442,10 @@ export class Game {
     await this.ui.fade(false);
     this.busy = false;
     this.ui.regionTitle(this.region.name, this.region.subtitle);
+    if (legacy) {
+      this.ui.toast(`Este registro é anterior aos níveis de dificuldade. Ele segue em ${DIFFICULTIES[s.difficulty].name}; a troca fica em Configurações.`, 'Dificuldade', 10);
+      this.save();
+    }
   }
 
   async toTitle(): Promise<void> {
@@ -586,7 +619,7 @@ export class Game {
   spawnEnemy(kind: EnemyKind, x: number, z: number, group: string, y?: number): Enemy {
     const r = this.region;
     const gy = y ?? groundAt(r, x, z, 50) ?? 0;
-    const e = new Enemy(kind, group, x, gy, z);
+    const e = new Enemy(kind, group, x, gy, z, 1, this.diff);
     e.onDeath = () => this.enemyDied(e);
     this.engine.scene.add(e.root);
     this.enemies.push(e);
@@ -849,12 +882,12 @@ export class Game {
   reward(r: Reward & { talk?: boolean }): boolean {
     const s = this.state!;
     const st = this.stats;
-    const xp = Math.round((r.xp ?? 0) * (r.talk && s.skills.includes('pergunta_aberta') ? 1.3 : 1));
-    const coins = Math.round((r.coins ?? 0) * (1 + st.coinBonus));
-    const res = D.grantReward(s, { ...r, xp, coins });
+    const raw = Math.round((r.xp ?? 0) * (r.talk && s.skills.includes('pergunta_aberta') ? 1.3 : 1));
+    const coins = this.coinGain(r.coins ?? 0);
+    const res = D.grantReward(s, { ...r, xp: raw, coins });
     if (!res.granted) return false;
     const parts: string[] = [];
-    if (xp) parts.push(`+${xp} de experiência`);
+    if (res.xp) parts.push(`+${res.xp} de experiência`);
     if (coins) parts.push(`+${coins} moedas`);
     if (r.crivoPoints) parts.push(`+${r.crivoPoints} ponto do Crivo`);
     if (parts.length) this.ui.toast(parts.join(' · '));
@@ -863,7 +896,7 @@ export class Game {
     return true;
   }
   private gainXp(n: number): void {
-    if (D.addXp(this.state!, n).leveled) this.levelUp();
+    if (D.gainXp(this.state!, n).leveled) this.levelUp();
   }
   private levelUp(): void {
     const s = this.state!;
@@ -973,7 +1006,7 @@ export class Game {
         return false;
       }
       D.removeItem(s, id);
-      s.hp = Math.min(max, s.hp + 45);
+      s.hp = Math.min(max, s.hp + scaleHeal(45, this.diff));
       this.audio.sfx('curar');
       if (this.player) this.burst(this.player.pos.clone().setY(this.player.pos.y + 1.1), 0x9fe0c0, 10, 1.2);
       return true;
@@ -986,7 +1019,7 @@ export class Game {
       }
       D.removeItem(s, id);
       if (id === 'limao_lind') {
-        s.hp = Math.min(max, s.hp + 30);
+        s.hp = Math.min(max, s.hp + scaleHeal(30, this.diff));
         if (this.player) this.player.vigor = this.stats.maxVigor;
       } else this.abilityCd = 0;
       this.audio.sfx('curar');
@@ -1032,7 +1065,8 @@ export class Game {
   }
   priceOf(id: string): number {
     const base = ITEMS[id]?.price ?? 0;
-    return this.state!.flags.includes('desconto_dalva') ? Math.round(base * 0.8) : base;
+    const price = scalePrice(base, this.diff);
+    return this.state!.flags.includes('desconto_dalva') ? Math.round(price * 0.8) : price;
   }
   buyItem(id: string): boolean {
     if (!D.buy(this.state!, id, this.priceOf(id))) {
@@ -1266,9 +1300,9 @@ export class Game {
     if (e.cfg.boss) this.engine.flash = 0.6;
     this.gainXp(e.cfg.xp);
     const [a, b] = e.cfg.coins;
-    s.coins += Math.round((a + Math.random() * (b - a)) * (1 + this.stats.coinBonus));
+    s.coins += this.coinGain(a + Math.random() * (b - a));
     if (D.unlockCodex(s, e.kind)) this.ui.toast(`Novo verbete no códice: ${ENEMY_CFG[e.kind].name}`);
-    const drop = rollDrop(e.kind, (id) => D.countItem(s, id) > 0 || this.props.some((p) => p.def.data?.gear === id && this.propVisible(p)), Math.random(), Math.random());
+    const drop = rollDrop(e.kind, (id) => D.countItem(s, id) > 0 || this.props.some((p) => p.def.data?.gear === id && this.propVisible(p)), Math.random(), Math.random(), this.diff.drops);
     if (drop) this.spawnDrop(drop, e.pos.x, e.pos.y + 1.2 * e.cfg.scale, e.pos.z);
     if (this.player?.lockTarget === e) this.player.lockTarget = null;
     if (!this.enemies.some((o) => o !== e && o.alive && o.group === e.group)) {
@@ -1327,6 +1361,9 @@ export class Game {
     this.mode = 'transition';
     await this.ui.fade(true);
     s.hp = this.stats.maxHp;
+    // a Névoa fica com parte das moedas; o que sobra segue com a pessoa
+    const lost = coinsLostOnDeath(s.coins, this.diff);
+    s.coins -= lost;
     const id = s.region as RegionId;
     if (id !== this.region.id) await this.loadRegion(id, new Set(s.flags));
     else this.despawn();
@@ -1335,6 +1372,7 @@ export class Game {
     this.enterPlay();
     await this.ui.fade(false);
     this.busy = false;
+    if (lost > 0) this.ui.toast(`A Névoa ficou com ${lost} ${lost === 1 ? 'moeda' : 'moedas'}.`, 'Derrota');
   }
 
   rest(): void {
@@ -1448,7 +1486,7 @@ export class Game {
     if (d.kind === 'pickup' && !Story.CUSTOM_PICKUPS.has(d.id)) {
       D.markCollected(s, d.id);
       if (data.item === 'moedas') {
-        const n = Math.round(Number(data.qty ?? 5) * (1 + this.stats.coinBonus));
+        const n = this.coinGain(Number(data.qty ?? 5));
         s.coins += n;
         this.audio.sfx('moeda');
         this.ui.toast(`+${n} moedas`);
