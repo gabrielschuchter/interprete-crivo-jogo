@@ -1,5 +1,6 @@
 import type { Quality } from './engine';
 import { DEFAULT_KEYS, type ActionName } from './input';
+import { DEFAULT_DIFFICULTY, isDifficulty, type DifficultyId } from '../domain/difficulty';
 
 export interface Settings {
   quality: Quality;
@@ -22,7 +23,8 @@ export interface Settings {
   reduceMotion: boolean;
   highContrast: boolean;
   textScale: number;
-  difficulty: 'historia' | 'padrao';
+  /** dificuldade das novas partidas; a de uma partida em curso mora no registro (GameState.difficulty) */
+  difficulty: DifficultyId;
   fov: number;
   hud: boolean;
   /** tamanho dos botões de toque */
@@ -59,7 +61,7 @@ export const DEFAULT_SETTINGS: Settings = {
   reduceMotion: false,
   highContrast: false,
   textScale: 1,
-  difficulty: 'padrao',
+  difficulty: DEFAULT_DIFFICULTY,
   fov: 58,
   hud: true,
   touchScale: 1,
@@ -87,7 +89,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     if (typeof d[k] === 'boolean') (s as unknown as Record<string, unknown>)[k] = d[k];
   };
   if (QUALITIES.includes(d.quality as string)) s.quality = d.quality as Quality;
-  if (d.difficulty === 'historia' || d.difficulty === 'padrao') s.difficulty = d.difficulty;
+  if (isDifficulty(d.difficulty)) s.difficulty = d.difficulty;
   if (d.aparencia === 'ps2' || d.aparencia === 'limpa') s.aparencia = d.aparencia;
   num('volGeral', 0, 1); num('volMusica', 0, 1); num('volEfeitos', 0, 1); num('volAmbiente', 0, 1);
   num('sens', 0.3, 2.5); num('sensY', 0.4, 2); num('camDist', 3.2, 6.5); num('hudScale', 0.8, 1.4); num('textScale', 0.9, 1.6); num('fov', 48, 75); num('touchScale', 0.8, 1.4);

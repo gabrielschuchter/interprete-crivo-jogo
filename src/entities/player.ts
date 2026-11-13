@@ -125,6 +125,8 @@ export class Player {
   private deflectT = 0;
   private sinceDodge = 9;
   private dodgeAge = 9;
+  /** duração da janela de esquiva perfeita da esquiva em curso (vem dos atributos, que seguem a dificuldade) */
+  private perfectSec = 0.22;
   private dodgeBack = false;
   private perfectUsed = false;
   private plunge = false;
@@ -308,7 +310,7 @@ export class Player {
   }
   /** a esquiva está no começo (até 0,22 s): um golpe que passa por ela conta como esquiva perfeita, uma vez */
   get perfectWindow(): boolean {
-    return this.dodging && this.dodgeAge < 0.22 && !this.perfectUsed;
+    return this.dodging && this.dodgeAge < this.perfectSec && !this.perfectUsed;
   }
   perfectDodge(): void {
     this.perfectUsed = true;
@@ -485,6 +487,7 @@ export class Player {
       this.heavyHold = -1;
       this.dodgeT = 0.42;
       this.dodgeAge = 0;
+      this.perfectSec = stats.perfectWindow;
       this.perfectUsed = false;
       this.iframes = Math.max(this.iframes, stats.dodgeIframes);
       this.vigor = Math.max(0, this.vigor - stats.dodgeCost);
@@ -534,7 +537,7 @@ export class Player {
       this.charging = true;
       this.chargeLvl = 0;
       // as primeiras 0,2 s da postura desviam um golpe corpo a corpo (golpe resoluto)
-      this.deflectT = 0.2;
+      this.deflectT = stats.deflectWindow;
       this.aim(wish);
     }
     if (this.charging) {
