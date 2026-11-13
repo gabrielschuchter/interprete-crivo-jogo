@@ -56,6 +56,6 @@ export const ENV: Record<string, EnvPreset> = {
     hemiSky: 0x6478b0, hemiGround: 0x1c1420, hemiIntensity: 0.6,
     sun: 0xa8baf0, sunIntensity: 1.4, sunDir: [-0.4, 0.7, -0.45],
     rain: 0.6, exposure: 1.05, bloom: 0.7,
-    tintShadow: [0.93, 0.97, 1.12], tintLight: [1.05, 1.0, 0.94], envIntensity: 0.8, moon: true,
+    tintShadow: [0.93, 0.97, 1.12], tintLight: [1.05, 1.0, 0.94], envIntensity: 0.8, moon: true, moonEye: true,
   },
 };

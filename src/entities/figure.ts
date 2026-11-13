@@ -38,6 +38,8 @@ export interface FigureOpts {
   modelAlt?: string;
   /** cor multiplicada sobre a textura de pele / cabelo do modelo externo */
   tintSkin?: number;
+  /** textura de pele avulsa (tons do protagonista, `textures/ps2/pele/`): substitui a pele do modelo externo */
+  skinMap?: string;
   tintHair?: number;
   tintCoat?: number;
   /** chave da persona (postura, fala, ofício); padrão: a chave do modelo */
@@ -49,7 +51,8 @@ export type Emblem = 'caderno' | 'estetoscopio' | 'relogio' | 'oculos' | 'fita';
 export type Action = 'none' | 'attack1' | 'attack2' | 'heavy' | 'dodge' | 'hit' | 'die' | 'interact' | 'cast' | 'talk' | 'sit' | 'shrug' | 'think' | 'nod' | 'wave' | 'point' | 'cheer' | 'bow' | 'listen' | Interaction;
 const INTERACTIONS = new Set<string>(['pickup', 'examine', 'pull', 'open', 'push', 'reach']);
 
-export const SKINS = [0xf1cfb4, 0xd9a47c, 0xb07a52, 0x7a4f34, 0x4f3222];
+// tons de pele: média do rosto das texturas de textures/ps2/pele (tools/chars/peles.py), do mais claro ao mais escuro
+export const SKINS = [0xd1a487, 0xa48066, 0x7b5a47, 0x523525, 0x402a1d];
 export const HAIRS = [0x1a1210, 0x3d2416, 0x6b3f22, 0x8a8078, 0xb9482e, 0xd8c8a8];
 
 const ACTION_TIME: Record<Action, number> = {
@@ -96,6 +99,19 @@ interface ModelManifest { [key: string]: string }
 let manifest: Promise<ModelManifest> | null = null;
 
 /** Carrega public/models/<arquivo>.glb listado em manifest.json. Sem manifesto ou sem a chave, devolve null e o corpo procedural fica. */
+const skinMaps = new Map<string, THREE.Texture>();
+/** Textura de pele avulsa, com cache: mesma UV da proxy da forja, orientação de glTF (sem flipY). */
+function skinMap(path: string): THREE.Texture {
+  let t = skinMaps.get(path);
+  if (!t) {
+    t = new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}${path}`);
+    t.flipY = false;
+    t.colorSpace = THREE.SRGBColorSpace;
+    skinMaps.set(path, t);
+  }
+  return t;
+}
+
 export function loadExternalModel(key: string): Promise<GLTF | null> {
   manifest ??= fetch(`${import.meta.env.BASE_URL}models/manifest.json`).then((r) => (r.ok ? (r.json() as Promise<ModelManifest>) : {})).catch(() => ({}));
   return manifest.then((mf) => (mf[key] ? loadGltf(`models/${mf[key]}`) : null));
@@ -542,7 +558,13 @@ export class Figure {
       const m = (me.material as THREE.MeshStandardMaterial).clone();
       me.material = m;
       const n = m.name.toLowerCase();
-      if (o.tintSkin !== undefined && /body|skin/.test(n)) m.color.set(o.tintSkin);
+      if (o.skinMap && /^human\.body$/.test(n)) {
+        const t = skinMap(o.skinMap);
+        if (m.map) { t.wrapS = m.map.wrapS; t.wrapT = m.map.wrapT; t.magFilter = m.map.magFilter; t.minFilter = m.map.minFilter; t.anisotropy = m.map.anisotropy; }
+        m.map = t;
+        m.color.set(0xffffff);
+        m.needsUpdate = true;
+      } else if (o.tintSkin !== undefined && /body|skin/.test(n)) m.color.set(o.tintSkin);
       else if (o.tintHair !== undefined && /hair|bob0|braid|bun|short0|long0|afro|ponytail|eyebrow/.test(n)) m.color.set(o.tintHair);
       else if (o.tintCoat !== undefined && /roupa_ps2/.test(n)) m.color.set(0xffffff).lerp(_tc.set(o.tintCoat), 0.45);
       // elenco PS2: o atlas já tem a paleta (vinho, couro, bronze); a cor escolhida tinge pela metade

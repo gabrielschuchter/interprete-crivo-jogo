@@ -34,6 +34,11 @@ R = json.loads(open(argv[0]).read()) if argv[0].endswith('.json') and not argv[0
 if 'elenco' in R:  # arquivo de elenco: escolhe a receita pelo nome
     R = R['elenco'][argv[2]]
 OUT = argv[1]
+# variações sem nova receita (ex.: tons de pele dos protagonistas): FORJA_EXTRA='{"corpo": {"pele": "..."}, "pele_tinta": "..."}'
+def _fundir(a, b):
+    for k, v in b.items(): a[k] = _fundir(dict(a.get(k) or {}), v) if isinstance(v, dict) else v
+    return a
+if os.environ.get('FORJA_EXTRA'): R = _fundir(R, json.loads(os.environ['FORJA_EXTRA']))
 CMU = os.environ.get('CMU_MOCAP_DIR', '/home/user/cmu-mocap/data')
 log = lambda *a: print('[forja]', *a, flush=True)
 
@@ -450,6 +455,10 @@ for img in node_images(skin_mat)[:1]:
     flip = paint.ps2_grade(flip, sat=R.get('pele_sat', 0.82), contrast=1.04, levels=R.get('niveis', 31))
     set_np(img, flip[::-1].copy())
     log('pele', img.name, img.size[:])
+    if os.environ.get('FORJA_PELE_OUT'):  # textura de pele avulsa, para trocar no jogo sem outro GLB
+        from PIL import Image
+        Image.fromarray((np.clip(flip[..., :3], 0, 1) * 255).astype(np.uint8)).save(os.environ['FORJA_PELE_OUT'])
+        log('pele avulsa em', os.environ['FORJA_PELE_OUT'])
 for img in node_images(eyeso.data.materials[0] if eyeso.data.materials else None):
     if img.size[0] > 128: img.scale(128, 128)
     # olho legível na distância de jogo: esclera menos branca, íris e pupila mais escuras e contrastadas

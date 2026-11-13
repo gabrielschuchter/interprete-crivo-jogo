@@ -59,6 +59,7 @@ try {
   await p.click('#menu [data-a=new]');
   await waitMode('create');
   await p.click('#create [data-prof=enfermagem]');
+  await p.click('#create [data-skin="3"]');
   await p.fill('#create input', 'Teste');
   await p.click('#create [data-a=go]');
   await waitMode('play');
@@ -69,6 +70,8 @@ try {
   const exprDe = (alvo) => { let d = null; alvo.traverse((o) => { if (o.morphTargetDictionary && o.material && /body/i.test(o.material.name)) d = Object.keys(o.morphTargetDictionary); }); return d || []; };
   const exprOk = (l) => EXPR.every((n) => l.includes(n));
   ok(exprOk(await E(`(${exprDe})(__game.player.fig.root)`)), 'o protagonista tem as seis expressões faciais no corpo');
+  const pele = await E(() => new Promise((res) => { const t0 = performance.now(); const f = () => { let src = '', w = 0; __game.player.fig.root.traverse((o) => { if (o.material && /^human\.body$/i.test(o.material.name) && o.material.map) { src = o.material.map.image?.src ?? ''; w = o.material.map.image?.width ?? 0; } }); if ((src && w) || performance.now() - t0 > 8000) res({ src, w }); else setTimeout(f, 100); }; f(); }));
+  ok(/pele\/fem_3\.webp/.test(pele.src) && pele.w > 0, `o tom de pele escolhido (escura) vira a textura do corpo (${pele.src.split('/').pop()}, ${pele.w} px)`);
 
   console.log('Moradores');
   for (const [reg, ids] of Object.entries(process.env.SO === 'inimigos' ? {} : MORADORES)) {

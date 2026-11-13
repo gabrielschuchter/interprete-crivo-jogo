@@ -684,7 +684,7 @@ export class Game {
   private talkingNpc: Npc | null = null;
   private cancelled = false;
   private scriptLocked = false;
-  /** Esc, B ou o botão de sair: encerra a conversa ou o exame em curso. Cenas essenciais (abertura) não cancelam. */
+  /** Esc, B ou o botão de sair: encerra a conversa ou o exame em curso (ver say). Cenas essenciais (abertura) não cancelam. */
   cancelScript(): void {
     if (this.mode !== 'dialogue' || this.scriptLocked) return;
     this.cancelled = true;
@@ -722,8 +722,10 @@ export class Game {
     this.checkpoint();
   }
   /** who: id de NPC, ou '' para narração */
+  /** Depois de Esc ou Sair as falas restantes são puladas, não interrompidas: o roteiro segue até o fim e
+   *  grava o que já tinha decidido (passo de missão, recompensa). Só uma escolha ainda por fazer encerra o roteiro. */
   async say(who: string, text: string): Promise<void> {
-    if (this.cancelled) throw SCRIPT_CANCEL;
+    if (this.cancelled) return;
     const def = NPCS[who];
     // quem fala gesticula e mexe a boca; os outros na cena escutam e acenam no fim da frase
     for (const n of this.npcs) n.speaking = n.def.id === who;
@@ -736,7 +738,6 @@ export class Game {
       }
       this.player?.fig.nod();
     }
-    if (this.cancelled) throw SCRIPT_CANCEL;
   }
   async choose(options: Array<{ text: string; tag?: string }>, pre?: number): Promise<number> {
     if (this.cancelled) throw SCRIPT_CANCEL;
