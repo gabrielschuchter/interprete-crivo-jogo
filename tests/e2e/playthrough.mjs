@@ -94,8 +94,15 @@ try {
   ok(await E(() => __game.region.platforms.some((x) => x.tag === 'ponte')), 'o mecanismo do passo estende a ponte');
   await E(() => __game.player.teleport(41, 0, 0, 1.57));
   await fight('margem');
-  await E(async () => { await T.use('marco', 0, -1.2, 0); await T.use('caixa_dalva'); await T.use('pagina_4'); });
-  ok((await step('ponte')) === 6, 'o marco aceso fecha a travessia');
+  // quem sai da narração com Esc logo na primeira fala não pode deixar a missão presa no marco
+  await E(async () => {
+    const g = __game; const say = g.say;
+    g.say = async function (w, t) { g.say = say; this.cancelScript(); return say.call(this, w, t); };
+    try { await T.use('marco', 0, -1.2, 0); } finally { g.say = say; }
+  });
+  ok((await E(() => __game.state.flags.includes('ponte_aberta'))) && (await step('ponte')) === 6, 'o marco aceso fecha a travessia mesmo com a narração encerrada no Esc');
+  ok((await E(() => __game.mode)) === 'play', 'sair da narração do marco devolve o controle');
+  await E(async () => { await T.use('caixa_dalva'); await T.use('pagina_4'); });
 
   console.log('Pátio, paralelas e caso simulado');
   await travel('atrio', 'de_bosque');
