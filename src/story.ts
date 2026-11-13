@@ -280,6 +280,7 @@ async function heloisa(g: G): Promise<void> {
 async function iris(g: G): Promise<void> {
   const s = g.state!;
   const I = (t: string) => g.say('iris', t);
+  if (g.step('ponte') === 5 && s.flags.includes('ponte_aberta')) D.advanceQuest(s, 'ponte', 6);
   const st = g.step('ponte');
   if (st === 0) {
     await I('Duas vezes por dia, ida e volta, onze anos. Anteontem a ponte recolheu no meio da minha travessia. Voltei de costas, sem tirar o olho dela.');
@@ -640,7 +641,11 @@ export async function useProp(g: G, p: PropPlacement): Promise<void> {
   }
 
   if (p.id === 'marco') {
-    if (s.flags.includes('ponte_aberta')) return void (await N('O marco arde baixo e constante. Dá para vê-lo do Pátio.'));
+    if (s.flags.includes('ponte_aberta')) {
+      // saves gravados antes da correção: o marco acendeu mas o passo ficou no 5
+      if (g.step('ponte') === 5) g.advance('ponte', 6);
+      return void (await N('O marco arde baixo e constante. Dá para vê-lo do Pátio.'));
+    }
     if (g.step('ponte') < 5 && !s.flags.includes('ponte_estendida')) return void (await N('Um marco de pedra com um pavio seco. Parece esperar alguma coisa.'));
     // quem atravessou sem a missão registrada não fica preso: ela é iniciada e posta em dia
     if (g.step('ponte') < 0) g.startQuest('ponte');
@@ -648,8 +653,8 @@ export async function useProp(g: G, p: PropPlacement): Promise<void> {
     g.flag('ponte_aberta');
     g.region.actions.marco?.();
     g.audio.sfx('sino');
-    await N('O pavio pega de primeira. A luz sobe pelo marco, e do outro lado do abismo a névoa recua alguns passos, como quem reconhece que perdeu a vez.');
     g.advance('ponte', 6);
+    await N('O pavio pega de primeira. A luz sobe pelo marco, e do outro lado do abismo a névoa recua alguns passos, como quem reconhece que perdeu a vez.');
     return;
   }
 
