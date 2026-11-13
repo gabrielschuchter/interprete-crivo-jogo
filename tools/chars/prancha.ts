@@ -54,6 +54,9 @@ floor.rotation.x = -Math.PI / 2;
 floor.receiveShadow = true;
 s.add(floor);
 const info: Record<string, unknown> = {};
+// ?pele=textures/x.webp troca a textura do corpo (tons de pele avulsos, como no jogo)
+const peleTex = q.get('pele') ? new THREE.TextureLoader().load(q.get('pele')!) : null;
+if (peleTex) { peleTex.flipY = false; peleTex.colorSpace = THREE.SRGBColorSpace; }
 const loader = new GLTFLoader();
 loader.setMeshoptDecoder(MeshoptDecoder);
 loader.load(q.get('m') ?? 'models/personagens/vulto.glb', (g) => {
@@ -69,6 +72,8 @@ loader.load(q.get('m') ?? 'models/personagens/vulto.glb', (g) => {
     for (const mt of (Array.isArray(m.material) ? m.material : [m.material]) as THREE.MeshStandardMaterial[]) {
       mats.add(mt.name);
       if (q.get('esconde') && mt.name === q.get('esconde')) m.visible = false;
+      if (peleTex && /body/i.test(mt.name)) { mt.map = peleTex; mt.needsUpdate = true; }
+      if (q.get('tinta') && /body|skin/i.test(mt.name)) mt.color.set(Number('0x' + q.get('tinta')));
       if (q.get('marca') && mt.name === q.get('marca')) { mt.map = null; mt.color.set(0x00ff00); mt.emissive?.set(0x003300); }
       mt.transparent = false;
       mt.alphaTest = mt.alphaTest || 0;
