@@ -111,9 +111,11 @@ export const DROPS: Record<string, { chance: number; pool: string[]; first?: str
 };
 
 /** Sorteio puro: `r1` decide se cai algo, `r2` escolhe a peça. Peças já possuídas saem do sorteio. */
-export function rollDrop(kind: string, owned: (id: string) => boolean, r1: number, r2: number): string | null {
+export function rollDrop(kind: string, owned: (id: string) => boolean, r1: number, r2: number, chanceMult = 1): string | null {
   const t = DROPS[kind];
-  if (!t || r1 >= t.chance) return null;
+  // a dificuldade mexe na sorte das criaturas comuns; quem já tem queda garantida (chefes) continua garantindo
+  const chance = t && t.chance >= 1 ? 1 : t ? Math.min(1, t.chance * chanceMult) : 0;
+  if (!t || r1 >= chance) return null;
   // chefes entregam primeiro a peça que é deles; repetir a luta sorteia o resto
   if (t.first && GEAR[t.first] && !owned(t.first)) return t.first;
   const pool = t.pool.filter((id) => GEAR[id] && !owned(id));

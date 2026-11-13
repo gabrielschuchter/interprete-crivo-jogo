@@ -49,7 +49,11 @@ const fight = async (group, tries = 8) => {
       continue;
     }
     if (r.mortes || r.restam) console.log('   luta', JSON.stringify(r));
-    if (!r.mortes && !r.restam) return r;
+    if (!r.mortes && !r.restam) {
+      // como uma pessoa faria: recolhe a peça que caiu antes de seguir
+      await E(() => T.loot());
+      return r;
+    }
     if (r.mortes) {
       await p.waitForTimeout(200);
       await E(() => __game.respawn());
@@ -76,6 +80,7 @@ try {
   await waitMode('play');
   await E(fs.readFileSync(path.join(here, 'page-helpers.js'), 'utf8'));
   ok((await step('chegada')) === 0, 'a abertura inicia a chegada ao Pátio');
+  ok((await E(() => __game.state.difficulty)) === 'padrao', 'a partida nova nasce no Padrão, a dificuldade difícil');
 
   console.log('Pátio e Bosque');
   await E(async () => { await T.talk('heloisa'); await T.talk('iris'); });
@@ -146,9 +151,12 @@ try {
   ok((await step('vento')) === 'ok' && (await E(() => __game.state.inventory.lupa_contexto === 1)), 'duas versões do vento resolvida, lupa recebida');
   await E(async () => { for (const id of ['pagina_1', 'pagina_2', 'pagina_3']) await T.use(id); });
   const coins = await E(() => { const g = __game; g.state.coins = 100; g.buyItem('ponteira_latao'); return g.state.coins; });
-  ok(coins === 40, 'compra na banca com o desconto de Dalva (75 → 60)');
+  // Padrão: a banca cobra 20% a mais (75 → 90) e o desconto de Dalva tira 20% (→ 72)
+  ok(coins === 28, 'compra na banca com o preço do Padrão e o desconto de Dalva (75 → 90 → 72)');
 
   console.log('Arquivo');
+  // o jogo base é difícil: antes de cada seção, quem explorou gasta os pontos de habilidade e se equipa com o que tem
+  await E(() => T.preparar());
   await E(() => T.talk('anselmo'));
   ok(await E(() => __game.state.crivoSkills.includes('lupa')), 'Anselmo ensina a Lupa curiosa ao Crivo');
   await travel('arquivo', 'de_atrio');
@@ -165,6 +173,7 @@ try {
   ok((await step('arquivo')) === 4, 'a alavanca do registro original abre a sala');
   await E(async () => { __game.player.teleport(0, 0, -21, 3.14); await T.sim(2); });
   ok(await E(() => __game.enemies.some((e) => e.alive && e.group === 'eco')), 'o Eco aguarda na sala dos originais');
+  await E(() => T.preparar());
   await fight('eco');
   await E(async () => { await T.use('bau_lanterna', undefined, 0, 1.4); await T.use('pagina_5'); });
   ok(await E(() => __game.state.inventory.lanterna_transparencia === 1), 'a lanterna sai do baú dos originais');
@@ -184,7 +193,7 @@ try {
   await E(async () => { for (const id of ['obra_ebm', 'obra_chalmers', 'obra_greenhalgh', 'obra_gigerenzer', 'obra_ioannidis', 'obra_cochrane_br']) await T.use('obra_' + id, undefined, 1.4, 0); });
   ok(await E(() => __game.state.inventory.bussola_cochrane === 1), 'seis obras lidas: Bússola de Cochrane recebida');
   await E(() => { const g = __game; g.state.inventory.limao_lind = 1; g.state.hp = 40; g.useItem('limao_lind'); });
-  ok(await E(() => __game.state.hp === 70), 'o Limão de Lind recupera 30 de fôlego');
+  ok(await E(() => __game.state.hp === 67), 'o Limão de Lind recupera 27 de fôlego no Padrão (30 de base, 90%)');
   console.log('Controles e atalhos');
   await E(() => { const s = __game.state; s.inventory.caldo = 0; s.inventory.limao_lind = 1; s.hp = 40; });
   ok((await E(() => __game.quickItem())) === 'limao_lind', 'F usa o limão quando não há caldo');
@@ -196,6 +205,10 @@ try {
   await E(() => { __game.pauseGame(); });
   await p.locator('#pause [data-a=config]').click({ force: true, noWaitAfter: true });
   ok((await mode()) === 'book', 'Configurações abrem pela pausa');
+  await p.selectOption('#cfg-difficulty', 'rigor');
+  ok((await E(() => __game.state.difficulty)) === 'rigor' && (await E(() => JSON.parse(localStorage.getItem('interprete-rpg-config-v1')).difficulty)) === 'rigor', 'Configurações trocam a dificuldade da partida e da preferência');
+  await p.selectOption('#cfg-difficulty', 'padrao');
+  ok((await E(() => __game.state.difficulty)) === 'padrao', 'a dificuldade volta ao Padrão');
   await E(() => __game.closeOverlay());
   ok((await mode()) === 'pause', 'fechar Configurações volta à pausa');
   await E(() => __game.closeOverlay());
@@ -212,6 +225,7 @@ try {
   await waitMode('play');
   await E(fs.readFileSync(path.join(here, 'page-helpers.js'), 'utf8'));
   ok((await E(() => JSON.stringify(__game.state.quests))) === before, 'recarregar a página preserva o progresso');
+  ok((await E(() => __game.state.difficulty)) === 'padrao' && (await E(() => JSON.parse(localStorage.getItem('interprete-rpg-registro-v1')).difficulty)) === 'padrao', 'a dificuldade está no registro e volta ao carregar');
 
   console.log('Observatório e final');
   await travel('observatorio', 'de_atrio');
@@ -219,6 +233,7 @@ try {
   ok(await E(() => __game.state.collected.includes('visto:lua_obs')), 'a lua de olho único pode ser examinada no Observatório');
   await E(async () => { await T.use('pagina_6'); await T.use('braseiro_terraco', 0, 0, 1.3); await T.sim(1); });
   ok((await step('veredito')) === 3 && (await E(() => !__game.state.inventory.oleo_lamparina)), 'um braseiro aceso gasta o único frasco');
+  await E(() => T.preparar());
   await E(() => __game.player.teleport(0, 0, -12, 3.14));
   await fight('veredito', 8);
   await E(async () => { await T.sim(3); await T.use('bau_pingente', undefined, 0, 1.2); });

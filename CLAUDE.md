@@ -6,6 +6,8 @@ Documento completo da direção (identidade "Luz de estudo", leis visuais, palet
 
 Ler `DESIGN.md` antes de tocar em interface e `docs/game/DECISOES_TECNICAS.md` antes de tocar em arquitetura.
 
+Dificuldade: três níveis (História, Padrão, Rigor), todos os valores em `src/domain/difficulty.ts`, escolhidos na criação e em Configurações e gravados no registro (versão 3). O Padrão é o jogo difícil. Ler `docs/game/DIFICULDADE.md` antes de mexer em vida e dano de criaturas, XP, moedas, preços, curas ou janelas de desvio; `npm run e2e:dificuldade` mede mortes por nível.
+
 Comandos: `npm run dev`, `npm run build`, `npm run test`, `npm run e2e` (com o servidor de desenvolvimento no ar).
 
 Regras que não mudam sem autorização explícita do Gabriel: não tocar banco de produção, Clerk, RLS, domínio canônico, migrations nem os apps Estudar e Comunidade; não usar pessoa real como NPC; todo asset novo entra em `docs/game/REGISTRO_DE_ASSETS.md` com origem e licença; nenhum conteúdo clínico real, e todo caso é fictício e marcado como simulação; PBE não vira quiz nem pirâmide rígida de evidências.

@@ -6,6 +6,7 @@ import { resolveCircle } from '../world/region';
 import { getGltf, instanceSkinned, loadGltf } from '../core/assets';
 import { Rig, Spring, applyPose, approach, forceMixerWrite, measureGait, mix, smooth, span, type GaitInfo, type Pose } from './motion';
 import { ESTILOS, RECITA, TONTO, URRO, type Estilo } from './estilos';
+import { scaleEnemyHp, type DifficultyDef } from '../domain/difficulty';
 
 /** Corpo de captura de movimento dos espectros maiores (MakeHuman + CMU, ver REGISTRO_DE_ASSETS). */
 const BODY_PATH = 'models/personagens/vulto.glb';
@@ -128,6 +129,10 @@ export class Enemy {
   private castCd = 4;
   private ringCd = 9;
   private reciteCd = 14;
+  /** ajustes de dificuldade: intervalo entre ataques à distância, folga depois do golpe e vida em que o mini-chefe muda de fase */
+  private gap = 1;
+  private cool = 1;
+  private phaseAt = 0.5;
   private poise = 0;
   private flash = 0;
   private summoned = 0;
@@ -175,9 +180,20 @@ export class Enemy {
     y: number,
     z: number,
     hpScale = 1,
+    diff?: DifficultyDef,
   ) {
     const c = (this.cfg = ENEMY_CFG[kind]);
-    this.maxHp = this.hp = Math.round(c.hp * hpScale);
+    this.maxHp = this.hp = diff ? scaleEnemyHp(c.hp * hpScale, !!c.boss, diff) : Math.round(c.hp * hpScale);
+    if (diff) {
+      // o aviso nunca cai abaixo de 0,3 s: abaixo disso deixa de ser leitura e vira sorte
+      this.cfg = { ...c, speed: c.speed * diff.foeSpeed, windup: Math.max(0.3, c.windup * diff.foeWindup), recover: c.recover * diff.foeRecover, sight: c.sight * diff.foeSight };
+      this.gap = diff.foeGap;
+      this.cool = diff.foeRecover;
+      this.phaseAt = diff.phaseAt;
+      this.castCd *= this.gap;
+      this.ringCd *= this.gap;
+      this.reciteCd *= this.gap;
+    }
     this.pos.set(x, y, z);
     this.home.copy(this.pos);
     smokeTex ??= smokeSprite(128, 3);
@@ -862,11 +878,11 @@ export class Enemy {
         const hpF = this.hp / this.maxHp;
         if (this.kind === 'veredito' && hpF < 0.36 && this.reciteCd <= 0) {
           this.set('recite');
-          this.reciteCd = 17;
+          this.reciteCd = 17 * this.gap;
           c.sfx('chefe');
           break;
         }
-        if (cfg.mini && this.phase === 1 && hpF <= 0.5) {
+        if (cfg.mini && this.phase === 1 && hpF <= this.phaseAt) {
           // segunda fase: mais rápido, antecipação mais curta, golpe mais pesado e o padrão próprio se intensifica.
           // Antes, um urro de 1,3 s: a mudança se vê no corpo antes de se sentir no dano
           this.phase = 2;
@@ -878,7 +894,7 @@ export class Enemy {
         }
         if (cfg.boss && this.ringCd <= 0 && dist < 9 && (this.kind === 'eco' || hpF < 0.7) && (!cfg.mini || cfg.special === 'invoca' || this.phase === 2)) {
           this.set('ring');
-          this.ringCd = this.kind === 'eco' ? 9 : cfg.mini ? (this.phase === 2 ? 7 : 10) : 8;
+          this.ringCd = (this.kind === 'eco' ? 9 : cfg.mini ? (this.phase === 2 ? 7 : 10) : 8) * this.gap;
           c.sfx('fiapoAviso');
           break;
         }
@@ -892,7 +908,7 @@ export class Enemy {
         }
         if (cfg.ranged && this.castCd <= 0 && dist > 4.5) {
           this.set('cast');
-          this.castCd = this.kind === 'veredito' ? 7 : cfg.special === 'coro' ? (this.phase === 2 ? 4.2 : 5.5) : 3.6;
+          this.castCd = (this.kind === 'veredito' ? 7 : cfg.special === 'coro' ? (this.phase === 2 ? 4.2 : 5.5) : 3.6) * this.gap;
           c.sfx('fiapoAviso');
           break;
         }
@@ -959,7 +975,7 @@ export class Enemy {
           }
           this.combo = 0;
           this.set('recover');
-          this.attackCd = 0.6;
+          this.attackCd = 0.6 * this.cool;
         }
         break;
       }

@@ -30,7 +30,8 @@ describe('recompensas idempotentes', () => {
     expect(D.grantReward(s, r).granted).toBe(true);
     expect(D.grantReward(s, r).granted).toBe(false);
     expect(s.coins).toBe(40);
-    expect(s.xp).toBe(50);
+    // a experiência de recompensa passa pelo ajuste de dificuldade (Padrão: 90%)
+    expect(s.xp).toBe(45);
     expect(s.inventory.caldo).toBe(3);
     expect(s.crivoPoints).toBe(1);
   });
@@ -104,10 +105,11 @@ describe('habilidades', () => {
 });
 
 describe('dano', () => {
-  it('nunca é menor que 1 e o modo história reduz', () => {
+  it('nunca é menor que 1 e cada dificuldade tem o seu fator', () => {
     const st = D.computeStats(novo());
-    expect(D.damageTaken(20, st, 'padrao')).toBe(20);
-    expect(D.damageTaken(20, st, 'historia')).toBe(9);
+    expect(D.damageTaken(20, st, 'padrao')).toBe(27);
+    expect(D.damageTaken(20, st, 'historia')).toBe(10);
+    expect(D.damageTaken(20, st, 'rigor')).toBe(34);
     expect(D.damageTaken(0.1, st, 'historia')).toBe(1);
   });
 });
