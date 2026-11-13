@@ -2,7 +2,7 @@
  * Interface em DOM e CSS, sobre o canvas. Usa os tokens do design system.
  * A interface só lê o estado e chama operações do jogo; nenhuma regra mora aqui.
  */
-import { glyphSvg, type Ps2Glyph } from './ps2-glyphs';
+import { glyphSvg, PS2_GLYPHS, type Ps2Glyph } from './ps2-glyphs';
 import type { Game } from '../game';
 import { ACTION_LABEL, keyLabel, padLabel, type ActionName } from '../core/input';
 import { CODEX, COAT_COLORS, CRIVO_SKILLS, ITEMS, PLAYER_SKILLS, PROFESSIONS, QUESTS, SHOP } from '../content/data';
@@ -123,7 +123,7 @@ export class UI {
       <div id="subtitle" class="hidden"></div>
       <div id="banner"><div class="label k"></div><div class="t"></div><div class="d"></div></div>
       <div id="region-title"><div class="sub"></div><div class="rule"></div><div class="name"></div></div>
-      <div id="dialogue" class="hidden" role="dialog" aria-label="Conversa" aria-live="polite"><div class="who"><span class="nm"></span><span class="label role"></span></div><div class="txt"></div><div class="choices"></div><div class="next"></div><button class="dx" type="button" aria-label="Sair da conversa">Sair</button></div>
+      <div id="dialogue" class="hidden" role="dialog" aria-label="Conversa" aria-live="polite"><div class="retrato" aria-hidden="true"></div><div class="who"><span class="nm"></span><span class="label role"></span></div><div class="txt"></div><div class="choices"></div><div class="next"></div><button class="dx" type="button" aria-label="Sair da conversa">Sair</button></div>
       <div id="splash" class="screen hidden"></div>
       <div id="menu" class="screen hidden" role="dialog" aria-modal="true" aria-label="Menu inicial"></div>
       <div id="create" class="screen hidden" role="dialog" aria-modal="true" aria-label="Criação de personagem"></div>
@@ -477,8 +477,17 @@ export class UI {
   get dialogueOpen(): boolean {
     return !this.$.dialogue.classList.contains('hidden');
   }
+  /** nome de quem fala agora (o retrato que chega atrasado só entra se a fala ainda é dele) */
+  speaker = '';
+  portrait(c: HTMLCanvasElement | null): void {
+    const box = this.$.dialogue.querySelector('.retrato') as HTMLElement;
+    this.$.dialogue.classList.toggle('com-retrato', !!c);
+    if (!c) return void box.replaceChildren();
+    if (box.firstChild !== c) box.replaceChildren(c);
+  }
   say(who: string, role: string, text: string): Promise<void> {
     const d = this.$.dialogue;
+    this.speaker = who;
     this.show('dialogue', true);
     (d.querySelector('.nm') as HTMLElement).textContent = who;
     (d.querySelector('.role') as HTMLElement).textContent = role;
@@ -1051,25 +1060,34 @@ export class UI {
     c.strokeStyle = ink;
     c.lineWidth = 2;
     c.strokeRect(14, 14, w - 28, h - 28);
-    c.font = '500 22px "IBM Plex Mono", monospace';
+    c.font = '500 18px "IBM Plex Mono", monospace';
     c.textAlign = 'center';
+    // glifos da direção PS2 no lugar dos losangos: passagem, gente a quem perguntar, ponto de interesse
+    const redraw = () => this.drawMap(cv);
+    c.imageSmoothingEnabled = false;
     for (const m of r.mapPoints) {
-      c.fillStyle = m.kind === 'portal' ? '#8c1535' : ink;
-      c.save();
-      c.translate(X(m.x), Z(m.z));
-      c.rotate(Math.PI / 4);
-      c.fillRect(-6, -6, 12, 12);
-      c.restore();
+      const gl = MAP_GLYPH[m.kind];
+      const col = m.kind === 'portal' ? '#8c1535' : ink;
+      const im = glyphImage(gl, col, redraw);
+      if (im) c.drawImage(im, Math.round(X(m.x) - 16), Math.round(Z(m.z) - 16), 32, 32);
+      else {
+        c.fillStyle = col;
+        c.fillRect(X(m.x) - 5, Z(m.z) - 5, 10, 10);
+      }
       c.fillStyle = ink;
-      c.fillText(m.label.toUpperCase(), X(m.x), Z(m.z) - 16);
+      c.fillText(m.label.toUpperCase(), X(m.x), Z(m.z) - 24);
     }
     const t = this.g.targetPos();
     if (t) {
-      c.strokeStyle = '#d62839';
-      c.lineWidth = 4;
-      c.beginPath();
-      c.arc(X(t.x), Z(t.z), 16, 0, 7);
-      c.stroke();
+      const im = glyphImage('alvo', '#d62839', redraw);
+      if (im) c.drawImage(im, Math.round(X(t.x) - 20), Math.round(Z(t.z) - 20), 40, 40);
+      else {
+        c.strokeStyle = '#d62839';
+        c.lineWidth = 4;
+        c.beginPath();
+        c.arc(X(t.x), Z(t.z), 16, 0, 7);
+        c.stroke();
+      }
     }
     const p = this.g.player;
     if (p) {
@@ -1162,3 +1180,19 @@ export class UI {
 }
 
 export { xpForLevel };
+
+const MAP_GLYPH: Record<'portal' | 'npc' | 'poi', Ps2Glyph> = { portal: 'descoberta', npc: 'pergunta', poi: 'evidencia' };
+const glyphCache = new Map<string, HTMLImageElement>();
+/** glifo como imagem para o canvas do mapa; devolve null até carregar e então chama onReady */
+function glyphImage(name: Ps2Glyph, color: string, onReady: () => void): HTMLImageElement | null {
+  const key = name + color;
+  let im = glyphCache.get(key);
+  if (!im) {
+    im = new Image();
+    im.onload = onReady;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 16 16" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="miter" stroke-linecap="square" shape-rendering="crispEdges" color="${color}">${PS2_GLYPHS[name]}</svg>`;
+    im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    glyphCache.set(key, im);
+  }
+  return im.complete && im.naturalWidth ? im : null;
+}

@@ -244,6 +244,7 @@ export function buildObservatorio(ctx: RegionCtx): BuiltRegion {
     { id: 'braseiro_terraco', kind: 'brazier', x: 4.2, z: -4.4, label: 'Examinar o braseiro do terraço', radius: 1.9, data: { group: 'braseiros' } },
     { id: 'pagina_6', kind: 'page', x: -4.6, z: 1.6, label: 'Recolher a página solta', radius: 1.6, data: { page: 'decisao' } },
     { id: 'inscricao_obs', kind: 'examine', x: 5.2, z: 6.6, label: 'Examinar a inscrição', radius: 1.8, data: { needsItem: 'lanterna_transparencia', dimText: 'Há algo gravado no parapeito, apagado pela chuva e pela penumbra. Com a luz certa, talvez desse para ler.', text: 'À luz da lanterna, a gravação aparece: "Quando ele recita, está indefeso por dentro. Interrompa-o nessa hora e cada golpe vale por mais."', xp: 20 } },
+    { id: 'lua_obs', kind: 'examine', x: -5.2, z: 6.6, label: 'Olhar a lua', radius: 1.8, data: { text: 'Daqui de cima a lua tem uma mancha escura bem no meio, redonda como uma pupila. Na Academia chamavam isso de olho único: uma lua que olha uma coisa de cada vez e, por isso, não se deixa convencer pelo céu inteiro. O Crivo fica parado, encarando. A lua parece conferir a mesma soma que ele.', xp: 10 } },
     { id: 'descanso_obs', kind: 'rest', x: -4.4, z: 9.4, label: 'Descansar e registrar o caminho', radius: 1.8 },
     { id: 'bau_pingente', kind: 'chest', x: 0, z: -36.4, label: 'Abrir o baú', radius: 1.9, data: { item: 'pingente_intervalo', ifFlag: 'veredito_vencido' } },
     { id: 'moedas_obs', kind: 'pickup', x: 4.8, z: 12.6, label: 'Pegar moedas', data: { item: 'moedas', qty: 20 } },

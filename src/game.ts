@@ -731,6 +731,7 @@ export class Game {
   async say(who: string, text: string): Promise<void> {
     if (this.cancelled) return;
     const def = NPCS[who];
+    this.ui.portrait(who ? this.portraitOf(who) : null);
     // quem fala gesticula e mexe a boca; os outros na cena escutam e acenam no fim da frase
     for (const n of this.npcs) n.speaking = n.def.id === who;
     try {
@@ -742,6 +743,26 @@ export class Game {
       }
       this.player?.fig.nod();
     }
+  }
+  /** busto do NPC que fala, tirado da própria figura 3D na primeira fala e guardado para as próximas */
+  portraits = new Map<string, HTMLCanvasElement | 'pendente'>();
+  private portraitOf(who: string): HTMLCanvasElement | null {
+    const got = this.portraits.get(who);
+    if (got instanceof HTMLCanvasElement) return got;
+    const n = this.npcs.find((x) => x.def.id === who);
+    if (!n || got === 'pendente') return null;
+    const f = n.fig;
+    const head = new THREE.Vector3();
+    const bone = f.headBone;
+    f.root.updateMatrixWorld(true);
+    if (bone) bone.getWorldPosition(head);
+    else head.set(n.pos.x, n.pos.y + f.height * 0.9, n.pos.z);
+    this.portraits.set(who, 'pendente');
+    this.engine.requestPortrait(f.root, head, f.root.rotation.y, (c) => {
+      this.portraits.set(who, c);
+      if (this.mode === 'dialogue' && this.ui.speaker === (NPCS[who]?.name ?? who)) this.ui.portrait(c);
+    });
+    return null;
   }
   async choose(options: Array<{ text: string; tag?: string }>, pre?: number): Promise<number> {
     if (this.cancelled) throw SCRIPT_CANCEL;
@@ -1547,6 +1568,8 @@ export class Game {
     this.focus.set(0, 0, 4);
   }
 
+  private interactBuffer = 0;
+  private interactHeld = 0;
   private updateWorld(dt: number, controls: boolean): void {
     const s = this.state!;
     const p = this.player!;
@@ -1765,8 +1788,24 @@ export class Game {
       // a cabeça vira para o que se pode usar ou para quem se pode ouvir
       const np = near?.npc?.pos ?? near?.prop?.pos;
       p.lookHint = np ? this.lookHint.set(np.x, np.y + (near?.npc ? near.npc.fig.height * 0.9 : 0.6), np.z) : null;
-      if (near && !p.fig.busy && inp.took('interagir')) this.interact(near);
-    } else this.ui.prompt(null);
+      // o toque em Interagir fica guardado por um instante: apertar no fim de um golpe ou de um tranco não se perde
+      if (inp.took('interagir')) {
+        this.interactBuffer = 0.35;
+        this.interactHeld = 0;
+      }
+      // o prazo só corre com o personagem livre: um golpe longo não come o toque
+      if (this.interactBuffer > 0) {
+        if (p.fig.busy) this.interactHeld += dt;
+        else if (near) {
+          this.interactBuffer = 0;
+          this.interact(near);
+        } else this.interactBuffer -= dt;
+        if (this.interactHeld > 1.5) this.interactBuffer = 0;
+      } else this.interactHeld = 0;
+    } else {
+      this.ui.prompt(null);
+      this.interactBuffer = 0;
+    }
 
     // marcador de objetivo
     const tgt = this.secret?.pos ?? this.targetPos();
