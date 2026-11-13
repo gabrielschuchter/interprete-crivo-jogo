@@ -129,20 +129,24 @@ try {
   await E(() => __game.closeOverlay());
   await E(() => __game.closeOverlay());
   await until(() => __game.mode === 'play');
+  // quadros avançados à mão também aqui: no WebGL por software um quadro do laço pode passar de 300 ms,
+  // e o Start solto só vira borda nova depois que o jogo lê o controle com o botão em repouso
+  const frame = () => E(() => { __game.tick(0.016); __game.input.endFrame(); });
   await E(() => { __pad.connected = false; });
-  await p.waitForTimeout(400);
+  await frame();
   await E(() => { __pad.buttons[9] = { pressed: true, value: 1 }; __pad.connected = true; });
-  await p.waitForTimeout(700);
+  await frame();
+  await frame();
   ok((await mode()) === 'play', 'reconectar com Start apertado não dispara a pausa');
   await E(() => { __pad.buttons[9] = { pressed: false, value: 0 }; });
-  await p.waitForTimeout(300);
+  await frame();
   await E(() => { __pad.axes = [0.12, 0.1, 0, 0]; });
-  await p.waitForTimeout(900);
+  await frame();
   ok(await E(() => __game.input.padMove.x === 0 && __game.input.padMove.y === 0), 'folga do analógico dentro da zona morta não move');
   await E(() => { __pad.axes = [0, 0, 0.9, 0]; });
-  await until(() => __game.input.padLook.x > 0.8, undefined, 8000);
-  ok(await E(() => __game.input.usingPad && __game.input.padLook.x > 0.8), 'analógico direito também marca o controle como entrada ativa');
+  ok(await E(() => { __game.tick(0.016); const r = __game.input.usingPad && __game.input.padLook.x > 0.8; __game.input.endFrame(); return r; }), 'analógico direito também marca o controle como entrada ativa');
   await E(() => { __pad.axes = [0, 0, 0, 0]; });
+  await frame();
   await press(9);
   ok(await waitMode('pause', 10000), 'Start pausa');
   await press(1);

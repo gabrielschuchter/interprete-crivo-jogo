@@ -224,7 +224,7 @@ export function buildObservatorio(ctx: RegionCtx): BuiltRegion {
   r.spawns = { de_atrio: { x: 0, z: 12.4, yaw: Math.PI } };
   r.npcs = [
     { id: 'severino', x: 0.5, z: 10.0, yaw: Math.PI },
-    { id: 'rosario', x: -7.0, z: 5.5, yaw: 2.2 },
+    { id: 'rosario', x: -7.8, z: 3.6, yaw: 2.2 }, // fora do raio do 'Olhar a lua' (-5,2; 6,6)
     { id: 'celeste', x: 8.6, z: 1.2, yaw: -2.0 },
     { id: 'inacio', x: -1.0, z: 6.0, yaw: Math.PI },
   ];
