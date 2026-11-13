@@ -3,3 +3,4 @@ dist
 tests/e2e/out
 *.log
 tools/chars/__pycache__/
+tools/pipeline/.lod-orig/

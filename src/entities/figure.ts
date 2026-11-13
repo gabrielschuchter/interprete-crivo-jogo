@@ -117,11 +117,21 @@ export function loadExternalModel(key: string): Promise<GLTF | null> {
   return manifest.then((mf) => (mf[key] ? loadGltf(`models/${mf[key]}`) : null));
 }
 
-/** Pré-carrega os protagonistas (tela de abertura). Moradores e inimigos baixam com a região em que aparecem. */
-export async function preloadModels(): Promise<void> {
+/** Chave do corpo do protagonista no manifesto: player_<fem|masc>_<corte> (mesma regra do Player). */
+export function playerModelKey(look: { hair: number; body?: 'fem' | 'masc' }): string {
+  const corte = (['curto', 'coque', 'longo', 'capuz'] as const)[Math.floor(look.hair / HAIRS.length) % 4] ?? 'curto';
+  return look.body ? `player_${look.body}_${corte}` : 'player_' + corte;
+}
+
+/**
+ * Pré-carrega protagonistas. Com `keys`, só esses (o corpo padrão da criação e o do jogo salvo, antes do menu);
+ * sem, todos os player_* (em segundo plano, depois do menu). Moradores e inimigos baixam com a região.
+ */
+export async function preloadModels(keys?: readonly string[]): Promise<void> {
   manifest ??= fetch(`${import.meta.env.BASE_URL}models/manifest.json`).then((r) => (r.ok ? (r.json() as Promise<ModelManifest>) : {})).catch(() => ({}));
   const mf = await manifest;
-  await Promise.all(Object.keys(mf).filter((k) => k.startsWith('player_')).map((k) => loadExternalModel(k)));
+  const list = keys ?? Object.keys(mf).filter((k) => k.startsWith('player_'));
+  await Promise.all(list.map((k) => loadExternalModel(k)));
 }
 
 /** Clipes de captura de movimento por ação. Ações sem clipe próprio usam o vizinho mais próximo. */
