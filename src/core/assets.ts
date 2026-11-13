@@ -196,6 +196,13 @@ function tex(file: string, color: boolean, repeat: number): THREE.Texture {
   return t;
 }
 
+/** Textura da direção PS2 (public/textures/ps2): PNG indexado pequeno, filtro linear, sem anisotropia. */
+export function ps2Tex(name: string, repeat: number): THREE.Texture {
+  const t = tex(`ps2/${name}.png`, true, repeat);
+  t.anisotropy = 1;
+  return t;
+}
+
 export interface PbrSet {
   map: THREE.Texture;
   normalMap: THREE.Texture;

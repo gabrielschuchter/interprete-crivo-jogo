@@ -140,7 +140,7 @@ export class Game {
   errors: string[] = [];
 
   constructor(canvas: HTMLCanvasElement, public ui: UI) {
-    this.engine = new Engine(canvas);
+    this.engine = new Engine(canvas, this.settings.aparencia);
     this.input = new Input(canvas);
     ui.bind(this);
     this.pulseRing = new THREE.Mesh(
@@ -239,6 +239,11 @@ export class Game {
     this.ui.touch.easyRun = s.touchEasyRun;
     this.applyAudio();
     storeSettings(s);
+    if (s.aparencia !== e.aparencia) {
+      // a camada PS2 mexe nos materiais ao montar a cena; a troca grava o progresso e recarrega
+      this.save();
+      location.reload();
+    }
   }
   private applyAudio(): void {
     const s = this.settings;
@@ -433,7 +438,7 @@ export class Game {
     const t0 = performance.now();
     if (id !== 'atrio') await this.restProps;
     const t1 = performance.now();
-    this.region = buildRegion(id, { flags, quality: this.settings.quality });
+    this.region = buildRegion(id, { flags, quality: this.settings.quality, ps2: !!this.engine.ps2 });
     const t2 = performance.now();
     sc.add(this.region.root);
     this.engine.applyEnv(this.region.env);

@@ -1,6 +1,6 @@
 /**
- * Camada de aparência PS2, opt-in. Protótipo de comparação da direção de arte
- * (docs/game/DIRECAO_DE_ARTE_PS2.md); sem o parâmetro ?arte=, nada muda no jogo.
+ * Camada de aparência PS2 "Luz de estudo" (docs/game/DIRECAO_DE_ARTE_PS2.md). Ligada por padrão; Ajustes,
+ * Aparência, "Limpa" desliga. ?arte=a|b|c compara as outras predefinições.
  *
  * Quatro peças, na ordem em que atuam: resolução interna baixa com ampliação sem
  * suavização, vértices presos a uma grade de tela, texturas sem filtro suave e
@@ -28,15 +28,20 @@ export interface Ps2Preset {
 
 const PRESETS = tokens.render.predefinicoes as Record<string, Ps2Preset>;
 
-/** Lê ?arte=a|b|c|ps2 (ou o valor guardado em localStorage). 'off' ou ausente desliga. */
-export function readPs2Preset(): Ps2Preset | null {
+/**
+ * Escolhe a predefinição. Ordem: ?arte=a|b|c|ps2|off na URL, depois o valor guardado em localStorage
+ * (página de comparação), depois a opção Aparência dos Ajustes. A Era PS2 é o padrão do jogo; 'limpa' ou
+ * 'off' desliga a camada.
+ */
+export function readPs2Preset(aparencia: 'ps2' | 'limpa' = 'ps2'): Ps2Preset | null {
   let q = '';
   try {
     q = new URLSearchParams(location.search).get('arte') ?? localStorage.getItem('interprete-arte') ?? '';
   } catch {
-    /* sem acesso ao armazenamento: segue desligado */
+    /* sem acesso ao armazenamento: vale a opção dos Ajustes */
   }
-  if (q === '' || q === 'off') return null;
+  if (q === '') q = aparencia === 'limpa' ? 'off' : tokens.render.padrao;
+  if (q === 'off' || q === 'limpa') return null;
   if (q === '1' || q === 'on') q = tokens.render.padrao;
   return PRESETS[q] ?? null;
 }
