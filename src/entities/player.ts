@@ -143,6 +143,8 @@ export class Player {
       model: look.body ? `player_${look.body}_${(['curto', 'coque', 'longo', 'capuz'] as const)[Math.floor(look.hair / HAIRS.length) % 4] ?? 'curto'}` : 'player_' + ((['curto', 'coque', 'longo', 'capuz'] as const)[Math.floor(look.hair / HAIRS.length) % 4] ?? 'curto'),
       modelAlt: 'player_' + ((['curto', 'coque', 'longo', 'capuz'] as const)[Math.floor(look.hair / HAIRS.length) % 4] ?? 'curto'),
       tintSkin: skinTint(SKINS[look.skin % SKINS.length]),
+      // corpo da forja: textura de pele própria de cada tom (assada das peles CC0 do MakeHuman), sem tinta por cima
+      skinMap: look.body ? `textures/ps2/pele/${look.body}_${look.skin % SKINS.length}.webp` : undefined,
       tintHair: new THREE.Color(HAIRS[look.hair % HAIRS.length]).multiplyScalar(2.4).getHex(),
       tintCoat: new THREE.Color(COAT_COLORS[look.coat % COAT_COLORS.length]).multiplyScalar(2.2).getHex(),
     });
