@@ -154,10 +154,22 @@ export function buildObservatorio(ctx: RegionCtx): BuiltRegion {
   gate.visible = !openGate;
   b.dynamic(gate);
   if (!openGate) b.collideBox(0, -9.7, 2.2, 0.3, 0, -1, 5, 'grade_arena');
+  // grade levadiça: sobe aos trancos, presa por corrente, e some na sombra do arco
+  let lift = -1;
   r.actions.grade = () => {
-    gate.visible = false;
+    if (lift < 0) lift = 0;
     r.colliders = r.colliders.filter((c) => c.tag !== 'grade_arena');
   };
+  b.updaters.push((dt) => {
+    if (lift < 0 || lift >= 1) return;
+    lift = Math.min(1, lift + dt * 0.5);
+    // três puxões de corrente: sobe, para, sobe
+    const steps = lift * 3;
+    const f = Math.floor(steps);
+    const k = (f + Math.min(1, (steps - f) * 1.6)) / 3;
+    gate.position.y = 3.9 * Math.min(1, k);
+    if (lift >= 1) gate.visible = false;
+  });
 
   // cúpula do observatório ao fundo, com a fenda e o telescópio
   b.add(new THREE.CylinderGeometry(9, 9.4, 7, 28), M.stone, trs(0, 3.5, -47), false);

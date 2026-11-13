@@ -230,8 +230,18 @@ export function buildBosque(ctx: RegionCtx): BuiltRegion {
   core.visible = open;
   b.dynamic(core);
   if (open) b.lamp(43.5, 3.8, 0, 0xffb060, 1.6, 22, 0.12);
+  let kindle = -1;
+  b.updaters.push((dt) => {
+    if (kindle < 0 || kindle >= 1) return;
+    // a chama pega no pavio: começa pequena, tremula e cresce até o tamanho cheio
+    kindle = Math.min(1, kindle + dt * 0.8);
+    const k = 1 - (1 - kindle) ** 3;
+    flame.scale.setScalar(Math.max(0.05, k * (1 + Math.sin(kindle * 40) * 0.08 * (1 - kindle))));
+    core.scale.set(k, 1.7 * k, k);
+  });
   r.actions.marco = () => {
     flame.visible = core.visible = true;
+    kindle = 0;
     r.lamps.push({ pos: new THREE.Vector3(43.5, 3.8, 0), color: 0xffb060, intensity: 1.6, range: 22, flicker: 0.12 });
     for (const p of puffs) (p.material as THREE.SpriteMaterial).opacity = 0.05;
   };
@@ -269,10 +279,24 @@ export function buildBosque(ctx: RegionCtx): BuiltRegion {
   gate.visible = !gopen;
   b.dynamic(gate);
   if (!gopen) b.collideBox(54, 13.5, 1.6, 0.3, 0, -1, 4, 'grade_bosque');
+  // a grade gira na dobradiça oeste e abre para fora: cede devagar, range, e só no fim ganha velocidade
+  let swing = -1;
   r.actions.grade_bosque = () => {
-    gate.visible = false;
+    if (swing < 0) swing = 0;
     r.colliders = r.colliders.filter((c) => c.tag !== 'grade_bosque');
   };
+  b.updaters.push((dt) => {
+    if (swing < 0 || swing >= 1.6) return;
+    swing = Math.min(1.6, swing + dt);
+    // 0,25 s de resistência (tremor), depois abre com aceleração e assenta com um pequeno rebote
+    const u = Math.max(0, (swing - 0.25) / 1.35);
+    const back = u >= 1 ? 1 : 1 + 2.2 * Math.pow(u - 1, 3) + 1.2 * Math.pow(u - 1, 2);
+    const a = 1.75 * back + (swing < 0.25 ? Math.sin(swing * 80) * 0.012 : 0);
+    const hx = 52.45;
+    const hz = 13.5;
+    gate.rotation.y = a;
+    gate.position.set(hx - (Math.cos(a) * hx + Math.sin(a) * hz), 0, hz - (-Math.sin(a) * hx + Math.cos(a) * hz));
+  });
   K.crate(b, 47.5, -9.4, 0.8, 0.4);
   K.barrel(b, 46.4, -8.2);
   b.place('wooden_barrels_01', 51, -13.2, 0, -0.3, { size: 4.0, fit: 'w', pad: -0.4 });

@@ -188,6 +188,18 @@ input[type='text']:focus { outline: none; border-color: var(--g-text); box-shado
 .cell svg { width: 54%; height: 54%; }
 .cell .n { position: absolute; right: 5px; bottom: 4px; font: 500 12px/1 var(--font-mono); }
 .cell .eq { position: absolute; left: 4px; top: 4px; font: 400 9px/1 var(--font-mono); letter-spacing: 0.1em; color: var(--g-gold); }
+/* resposta à seleção: o ícone sobe dois pixels e assenta, em degraus, como nos menus de console da época;
+   o painel de detalhe entra como folha virada. Movimento reduzido desliga tudo (body.rm) */
+.cell[aria-pressed='true'] svg { animation: sel-assenta 0.24s steps(4, end); }
+@keyframes sel-assenta { 0% { transform: translateY(0); } 35% { transform: translateY(-3px); } 100% { transform: translateY(0); } }
+.cell[aria-pressed='true'] { animation: sel-brilho 0.3s linear; }
+@keyframes sel-brilho { 0% { border-color: var(--g-gold); } 100% { border-color: var(--g-text); } }
+.detail > * { animation: folha 0.28s var(--ease-standard) both; }
+.detail > *:nth-child(2) { animation-delay: 0.03s; }
+.detail > *:nth-child(n+3) { animation-delay: 0.06s; }
+@keyframes folha { from { opacity: 0; transform: translateX(6px); } }
+#book .frame { animation: livro 0.26s var(--ease-standard); }
+@keyframes livro { from { opacity: 0; transform: translateY(6px) scale(0.99); } }
 .detail { border-left: 1px solid var(--g-line); padding-left: 26px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
 .detail .big { width: 112px; height: 112px; border: 1px solid var(--g-line); display: flex; align-items: center; justify-content: center; color: var(--g-paper); }
 .detail .big svg { width: 60%; height: 60%; }

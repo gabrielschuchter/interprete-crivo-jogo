@@ -396,13 +396,25 @@ export class Engine {
     g.uHighContrast.value = this.settings.highContrast ? 1 : 0;
     this.flash = Math.max(0, this.flash - dt * 2.5);
     g.uFlash.value = this.settings.reduceMotion ? 0 : this.flash;
+    let roll = 0;
     if (this.shake > 0 && !this.settings.reduceMotion) {
-      this.camera.position.x += (Math.random() - 0.5) * this.shake * 0.25;
-      this.camera.position.y += (Math.random() - 0.5) * this.shake * 0.25;
+      // tremor por trauma: amplitude cresce mais que linear e o deslocamento segue um ruído contínuo
+      // (soma de senos fora de fase), sem o pulo de quadro a quadro do aleatório puro
+      const a = Math.pow(Math.min(1, this.shake), 1.5);
+      const t = this.time;
+      const n1 = Math.sin(t * 37.3) * 0.55 + Math.sin(t * 61.7 + 1.3) * 0.3 + Math.sin(t * 89.1 + 2.1) * 0.15;
+      const n2 = Math.sin(t * 41.9 + 0.7) * 0.55 + Math.sin(t * 57.1 + 2.6) * 0.3 + Math.sin(t * 97.3 + 0.4) * 0.15;
+      const n3 = Math.sin(t * 29.4 + 1.9) * 0.6 + Math.sin(t * 71.3) * 0.4;
+      this.camera.position.x += n1 * a * 0.16;
+      this.camera.position.y += n2 * a * 0.12;
+      roll = n3 * a * 0.025;
+      this.camera.rotateZ(roll);
       this.shake = Math.max(0, this.shake - dt * 2.2);
     } else this.shake = 0;
     this.ps2?.sweep(this.scene, dt);
     if (this.quality === 'baixa' && !this.ps2) this.renderer.render(this.scene, this.camera);
     else this.composer.render(dt);
+    // o giro do tremor vale só para este quadro
+    if (roll) this.camera.rotateZ(-roll);
   }
 }

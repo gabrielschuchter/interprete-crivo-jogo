@@ -4,6 +4,9 @@ import { fixMaterials, instanceSkinned, loadGltf } from '../core/assets';
 import { M } from '../world/mats';
 import { report } from '../core/diag';
 import { TorchModel, WEAPON_LOOKS, buildWeapon, orientWeapon, preloadWeapon, weaponDir } from './weapons';
+import { Face, Gaze, Rig, Spring, applyPose, approach, measureGait, smooth, type GaitInfo, forceMixerWrite } from './motion';
+import { personaFor, talkGesture, type Persona } from './personas';
+import { gesto, type Interaction } from './gestos';
 
 /**
  * Figura humana procedural: proporções plausíveis, casaco longo, capa curta,
@@ -37,11 +40,14 @@ export interface FigureOpts {
   tintSkin?: number;
   tintHair?: number;
   tintCoat?: number;
+  /** chave da persona (postura, fala, ofício); padrão: a chave do modelo */
+  persona?: string;
 }
 
 export type Emblem = 'caderno' | 'estetoscopio' | 'relogio' | 'oculos' | 'fita';
 
-export type Action = 'none' | 'attack1' | 'attack2' | 'heavy' | 'dodge' | 'hit' | 'die' | 'interact' | 'cast' | 'talk' | 'sit' | 'shrug' | 'think' | 'nod' | 'wave' | 'point' | 'cheer' | 'bow' | 'listen';
+export type Action = 'none' | 'attack1' | 'attack2' | 'heavy' | 'dodge' | 'hit' | 'die' | 'interact' | 'cast' | 'talk' | 'sit' | 'shrug' | 'think' | 'nod' | 'wave' | 'point' | 'cheer' | 'bow' | 'listen' | Interaction;
+const INTERACTIONS = new Set<string>(['pickup', 'examine', 'pull', 'open', 'push', 'reach']);
 
 export const SKINS = [0xf1cfb4, 0xd9a47c, 0xb07a52, 0x7a4f34, 0x4f3222];
 export const HAIRS = [0x1a1210, 0x3d2416, 0x6b3f22, 0x8a8078, 0xb9482e, 0xd8c8a8];
@@ -66,6 +72,12 @@ const ACTION_TIME: Record<Action, number> = {
   cheer: 1.6,
   bow: 1.8,
   listen: 9999,
+  pickup: 1.15,
+  examine: 1.7,
+  pull: 1.15,
+  open: 1.25,
+  push: 1.0,
+  reach: 0.85,
 };
 
 function cloth(color: number, rough = 0.92): THREE.MeshStandardMaterial {
@@ -117,13 +129,56 @@ const CLIP_FOR: Partial<Record<Action, string[]>> = {
   cheer: ['wave'],
   bow: ['interact'],
   listen: ['listen', 'idle'],
+  pickup: ['idle'],
+  examine: ['idle'],
+  pull: ['idle'],
+  open: ['idle'],
+  push: ['idle'],
+  reach: ['idle'],
 };
 /** ações que acompanham a duração de jogo (golpes): o clipe é acelerado para caber em ACTION_TIME */
 const TIMED: Action[] = ['attack1', 'attack2', 'heavy', 'dodge', 'hit', 'interact', 'cast'];
 const LOOPED = new Set(['idle', 'walk', 'run', 'talk', 'listen']);
 
 const _v = new THREE.Vector3();
+const _v2 = new THREE.Vector3();
+const _up = new THREE.Vector3(0, 1, 0);
+const _v3 = new THREE.Vector3();
+const _qs = new THREE.Quaternion();
 const _tc = new THREE.Color();
+
+/** corpo glTF animado: clipes em duas camadas (locomoção e ação) e a camada procedural da persona */
+interface ExtBody {
+  mixer: THREE.AnimationMixer;
+  clips: Map<string, THREE.AnimationAction>;
+  cur: string;
+  curAction: Action;
+  hand: THREE.Object3D | null;
+  handL: THREE.Object3D | null;
+  head: THREE.Object3D | null;
+  rig: Rig;
+  rest: Map<THREE.Object3D, { q: THREE.Quaternion; p: THREE.Vector3 }>;
+  gaits: Map<string, GaitInfo>;
+  persona: Persona;
+  face: Face;
+  loco: Map<string, number>;
+  acts: Array<{ a: THREE.AnimationAction; w: number; rate: number }>;
+  twins: Map<THREE.AnimationAction, THREE.AnimationAction>;
+  actW: number;
+  actName: string;
+  gaze: Gaze;
+  seed: number;
+  hipsBase: number;
+  scale: number;
+  restK?: number;
+  ofK?: number;
+  talkK?: number;
+  listenK?: number;
+  breath?: number;
+  gripL?: number;
+  gripR?: number;
+  sheath?: number;
+}
 
 export class Figure {
   root = new THREE.Group();
@@ -168,7 +223,7 @@ export class Figure {
   private idleT = 0;
   private lastYaw = 0;
   private bank = 0;
-  private ext: { mixer: THREE.AnimationMixer; clips: Map<string, THREE.AnimationAction>; cur: string; curAction: Action; hand: THREE.Object3D | null; handL: THREE.Object3D | null; head: THREE.Object3D | null } | null = null;
+  private ext: ExtBody | null = null;
   private opts: FigureOpts;
   private lastActT = 0;
   /** cabeça do modelo externo (para olhos, marcadores) */
@@ -506,7 +561,7 @@ export class Figure {
     const clips = new Map<string, THREE.AnimationAction>();
     for (const c of g.animations) {
       const a = mixer.clipAction(c);
-      if (!LOOPED.has(c.name.toLowerCase())) {
+      if (!LOOPED.has(c.name.toLowerCase().replace('torch_', ''))) {
         a.setLoop(THREE.LoopOnce, 1);
         a.clampWhenFinished = true;
       }
@@ -521,7 +576,24 @@ export class Figure {
       this.weapon.position.set(0.2, 0.9, 0.1);
       if (this.torch) this.root.add(this.torch.group);
     }
-    this.ext = { mixer, clips, cur: '', curAction: 'none', hand, handL, head };
+    const rig = new Rig(scene, this.root);
+    // pose de referência: osso sem trilha no clipe não acumula giro de quadro em quadro
+    const rest = new Map<THREE.Object3D, { q: THREE.Quaternion; p: THREE.Vector3 }>();
+    for (const b of rig.bones.values()) rest.set(b, { q: b.quaternion.clone(), p: b.position.clone() });
+    // passada: velocidade natural de cada clipe de locomoção, medida pelo pé de apoio
+    const gaits = new Map<string, GaitInfo>();
+    for (const n of ['walk', 'run', 'torch_walk', 'torch_run']) {
+      const a = clips.get(n);
+      if (!a) continue;
+      const gi = measureGait(mixer, a.getClip(), rig);
+      if (gi) gaits.set(n, gi);
+    }
+    mixer.stopAllAction();
+    const persona = personaFor(o.persona ?? key);
+    // ninguém respira no mesmo compasso: o idle começa em ponto diferente e no tempo da persona
+    const idle = clips.get('idle');
+    if (idle) idle.time = Math.random() * idle.getClip().duration;
+    this.ext = { mixer, clips, cur: '', curAction: 'none', hand, handL, head, rig, rest, gaits, persona, face: new Face(scene), loco: new Map(), acts: [], twins: new Map(), actW: 0, actName: '', gaze: new Gaze(1.05, persona.gazeRate ?? 4), seed: Math.random() * 10, hipsBase: rig.get('Hips')?.position.y ?? 0, scale: k };
     return true;
   }
 
@@ -537,58 +609,361 @@ export class Figure {
     return null;
   }
 
+  /** ponto (no mundo) para onde a cabeça olha; null olha à frente */
+  lookAt: THREE.Vector3 | null = null;
+  /** fala em curso (boca e gesto) */
+  speaking = false;
+  /** passos no lugar ao virar parado, em rad/s (moradores que se voltam para o jogador) */
+  turnRate = 0;
+  private flX = new Spring(140, 12);
+  private flZ = new Spring(140, 12);
+  private landS = new Spring(170, 13);
+  private accS = new Spring(60, 10);
+  private lastSpeed = 0;
+  private oficioT = 6 + Math.random() * 6;
+  private oficioRun = 0;
+  private nodT = 2 + Math.random() * 2;
+  private nodS = new Spring(120, 9);
+  /** tranco de impacto vindo de `from` (mundo); força 1 = golpe comum */
+  flinch(from: THREE.Vector3, force = 1): void {
+    _v.copy(from);
+    this.root.worldToLocal(_v);
+    const l = Math.hypot(_v.x, _v.z) || 1;
+    // o tronco recua para longe do golpe e tomba de lado
+    this.flX.kick((-_v.z / l) * 7 * force);
+    this.flZ.kick((_v.x / l) * 5 * force);
+  }
+  /** teste: força a mão (0 aberta, 1 punho) */
+  gripTest: number | null = null;
+  /** mão por ação: [esquerda, direita]; undefined deixa o padrão */
+  private handGrip(act: Action): [number | undefined, number | undefined] {
+    switch (act) {
+      case 'wave':
+      case 'point':
+      case 'shrug':
+        return [0.1, this.weapon ? 1 : 0.1];
+      case 'cast':
+        return [0, undefined];
+      default:
+        return [undefined, undefined];
+    }
+  }
+  /** pouso: os joelhos absorvem */
+  land(hard: boolean): void {
+    this.landS.kick(hard ? 4.2 : 2.4);
+  }
+  /** aceno de cabeça de quem escuta (fim de frase) */
+  nod(): void {
+    this.nodS.kick(3.2);
+  }
+
+  /** pesos da camada de locomoção: parado, andar, correr, no ar */
+  private locoTargets(base: string): Map<string, number> {
+    const e = this.ext!;
+    const t = new Map<string, number>();
+    const has = (n: string) => e.clips.has(base + n) || e.clips.has(n);
+    if (this.airborne && has('jump')) t.set('jump', 1);
+    else {
+      const k = this.height / 1.75;
+      const sp = this.speed;
+      // até 1,3 m/s anda, a partir de 2,1 corre; entre os dois mistura com as fases alinhadas
+      const run = has('run') ? THREE.MathUtils.smoothstep(sp, 1.3 * k, 2.1 * k) : 0;
+      const move = THREE.MathUtils.smoothstep(sp, 0.08, 0.5);
+      // virar parado: arrasta os pés no compasso do andar, devagar
+      const shuffle = Math.min(0.55, Math.abs(this.turnRate) * 0.6) * (1 - move);
+      t.set('idle', (1 - move) * (1 - shuffle));
+      t.set('walk', move * (1 - run) + shuffle);
+      if (run > 0) t.set('run', move * run);
+    }
+    return t;
+  }
+
+  private clipName(base: string, n: string): string {
+    return this.ext!.clips.has(base + n) ? base + n : n;
+  }
+
   private updateExternal(dt: number): void {
     const e = this.ext!;
-    let want: string;
-    let timed = false;
-    if (this.action !== 'none') {
-      want = this.pickClip(CLIP_FOR[this.action]) ?? 'idle';
-      timed = TIMED.includes(this.action);
-    } else want = this.airborne ? (e.clips.has('jump') ? 'jump' : 'run') : this.speed > 3.4 ? 'run' : this.speed > 0.3 ? 'walk' : 'idle';
-    if (!e.clips.has(want)) want = this.speed > 0.3 && e.clips.has('walk') ? 'walk' : 'idle';
-    // com a tocha na mão esquerda, o modelo do protagonista traz variantes de braço erguido (torch_*)
-    if (this.torch && e.clips.has('torch_' + want)) want = 'torch_' + want;
+    const per = e.persona;
+    // tocha na mão esquerda: o modelo do protagonista traz variantes de braço erguido (torch_*)
+    const base = this.torch ? 'torch_' : '';
+
+    // ---- camada de ação: uma ação por vez, com troca em mistura curta ----
     const restart = this.action !== 'none' && (this.action !== e.curAction || this.actionT < this.lastActT);
     this.lastActT = this.actionT;
-    if (e.cur !== want || restart) {
-      const next = e.clips.get(want);
-      const prev = e.clips.get(e.cur);
-      if (next) {
-        const fade = timed ? 0.08 : 0.22;
-        next.reset();
-        next.setEffectiveWeight(1);
-        if (timed) next.setEffectiveTimeScale(next.getClip().duration / ACTION_TIME[this.action]);
-        else next.setEffectiveTimeScale(1);
-        next.fadeIn(fade).play();
-        if (prev && prev !== next) prev.fadeOut(fade);
+    e.curAction = this.action;
+    const timed = TIMED.includes(this.action);
+    if (this.action !== 'none' && restart) {
+      const want = this.clipName(base, this.pickClip(CLIP_FOR[this.action]) ?? 'idle');
+      const a = e.clips.get(want);
+      if (a) {
+        // a mesma ação reiniciada (combo) usa um clone para misturar com a anterior em vez de pular
+        let act = a;
+        if (e.acts.some((x) => x.a === a)) {
+          let tw = e.twins.get(a);
+          if (!tw) e.twins.set(a, (tw = e.mixer.clipAction(a.getClip().clone())));
+          if (!e.acts.some((x) => x.a === tw)) act = tw;
+          else e.acts = e.acts.filter((x) => x.a !== a);
+        }
+        act.setLoop(LOOPED.has(want.replace('torch_', '')) ? THREE.LoopRepeat : THREE.LoopOnce, Infinity);
+        act.clampWhenFinished = true;
+        act.reset().play();
+        act.setEffectiveTimeScale(timed ? act.getClip().duration / ACTION_TIME[this.action] : this.action === 'talk' || this.action === 'listen' ? per.tempo : 1);
+        e.acts.push({ a: act, w: 0, rate: timed ? 16 : 6 });
+        e.actName = want;
         e.cur = want;
       }
     }
-    e.curAction = this.action;
-    const cur = e.clips.get(e.cur);
-    const gait = e.cur.replace('torch_', '');
-    if (cur && (gait === 'walk' || gait === 'run')) {
-      // passada acompanha a velocidade real (clipes: andar ~1,4 m/s, correr ~3,6 m/s)
-      const nat = gait === 'walk' ? 1.4 : 3.6;
-      cur.setEffectiveTimeScale(THREE.MathUtils.clamp(this.speed / nat, 0.55, 1.7));
+    const actOn = this.action !== 'none' && e.acts.length > 0;
+    // fala e escuta não apagam a locomoção inteira: a persona decide quanto do clipe de fala aparece
+    const social = this.action === 'talk' ? per.talkW : this.action === 'listen' ? 0.35 : 1;
+    e.actW = approach(e.actW, actOn ? social : 0, actOn ? (timed ? 18 : 7) : timed ? 10 : 5, dt);
+    for (let i = 0; i < e.acts.length; i++) {
+      const x = e.acts[i];
+      const last = i === e.acts.length - 1;
+      x.w = approach(x.w, last && actOn ? 1 : 0, x.rate, dt);
     }
+    // ações que já sumiram saem da mistura
+    for (let i = e.acts.length - 1; i >= 0; i--) {
+      if (e.acts[i].w < 0.01 && (i < e.acts.length - 1 || !actOn)) {
+        e.acts[i].a.stop();
+        e.acts.splice(i, 1);
+      }
+    }
+    if (!actOn && e.actW < 0.01) e.actName = '';
+
+    // ---- camada de locomoção ----
+    const tg = this.locoTargets(base);
+    for (const n of new Set([...tg.keys(), ...e.loco.keys()])) {
+      const cur = e.loco.get(n) ?? 0;
+      const goal = tg.get(n) ?? 0;
+      const nw = approach(cur, goal, n === 'jump' || this.airborne ? 12 : 7, dt);
+      const name = this.clipName(base, n);
+      const a = e.clips.get(name);
+      if (!a) continue;
+      if (cur < 0.01 && nw >= 0.01) {
+        a.reset().play();
+        if (n === 'idle') a.time = (e.seed * 0.37) % a.getClip().duration;
+        // entra na mesma fase da passada que já está em curso
+        const other = n === 'walk' ? 'run' : n === 'run' ? 'walk' : '';
+        const oa = other && (e.loco.get(other) ?? 0) > 0.01 ? e.clips.get(this.clipName(base, other)) : null;
+        const gi = e.gaits.get(name);
+        const go = oa ? e.gaits.get(this.clipName(base, other)) : null;
+        if (oa && gi && go) a.time = ((((oa.time / go.dur - go.phase + gi.phase) % 1) + 1) % 1) * gi.dur;
+      }
+      if (nw < 0.01) {
+        if (cur >= 0.01) a.stop();
+        e.loco.delete(n);
+      } else e.loco.set(n, nw);
+    }
+    // passada casada à velocidade: frequência = velocidade / comprimento de passada misturado
+    const gw = e.gaits.get(this.clipName(base, 'walk'));
+    const gr = e.gaits.get(this.clipName(base, 'run'));
+    const ww = e.loco.get('walk') ?? 0;
+    const wr = e.loco.get('run') ?? 0;
+    if (gw && ww + wr > 0) {
+      const sw = gw.nat * gw.dur;
+      const sr = gr ? gr.nat * gr.dur : sw;
+      const stride = (ww * sw + wr * sr) / (ww + wr);
+      const sp = Math.max(this.speed, Math.abs(this.turnRate) * 0.35);
+      const f = THREE.MathUtils.clamp(sp / stride, 0.45 / gw.dur, 2.2 / (gr?.dur ?? gw.dur));
+      const aw = e.clips.get(this.clipName(base, 'walk'));
+      const ar = e.clips.get(this.clipName(base, 'run'));
+      aw?.setEffectiveTimeScale(f * gw.dur);
+      if (ar && gr) ar.setEffectiveTimeScale(f * gr.dur);
+    }
+    const idleA = e.clips.get(this.clipName(base, 'idle'));
+    idleA?.setEffectiveTimeScale(per.tempo);
+    // pesos finais somam 1: o que sobra da ação vai para a locomoção
+    let locoSum = 0;
+    for (const w of e.loco.values()) locoSum += w;
+    const lw = (1 - e.actW) / Math.max(1e-3, locoSum);
+    for (const [n, w] of e.loco) e.clips.get(this.clipName(base, n))?.setEffectiveWeight(w * lw);
+    let actSum = 0;
+    for (const x of e.acts) actSum += x.w;
+    for (const x of e.acts) x.a.setEffectiveWeight((e.actW * x.w) / Math.max(1e-3, actSum));
+    if (locoSum < 1e-3 && actSum < 1e-3) idleA?.play().setEffectiveWeight(1);
+
+    // ---- clipes ----
+    for (const [b, r] of e.rest) {
+      b.quaternion.copy(r.q);
+      b.position.copy(r.p);
+    }
+    forceMixerWrite(e.mixer);
     e.mixer.update(dt);
     this.clock += dt;
-    if (this.weapon && e.hand) {
-      e.hand.getWorldPosition(_v);
-      this.root.worldToLocal(_v);
-      this.weapon.position.copy(_v);
-      const act = this.action;
-      orientWeapon(this.weapon, weaponDir(act, act === 'none' ? 0 : this.progress));
-    }
+    this.motion(dt);
+    e.face.update(dt, this.clock);
+
+    const rig = e.rig;
     if (this.torch && e.handL) {
-      e.handL.getWorldPosition(_v);
-      this.root.worldToLocal(_v);
-      this.torch.group.position.copy(_v);
-      // tocha erguida, levemente para fora e para a frente
-      this.torch.group.rotation.set(0.28, 0, -0.16);
+      // a chama nunca entra no corpo: na altura do tronco o braço da tocha abre até a mão ficar a um palmo do eixo
+      const kH = this.height / 1.75;
+      if (rig.pos('LeftHand', _v) && _v.y > 0.6 * kH && _v.y < 1.6 * kH && _v.x < 0.22 * kH && _v.z < 0.3 * kH) rig.turn('LeftArm', 0, 0, Math.min(0.7, (0.22 * kH - _v.x) * 2.2));
+      // cabo quase de pé, um pouco para fora e para a frente; balança com a passada e tomba na curva
+      const sw = Math.sin(this.clock * 7) * Math.min(0.08, this.speed * 0.015);
+      _v2.set(0.16 - this.bankX * 0.12, 1, 0.3 + sw).normalize();
+      const palm = rig.holdAxis('Left', _v2, _v);
+      if (palm) {
+        // o cabo passa pelo punho a 15 cm da base
+        this.torch.group.position.copy(palm).addScaledVector(_v2, -0.15);
+        this.torch.group.quaternion.setFromUnitVectors(_up, _v2);
+      } else {
+        e.handL.getWorldPosition(_v);
+        this.torch.group.position.copy(this.root.worldToLocal(_v));
+        this.torch.group.rotation.set(0.28 + sw, 0, -0.16);
+      }
       this.torch.update(this.clock);
     }
+    if (this.weapon && e.hand) {
+      const act = this.action;
+      orientWeapon(this.weapon, weaponDir(act, act === 'none' ? 0 : this.progress));
+      // o punho gira para o cabo: a lâmina sai do lado do polegar e a mão fecha em volta da empunhadura
+      _v2.set(0, 1, 0).applyQuaternion(this.weapon.quaternion);
+      const sh = e.sheath ?? 0;
+      const palm = sh < 0.5 ? rig.holdAxis('Right', _v2, _v, 2.4) : null;
+      if (palm) this.weapon.position.copy(palm);
+      else {
+        e.hand.getWorldPosition(_v);
+        this.weapon.position.copy(this.root.worldToLocal(_v));
+      }
+      if (sh > 0.001) {
+        // bainha no quadril esquerdo, cabo à frente, lâmina para baixo e para trás
+        const kH = this.height / 1.75;
+        _v2.set(0.19 * kH, 0.98 * kH, 0.06 * kH);
+        const k = smooth(sh);
+        this.weapon.position.lerp(_v2, k);
+        _qs.setFromUnitVectors(_up, _v3.set(0.15, -0.75, -0.6).normalize());
+        this.weapon.quaternion.slerp(_qs, k);
+      }
+    }
+  }
+
+  private bankX = 0;
+  private lastYawX = 0;
+  /** camada procedural: postura da persona, repouso, ofício, fala e escuta, olhar, respiração, inclinação e trancos */
+  private motion(dt: number): void {
+    const e = this.ext!;
+    const per = e.persona;
+    const rig = e.rig;
+    const t = this.clock;
+    const act = this.action;
+    const calm = act === 'none' || act === 'talk' || act === 'listen' || act === 'think' || act === 'nod';
+    const moving = this.speed > 0.3;
+    const still = calm && !moving && !this.airborne;
+    // postura de sempre: inteira parada, metade andando, quase nada no meio de golpe
+    applyPose(rig, per.posture, calm ? (moving ? 0.5 : 1) : 0.25);
+    // braços em repouso: só parados e fora de gesto
+    const rw = (per.restW ?? 0) * (still && act !== 'talk' ? 1 : act === 'talk' ? 0.35 : 0);
+    e.restK = approach(e.restK ?? 0, rw, 4, dt);
+    if (per.rest) applyPose(rig, per.rest, e.restK);
+    // ofício nas esperas: começa, segura, termina; a conversa interrompe
+    if (still && act === 'none' && per.oficio) {
+      this.oficioT -= dt;
+      if (this.oficioT <= 0 && this.oficioRun <= 0) {
+        this.oficioRun = per.oficio.dur;
+        const [a, b] = per.oficio.every;
+        this.oficioT = per.oficio.dur + a + Math.random() * (b - a);
+      }
+    } else this.oficioRun = Math.min(this.oficioRun, 0.6);
+    if (this.oficioRun > 0) this.oficioRun -= dt;
+    const of = per.oficio;
+    const ofK = of ? smooth(Math.min(of.dur - Math.max(0, this.oficioRun), Math.max(0, this.oficioRun)) / 0.7) : 0;
+    e.ofK = approach(e.ofK ?? 0, of && this.oficioRun > 0 ? ofK : 0, 6, dt);
+    if (of && e.ofK > 0.01) {
+      applyPose(rig, of.pose, e.ofK);
+      if (of.head === 'varre') rig.turn('Head', 0, Math.sin(t * 0.7) * 0.45 * e.ofK, 0);
+    }
+    // fala: gesto da persona por cima do clipe de fala; escuta: pose de escuta e acenos no fim das frases
+    e.talkK = approach(e.talkK ?? 0, act === 'talk' ? 1 : 0, 5, dt);
+    if (e.talkK > 0.01) {
+      const g = talkGesture(per.talk, t, e.seed);
+      applyPose(rig, g.pose, g.w * e.talkK);
+    }
+    e.listenK = approach(e.listenK ?? 0, act === 'listen' ? 1 : 0, 4, dt);
+    if (e.listenK > 0.01) {
+      applyPose(rig, per.listen, e.listenK);
+      this.nodT -= dt;
+      if (this.nodT <= 0) {
+        this.nod();
+        this.nodT = 2.4 + Math.random() * 3.5;
+      }
+    }
+    rig.turn('Head', this.nodS.update(dt) * 0.09, 0, 0);
+    // olhar: no alvo; quem é tímido baixa os olhos de vez em quando
+    let target: THREE.Vector3 | null = null;
+    if (this.lookAt && (calm || act === 'wave' || act === 'point')) {
+      target = _v2.copy(this.lookAt);
+      this.root.worldToLocal(target);
+      if (per.shy && Math.sin(t * 0.37 + e.seed) > 1 - per.shy * 1.4) target.set(target.x * 0.3 + 0.3, 0.3 * this.height, 1.2);
+    }
+    e.gaze.update(rig, target, dt, calm ? 1 : 0.4);
+    // respiração: peito e ombros sobem, mais fundo depois de correr
+    e.breath = approach(e.breath ?? 0, moving ? Math.min(1, this.speed / 4) : 0, 0.6, dt);
+    const br = Math.sin(t * (1.4 + e.breath * 1.8) * per.tempo + e.seed);
+    rig.turn('Spine1', -br * (0.012 + e.breath * 0.02), 0, 0);
+    rig.turn('LeftShoulder', 0, 0, br * 0.012);
+    rig.turn('RightShoulder', 0, 0, -br * 0.012);
+    // inclinação nas curvas e no arranque: o corpo vai antes dos pés
+    let dyaw = this.root.rotation.y - this.lastYawX;
+    while (dyaw > Math.PI) dyaw -= Math.PI * 2;
+    while (dyaw < -Math.PI) dyaw += Math.PI * 2;
+    this.lastYawX = this.root.rotation.y;
+    const turn = dt > 0 ? THREE.MathUtils.clamp(dyaw / dt, -5, 5) : 0;
+    this.bankX = approach(this.bankX, turn * Math.min(1, this.speed / 4), 6, dt);
+    if (dt > 0) this.accS.kick(THREE.MathUtils.clamp((this.speed - this.lastSpeed) / dt, -25, 25) * 0.012);
+    this.lastSpeed = this.speed;
+    const acc = this.accS.update(dt);
+    rig.turn('Hips', acc * 0.5, 0, -this.bankX * 0.06);
+    rig.turn('Spine1', acc * 0.35, 0, this.bankX * 0.03);
+    // trancos: impacto e pouso
+    const fx = this.flX.update(dt);
+    const fz = this.flZ.update(dt);
+    if (fx || fz) {
+      rig.turn('Spine', fx * 0.06, 0, fz * 0.05);
+      rig.turn('Spine1', fx * 0.08, 0, fz * 0.06);
+      rig.turn('Head', fx * 0.1, 0, fz * 0.08);
+    }
+    const ld = this.landS.update(dt);
+    if (ld) {
+      const hips = rig.get('Hips');
+      if (hips) hips.position.y -= (ld * 0.035) / e.scale;
+      rig.turn('Spine1', ld * 0.06, 0, 0);
+      // joelhos dobram para o quadril descer sem tirar os pés do chão
+      rig.turn('LeftUpLeg', -ld * 0.12, 0, 0);
+      rig.turn('RightUpLeg', -ld * 0.12, 0, 0);
+      rig.turn('LeftLeg', ld * 0.24, 0, 0);
+      rig.turn('RightLeg', ld * 0.24, 0, 0);
+    }
+    // interações: pose desenhada por cima do idle, mão que fecha no contato, arma na bainha
+    let gripI: number | undefined;
+    e.sheath = approach(e.sheath ?? 0, 0, 8, dt);
+    if (INTERACTIONS.has(act)) {
+      const g = gesto(act as Interaction, this.progress);
+      applyPose(rig, g.pose, g.w);
+      if (g.drop > 0.001) {
+        const hips = rig.get('Hips');
+        if (hips) hips.position.y -= g.drop / e.scale;
+      }
+      gripI = g.gripR;
+      e.sheath = g.sheath;
+    }
+    // mãos: relaxadas meio fechadas; punho cerrado na arma, na tocha e no que a forja pôs na mão
+    const gp = per.grip ?? [0.35, 0.35];
+    const ga = this.handGrip(act);
+    e.gripL = approach(e.gripL ?? 0, ga[0] ?? (this.torch ? 1 : gp[0]), 14, dt);
+    e.gripR = gripI ?? approach(e.gripR ?? 0, ga[1] ?? (this.weapon && (e.sheath ?? 0) < 0.5 ? 1 : gp[1]), 14, dt);
+    rig.grip('Left', this.gripTest ?? e.gripL);
+    rig.grip('Right', this.gripTest ?? e.gripR);
+    // rosto: expressão de base da persona, sobrancelhas na fala, sorriso no aceno
+    const fw = e.face.want;
+    const bf = per.face ?? {};
+    fw.sobrancelha_erguer = (bf.sobrancelha_erguer ?? 0) + (act === 'talk' ? 0.25 * Math.max(0, Math.sin(t * 2.6 + e.seed)) : 0) + (act === 'listen' ? 0.2 : 0) + (act === 'shrug' ? 0.6 : 0);
+    fw.sobrancelha_franzir = (bf.sobrancelha_franzir ?? 0) + (act === 'hit' ? 0.8 : 0) + (act === 'think' ? 0.4 : 0) + (act === 'attack1' || act === 'attack2' || act === 'heavy' ? 0.6 : 0);
+    fw.sorriso = (bf.sorriso ?? 0) + (act === 'wave' || act === 'cheer' ? 0.6 : 0);
+    fw.tristeza = bf.tristeza ?? 0;
+    fw.boca_abrir = act === 'hit' ? 0.5 : act === 'heavy' ? 0.3 * this.progress : act === 'die' ? 0.4 : 0;
+    e.face.speaking = this.speaking;
   }
 
   update(dt: number): void {

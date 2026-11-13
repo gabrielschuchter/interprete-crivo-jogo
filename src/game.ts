@@ -9,7 +9,7 @@ import { AudioSys, type AmbienceLoop, type Surface } from './core/audio';
 import { DEFAULT_SETTINGS, loadSettings, storeSettings, type Settings } from './core/settings';
 import { UI, type BookTab } from './ui/ui';
 import { Player } from './entities/player';
-import { loadExternalModel, preloadModels } from './entities/figure';
+import { loadExternalModel, preloadModels, type Action } from './entities/figure';
 import { DEFAULT_PAD } from './core/input';
 import { loadGltf, preloadProps, PROPS_FIRST } from './core/assets';
 import { Crivo } from './entities/crivo';
@@ -80,6 +80,8 @@ interface PropRt {
   pos: THREE.Vector3;
   own: boolean;
   lid?: THREE.Object3D;
+  /** tampa abrindo: tempo desde o gesto (negativo = espera a mão chegar) */
+  lidT?: number;
 }
 
 interface Spark {
@@ -126,6 +128,7 @@ export class Game {
   private preview: Player | null = null;
   private wasLocked = false;
   private focus = new THREE.Vector3();
+  private lookHint = new THREE.Vector3();
   inCombat = false;
   /** último texto examinado (habilidade Contraste do Crivo) */
   lastExamined = '';
@@ -650,10 +653,27 @@ export class Game {
     if (p.def.kind === 'chest' && this.state!.collected.includes(p.def.id)) return false;
     return true;
   }
+  private lidAnim = false;
+  /** tampas de baú em movimento: sobem com aceleração, passam um pouco e assentam */
+  private updateLids(dt: number): void {
+    for (const p of this.props) {
+      if (!p.lid || p.lidT === undefined) continue;
+      p.lidT += dt;
+      const u = Math.min(1, Math.max(0, p.lidT / 0.55));
+      const back = 1 + 2.4 * Math.pow(u - 1, 3) + 1.4 * Math.pow(u - 1, 2);
+      p.lid.rotation.x = -1.9 * back;
+      if (u >= 1) p.lidT = undefined;
+    }
+  }
   refreshProps(): void {
     for (const p of this.props) {
       if (p.obj) p.obj.visible = this.propVisible(p);
-      if (p.lid) p.lid.rotation.x = this.state!.collected.includes(p.def.id) ? -1.9 : 0;
+      if (p.lid) {
+        const open = this.state!.collected.includes(p.def.id);
+        // baú aberto agora: a tampa espera as mãos chegarem e sobe com o gesto; os já abertos ficam abertos
+        if (open && this.lidAnim && p.lid.rotation.x === 0) p.lidT = -0.45;
+        else if (p.lidT === undefined || !open) p.lid.rotation.x = open ? -1.9 : 0;
+      }
     }
   }
   prop(id: string): PropRt | undefined {
@@ -705,7 +725,17 @@ export class Game {
   async say(who: string, text: string): Promise<void> {
     if (this.cancelled) throw SCRIPT_CANCEL;
     const def = NPCS[who];
-    await this.ui.say(def?.name ?? who, def?.role ?? '', text);
+    // quem fala gesticula e mexe a boca; os outros na cena escutam e acenam no fim da frase
+    for (const n of this.npcs) n.speaking = n.def.id === who;
+    try {
+      await this.ui.say(def?.name ?? who, def?.role ?? '', text);
+    } finally {
+      for (const n of this.npcs) {
+        if (n.speaking) n.speaking = false;
+        else if (n.talking) n.fig.nod();
+      }
+      this.player?.fig.nod();
+    }
     if (this.cancelled) throw SCRIPT_CANCEL;
   }
   async choose(options: Array<{ text: string; tag?: string }>, pre?: number): Promise<number> {
@@ -1088,7 +1118,7 @@ export class Game {
       return;
     }
     s.hp = Math.max(0, s.hp - d);
-    p.hurt();
+    p.hurt(from, Math.min(1.6, 0.6 + d / 20));
     p.iframes = 0.55;
     const kx = p.pos.x - from.x;
     const kz = p.pos.z - from.z;
@@ -1279,7 +1309,7 @@ export class Game {
     const p = this.player!;
     if (t.npc) {
       const n = t.npc;
-      p.yaw = Math.atan2(n.pos.x - p.pos.x, n.pos.z - p.pos.z);
+      p.faceTo = Math.atan2(n.pos.x - p.pos.x, n.pos.z - p.pos.z);
       this.runScript(() => Story.talk(this, n.def.id), n);
       return;
     }
@@ -1287,7 +1317,13 @@ export class Game {
     const s = this.state!;
     const d = x.def;
     const data = d.data ?? {};
-    p.fig.play('interact');
+    // vira para o objeto antes de estender a mão
+    if (Math.hypot(x.pos.x - p.pos.x, x.pos.z - p.pos.z) > 0.2) p.faceTo = Math.atan2(x.pos.x - p.pos.x, x.pos.z - p.pos.z);
+    // cada objeto pede um gesto: abaixar para pegar, erguer a tampa, puxar a alavanca, empurrar a grade
+    const ges: Record<string, Action> = { pickup: (x.pos.y - p.pos.y > 0.5 ? 'reach' : 'pickup'), page: 'reach', chest: 'open', lever: 'examine', door: 'push', examine: 'examine', board: 'examine', mechanism: 'reach', brazier: 'reach', rest: 'examine' };
+    if (d.kind !== 'portal' && d.kind !== 'trail') p.fig.play(ges[d.kind] ?? 'reach');
+    // descobertas puxam a câmera para perto do que foi achado
+    if (d.kind === 'chest' || d.kind === 'pickup' || d.kind === 'page' || d.kind === 'examine') p.focus(new THREE.Vector3(x.pos.x, x.pos.y + (d.kind === 'page' ? 0.95 : 0.35), x.pos.z), d.kind === 'examine' ? 2.2 : 1.8);
     if (d.kind === 'pickup' && !Story.CUSTOM_PICKUPS.has(d.id)) {
       D.markCollected(s, d.id);
       if (data.item === 'moedas') {
@@ -1326,7 +1362,9 @@ export class Game {
     const s = this.state!;
     if (!D.markCollected(s, id)) return false;
     this.audio.sfx('porta');
+    this.lidAnim = true;
     this.refreshProps();
+    this.lidAnim = false;
     return true;
   }
 
@@ -1405,6 +1443,7 @@ export class Game {
       }
     }
     for (const u of this.region.updaters) u(dt, this.engine.time);
+    this.updateLids(dt);
     this.updateSparks(dt);
     // telas paradas (pausa, caderno, loja, dossiê) redesenham a 15 quadros por segundo: poupa bateria e GPU
     const still = this.mode === 'pause' || this.mode === 'shop' || this.mode === 'case' || (this.mode === 'book' && !!this.state);
@@ -1600,7 +1639,10 @@ export class Game {
     this.inCombat = fighting;
     this.audio.setCombat(fighting ? 1 : 0);
 
+    if (this.mode === 'dialogue' && this.talkingNpc) p.lookHint = this.lookHint.set(this.talkingNpc.pos.x, this.talkingNpc.pos.y + this.talkingNpc.fig.height * 0.9, this.talkingNpc.pos.z);
+    p.frame = this.mode === 'dialogue' && this.talkingNpc ? this.lookHint : null;
     Npc.cam.copy(cam.position);
+    Npc.typing = this.ui.isTyping || this.ui.instant;
     for (const n of this.npcs) n.update(dt, p.pos);
 
     // habilidades e itens
@@ -1671,6 +1713,9 @@ export class Game {
     if (controls && !p.dead) {
       const near = this.nearest();
       this.ui.prompt(near ? near.label : null);
+      // a cabeça vira para o que se pode usar ou para quem se pode ouvir
+      const np = near?.npc?.pos ?? near?.prop?.pos;
+      p.lookHint = np ? this.lookHint.set(np.x, np.y + (near?.npc ? near.npc.fig.height * 0.9 : 0.6), np.z) : null;
       if (near && !p.fig.busy && inp.took('interagir')) this.interact(near);
     } else this.ui.prompt(null);
 
