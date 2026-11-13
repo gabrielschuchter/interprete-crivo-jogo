@@ -4,6 +4,8 @@ import { BRAND } from '../world/palette';
 import type { Collider } from '../world/builder';
 import { resolveCircle } from '../world/region';
 import { getGltf, instanceSkinned, loadGltf } from '../core/assets';
+import { Rig, Spring, applyPose, approach, forceMixerWrite, measureGait, mix, smooth, span, type GaitInfo, type Pose } from './motion';
+import { ESTILOS, RECITA, TONTO, URRO, type Estilo } from './estilos';
 
 /** Corpo de captura de movimento dos espectros maiores (MakeHuman + CMU, ver REGISTRO_DE_ASSETS). */
 const BODY_PATH = 'models/personagens/vulto.glb';
@@ -75,7 +77,7 @@ export function enemyModelPath(kind: EnemyKind): string | null {
   return m ? `${PS2}${m}.glb` : BODY_PATH;
 }
 
-export type EnemyState = 'idle' | 'chase' | 'windup' | 'strike' | 'recover' | 'stunned' | 'cast' | 'ring' | 'recite' | 'dying' | 'dead';
+export type EnemyState = 'idle' | 'chase' | 'windup' | 'strike' | 'recover' | 'stunned' | 'cast' | 'ring' | 'recite' | 'fase' | 'dying' | 'dead';
 
 export interface EnemyCtx {
   playerPos: THREE.Vector3;
@@ -153,7 +155,18 @@ export class Enemy {
     eyes: THREE.Mesh[];
     lastState: EnemyState | null;
     own: boolean;
+    rig: Rig;
+    rest: Map<THREE.Object3D, { q: THREE.Quaternion; p: THREE.Vector3 }>;
+    gaits: Map<string, GaitInfo>;
+    k: number;
   } | null = null;
+  /** trancos de impacto (frente/trás e lado) e o último ponto de onde veio o golpe */
+  private flX = new Spring(120, 11);
+  private flZ = new Spring(120, 11);
+  private lastFrom = new THREE.Vector3();
+  /** pose do golpe que já foi atingida, para a recuperação partir dela */
+  private styleW = 0;
+  private hoverY = 0;
 
   constructor(
     public kind: EnemyKind,
@@ -446,7 +459,19 @@ export class Enemy {
       this.eyes.push(e);
     }
     const clips = new Map(g.animations.map((a) => [a.name, a] as const));
-    this.body = { root, mixer: new THREE.AnimationMixer(root), clips, cur: '', act: null, mats, head, eyes, lastState: null, own };
+    const mixer = new THREE.AnimationMixer(root);
+    const rig = new Rig(root, this.root);
+    const rest = new Map<THREE.Object3D, { q: THREE.Quaternion; p: THREE.Vector3 }>();
+    for (const b of rig.bones.values()) rest.set(b, { q: b.quaternion.clone(), p: b.position.clone() });
+    // passada: velocidade natural de andar e correr deste corpo, para o pé não patinar na perseguição
+    const gaits = new Map<string, GaitInfo>();
+    for (const n of ['walk', 'run']) {
+      const cl = clips.get(n);
+      const gi = cl ? measureGait(mixer, cl, rig) : null;
+      if (gi) gaits.set(n, gi);
+    }
+    mixer.stopAllAction();
+    this.body = { root, mixer, clips, cur: '', act: null, mats, head, eyes, lastState: null, own, rig, rest, gaits, k: root.scale.x };
   }
 
   private playClip(name: string, opts: { once?: boolean; speed?: number; fade?: number } = {}): void {
@@ -482,12 +507,25 @@ export class Enemy {
         this.playClip(this.kind === 'veredito' ? 'listen' : 'idle', { speed: 0.8 });
         break;
       case 'chase': {
-        const v = this.moveSpeed / Math.max(0.5, c.scale);
-        if (v > 2.2) this.playClip('run', { speed: Math.min(1.4, v / 3.6) });
-        else this.playClip('walk', { speed: Math.max(0.5, Math.min(1.5, v / 1.4)) });
+        const v = this.moveSpeed;
+        if (this.kind === 'matriarca') {
+          // a Matriarca não anda: paira, e o véu arrasta
+          this.playClip('idle', { speed: 0.7 });
+          break;
+        }
+        // velocidade do clipe = velocidade real / velocidade natural do corpo: o pé assenta onde pisa
+        const gw = b.gaits.get('walk');
+        const gr = b.gaits.get('run');
+        if (gr && v > gr.nat * 0.75) this.playClip('run', { speed: THREE.MathUtils.clamp(v / gr.nat, 0.6, 1.8) });
+        else if (gw) this.playClip('walk', { speed: THREE.MathUtils.clamp(v / gw.nat, 0.4, 2.4) });
+        else this.playClip(v > 2.2 ? 'run' : 'walk', { speed: 1 });
         break;
       }
       case 'windup':
+        if (this.style) {
+          this.playClip('idle', { speed: 0.5, fade: 0.1 });
+          break;
+        }
         // o braço sobe durante a antecipação e desce no golpe: mesmo clipe, sem reinício
         if (changed) {
           b.cur = '';
@@ -495,6 +533,7 @@ export class Enemy {
         }
         break;
       case 'strike':
+        if (this.style) break;
         if (b.act && b.cur === 'heavy') b.act.timeScale = 1.5;
         else this.playClip('attack', { once: true, speed: 1.3 });
         break;
@@ -512,6 +551,12 @@ export class Enemy {
       case 'recite':
         this.playClip('talk', { speed: 0.7 });
         break;
+      case 'fase':
+        if (changed) {
+          b.cur = '';
+          this.playClip('hit', { once: true, speed: 0.6, fade: 0.08 });
+        }
+        break;
       case 'dying':
         if (changed) {
           b.cur = '';
@@ -526,7 +571,13 @@ export class Enemy {
       default:
         break;
     }
+    for (const [bn, r] of b.rest) {
+      bn.quaternion.copy(r.q);
+      bn.position.copy(r.p);
+    }
+    forceMixerWrite(b.mixer);
     b.mixer.update(dt);
+    this.motion(dt);
     const em = this.flash > 0 ? 0xffffff : eyeHot ? BRAND.classicCrimson : c.tint;
     for (const m of b.mats) {
       m.emissive.set(em);
@@ -541,6 +592,108 @@ export class Enemy {
       this.root.worldToLocal(_hv);
       const sc = c.scale;
       for (let i = 0; i < b.eyes.length; i++) b.eyes[i].position.set(_hv.x + (i ? 1 : -1) * 0.045 * sc, _hv.y + 0.07 * sc, _hv.z + 0.11 * sc);
+    }
+  }
+
+  /** estilo de ataque do corpo do elenco (poses de antecipação, contato e recuperação) */
+  private get style(): Estilo | null {
+    return this.body?.own ? (ESTILOS[this.kind] ?? null) : null;
+  }
+
+  /** Camada procedural sobre o clipe: poses do golpe, trancos de impacto, urro de fase e o pairar da Matriarca. */
+  private motion(dt: number): void {
+    const b = this.body!;
+    const rig = b.rig;
+    const st = this.state;
+    const t = this.t;
+    const cfg = this.cfg;
+    const sty = this.style;
+    let pose: Pose | null = null;
+    let w = 0;
+    if (sty) {
+      switch (st) {
+        case 'chase':
+          if (sty.guard) {
+            pose = sty.guard;
+            w = 0.55;
+          }
+          break;
+        case 'windup': {
+          // sobe até 78% do aviso e segura, tenso, até o golpe sair
+          const hold = cfg.windup * 0.78;
+          pose = sty.windup;
+          w = smooth(t / hold);
+          if (t > hold) rig.turn('Spine1', Math.sin(t * 55) * 0.018, 0, Math.sin(t * 47) * 0.014);
+          break;
+        }
+        case 'strike': {
+          // acelera até o contato, que cai no quadro do dano
+          const k = Math.min(1, t / sty.impact);
+          pose = mix(sty.windup, sty.strike, k * k);
+          w = 1;
+          break;
+        }
+        case 'recover': {
+          const R = cfg.recover;
+          pose = mix(sty.strike, sty.recover, span(t, 0, R * 0.35));
+          w = 1 - span(t, R * 0.55, R);
+          break;
+        }
+        case 'ring':
+          if (sty.ring) {
+            const wind = 1.15;
+            if (t < wind) {
+              pose = sty.ring.up;
+              w = smooth(t / (wind * 0.7));
+              if (t > wind * 0.7) rig.turn('Spine1', Math.sin(t * 50) * 0.02, 0, 0);
+            } else {
+              pose = mix(sty.ring.up, sty.ring.down, Math.min(1, (t - wind) / 0.1) ** 2);
+              w = 1 - span(t, wind + 0.3, wind + 0.45);
+            }
+          }
+          break;
+        case 'cast':
+          if (sty.cast) {
+            pose = sty.cast;
+            w = smooth(t / 0.45);
+            // cada sopro sai com um tranco de peito
+            rig.turn('Spine1', Math.max(0, Math.sin(t * 26)) * 0.06 * w, 0, 0);
+          }
+          break;
+        default:
+          break;
+      }
+    }
+    if (st === 'recite') {
+      pose = RECITA;
+      w = smooth(t / 0.8);
+      rig.turn('Spine1', Math.sin(t * 40) * 0.02 * w, 0, Math.sin(t * 33) * 0.015 * w);
+    } else if (st === 'fase') {
+      // recua com o golpe que abriu a fase, depois se ergue e urra
+      pose = URRO;
+      w = span(t, 0.3, 0.6) * (1 - span(t, 1.05, 1.3));
+      if (t > 0.5 && t < 1.05) rig.turn('Head', Math.sin(t * 60) * 0.03, 0, 0);
+    } else if (st === 'stunned' && b.own) {
+      pose = TONTO;
+      w = 0.7;
+    }
+    if (pose && w > 0.001) {
+      applyPose(rig, pose, w);
+      const hips = rig.get('Hips');
+      if (hips && pose.drop) hips.position.y -= (pose.drop * w * (this.cfg.alt ?? 1.9) / 1.9) / b.k;
+    }
+    // Matriarca: pernas soltas sob o véu, corpo inclinado na direção do movimento
+    if (this.kind === 'matriarca') {
+      applyPose(rig, { lL: [0.06, -0.93, -0.36], sL: [0, -0.82, -0.57], lR: [-0.06, -0.93, -0.3], sR: [0, -0.85, -0.52] }, 0.75);
+      rig.turn('Hips', Math.min(0.32, this.moveSpeed * 0.14), 0, 0);
+    }
+    // tranco de impacto: o tronco cede para longe do golpe e volta
+    const fx = this.flX.update(dt);
+    const fz = this.flZ.update(dt);
+    if (fx || fz) {
+      rig.turn('Spine', fx * 0.07, 0, fz * 0.05);
+      rig.turn('Spine1', fx * 0.09, 0, fz * 0.06);
+      rig.turn('Head', fx * 0.12, 0, fz * 0.08);
     }
   }
 
@@ -582,6 +735,19 @@ export class Enemy {
     this.hp -= dealt;
     this.flash = 0.18;
     this.aggro = true;
+    {
+      // tranco na direção do golpe: chefe cede pouco, comum cede muito, golpe firme dobra
+      const dx = this.lastFrom.x - this.pos.x;
+      const dz = this.lastFrom.z - this.pos.z;
+      const c = Math.cos(this.yaw);
+      const sn = Math.sin(this.yaw);
+      const lx = dx * c - dz * sn;
+      const lz = dx * sn + dz * c;
+      const l = Math.hypot(lx, lz) || 1;
+      const f = (this.cfg.boss ? 0.45 : 1) * (heavy ? 1.6 : 1);
+      this.flX.kick((-lz / l) * 6 * f);
+      this.flZ.kick((lx / l) * 4 * f);
+    }
     this.bar.visible = !this.cfg.boss;
     this.poise += heavy ? 3 : 1;
     if (this.hp <= 0) {
@@ -608,6 +774,7 @@ export class Enemy {
     this.t += dt;
     this.flash = Math.max(0, this.flash - dt);
     this.attackCd = Math.max(0, this.attackCd - dt);
+    this.lastFrom.copy(c.playerPos);
     const toP = new THREE.Vector3().subVectors(c.playerPos, this.pos);
     toP.y = 0;
     const dist = toP.length();
@@ -680,16 +847,13 @@ export class Enemy {
           break;
         }
         if (cfg.mini && this.phase === 1 && hpF <= 0.5) {
-          // segunda fase: mais rápido, antecipação mais curta, golpe mais pesado e o padrão próprio se intensifica
+          // segunda fase: mais rápido, antecipação mais curta, golpe mais pesado e o padrão próprio se intensifica.
+          // Antes, um urro de 1,3 s: a mudança se vê no corpo antes de se sentir no dano
           this.phase = 2;
           this.cfg = { ...cfg, speed: cfg.speed * 1.25, windup: cfg.windup * 0.8, recover: cfg.recover * 0.7, dmg: Math.round(cfg.dmg * 1.15) };
           this.flash = 0.4;
-          c.shake(0.6);
-          c.sfx('chefe');
-          if (cfg.special === 'invoca') {
-            for (const sgn of [-1, 1]) c.summon('fiapo', this.pos.x + sgn * 2.4 * Math.cos(this.yaw), this.pos.z - sgn * 2.4 * Math.sin(this.yaw), this.group);
-          }
-          this.ringCd = 0;
+          this.set('fase');
+          this.flX.kick(-7);
           break;
         }
         if (cfg.boss && this.ringCd <= 0 && dist < 9 && (this.kind === 'eco' || hpF < 0.7) && (!cfg.mini || cfg.special === 'invoca' || this.phase === 2)) {
@@ -753,7 +917,13 @@ export class Enemy {
         move(this.strikeDir.x * sp, this.strikeDir.z * sp);
         lean = 0.4;
         eyeHot = 1;
-        if (!this.strikeHit && dist < this.radius + 0.95 + (cfg.boss ? 0.8 : 0)) {
+        // o dano sai no quadro em que a pose chega ao contato, não no início do golpe
+        const impact = this.style?.impact ?? 0;
+        if (this.t >= impact && this.t - dt < impact && this.style?.quake) {
+          c.shake(this.style.quake);
+          c.sfx('impactoChao');
+        }
+        if (!this.strikeHit && this.t >= impact && dist < this.radius + 0.95 + (cfg.boss ? 0.8 : 0)) {
           this.strikeHit = true;
           c.hitPlayer(cfg.dmg, this.pos, 'golpe');
         }
@@ -840,6 +1010,25 @@ export class Enemy {
         }
         break;
       }
+      case 'fase': {
+        face(1.5);
+        eyeHot = 1;
+        swell = 1 + span(this.t, 0.3, 0.6) * 0.2;
+        if (this.t >= 0.45 && this.t - dt < 0.45) {
+          c.shake(0.6);
+          c.sfx('chefe');
+          if (cfg.special === 'invoca') {
+            for (const sgn of [-1, 1]) c.summon('fiapo', this.pos.x + sgn * 2.4 * Math.cos(this.yaw), this.pos.z - sgn * 2.4 * Math.sin(this.yaw), this.group);
+          }
+          ringOpacity = 0.9;
+          ringScale = 4;
+        }
+        if (this.t >= 1.3) {
+          this.ringCd = 0;
+          this.set('chase');
+        }
+        break;
+      }
       case 'stunned': {
         lean = -0.3;
         swell = 0.92 + Math.sin(this.t * 30) * 0.02;
@@ -870,7 +1059,10 @@ export class Enemy {
     // visual
     this.bobPhase += dt;
     const bob = Math.sin(this.bobPhase * 1.7) * 0.08 * s;
-    this.root.position.set(this.pos.x, this.pos.y + bob + 0.05, this.pos.z);
+    // a Matriarca paira a meio metro do chão, sobe e desce devagar e só toca o chão ao morrer
+    const hover = this.kind === 'matriarca' && this.body ? (this.alive ? 0.5 + Math.sin(this.bobPhase * 1.1) * 0.08 : 0.5 * Math.max(0, 1 - this.t / 0.8)) : 0;
+    this.hoverY = approach(this.hoverY, hover, 3, dt);
+    this.root.position.set(this.pos.x, this.pos.y + bob + 0.05 + this.hoverY, this.pos.z);
     this.root.rotation.y = this.yaw;
     this.shroud.scale.set(swell, 1 + (swell - 1) * 0.3, swell);
     this.shroud.rotation.y = Math.sin(time * 0.7 + this.bobPhase) * 0.08;
@@ -900,7 +1092,7 @@ export class Enemy {
     rm.opacity = ringOpacity;
     this.ring.visible = ringOpacity > 0.01;
     this.ring.scale.setScalar(ringScale);
-    this.ring.position.y = 0.06 - bob;
+    this.ring.position.y = 0.06 - bob - this.hoverY;
     this.ring.rotation.z = -this.yaw;
     if (this.bar.visible) {
       this.bar.quaternion.copy(this.root.quaternion).invert().multiply(cameraQuat);

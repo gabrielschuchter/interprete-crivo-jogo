@@ -695,6 +695,9 @@ export async function useProp(g: G, p: PropPlacement): Promise<void> {
     if (fichas < 3) await N(`Você tem ${fichas} de três fichas de procedência. Dá para puxar assim mesmo, mas seria palpite.`);
     const c = await g.choose([{ text: `Puxar a alavanca do ${name}` }, { text: 'Ainda não' }], 1);
     if (c !== 0) return;
+    // o gesto e a haste andam juntos: a mão alcança, o corpo puxa, a haste desce
+    g.player?.fig.play('pull');
+    g.region.actions['puxa_' + p.id]?.();
     g.audio.sfx('mecanismo');
     if (p.id !== 'alavanca_b') {
       g.audio.sfx('erro');

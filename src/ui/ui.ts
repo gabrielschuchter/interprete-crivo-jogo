@@ -67,6 +67,10 @@ export class UI {
   private $: Record<string, HTMLElement> = {};
   private g!: Game;
   private typing: { full: string; i: number; el: HTMLElement; done: () => void } | null = null;
+  /** texto de fala ainda sendo escrito (a boca do falante acompanha) */
+  get isTyping(): boolean {
+    return !!this.typing;
+  }
   private sayResolve: (() => void) | null = null;
   private chooseResolve: ((i: number) => void) | null = null;
   private choiceCount = 0;

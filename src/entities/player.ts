@@ -7,6 +7,8 @@ import type { Stats, Look } from '../domain/state';
 import { PROFESSIONS, COAT_COLORS } from '../content/data';
 import type { Emblem } from './figure';
 
+/** gestos de interação: o corpo para enquanto a mão trabalha */
+const USING = new Set(['pickup', 'examine', 'pull', 'open', 'push', 'reach', 'interact']);
 const EMBLEM: Record<string, Emblem> = { nutricao: 'caderno', medicina: 'estetoscopio', enfermagem: 'relogio', psicologia: 'oculos', fisioterapia: 'fita' };
 import { BRAND } from '../world/palette';
 
@@ -102,6 +104,18 @@ export class Player {
   camDist = 4.6;
   private camCur = new THREE.Vector3();
   private camInit = false;
+  /** conversa: a câmera vai para trás do ombro e enquadra quem fala (o jogo aponta o rosto) */
+  frame: THREE.Vector3 | null = null;
+  private frameK = 0;
+  /** descoberta: aproximação lenta sobre o ponto achado (baú, folha, item) */
+  private focusP = new THREE.Vector3();
+  private focusT = 0;
+  private focusDur = 1;
+  private camLook = new THREE.Vector3();
+  focus(p: THREE.Vector3, dur = 1.8): void {
+    this.focusP.copy(p);
+    this.focusT = this.focusDur = dur;
+  }
   lockTarget: { pos: THREE.Vector3; alive: boolean; radius: number } | null = null;
   frozen = false;
   onStep: (() => void) | null = null;
@@ -123,6 +137,11 @@ export class Player {
   private groundedRecently = 0;
   onJump: (() => void) | null = null;
   onLand: ((hard: boolean) => void) | null = null;
+  /** ponto de interesse próximo para onde a cabeça vira (o jogo atualiza) */
+  lookHint: THREE.Vector3 | null = null;
+  /** rumo para onde o corpo vira sozinho (conversa, objeto), com passos e sem estalo */
+  faceTo: number | null = null;
+  private lookP = new THREE.Vector3();
 
   constructor(look: Look, profession: string) {
     const prof = PROFESSIONS.find((p) => p.id === profession) ?? PROFESSIONS[5];
@@ -205,8 +224,9 @@ export class Player {
     return this.dodgeT > 0;
   }
 
-  hurt(): void {
+  hurt(from?: THREE.Vector3, force = 1): void {
     this.hurtT = 0.36;
+    if (from) this.fig.flinch(from, force);
     if (!this.fig.busy || this.fig.action === 'hit') this.fig.play('hit');
   }
 
@@ -340,7 +360,7 @@ export class Player {
       // pequeno avanço no golpe
       const adv = fig.progress > 0.25 && fig.progress < 0.55 ? 2.4 : 0;
       this.vel.set(Math.sin(this.yaw) * adv, 0, Math.cos(this.yaw) * adv);
-    } else if (this.hurtT > 0 || this.dead || fig.action === 'die') {
+    } else if (this.hurtT > 0 || this.dead || fig.action === 'die' || USING.has(fig.action)) {
       this.vel.multiplyScalar(Math.exp(-dt * 8));
     } else if (wish.lengthSq() > 0.01) {
       const target = running ? stats.runSpeed : stats.walkSpeed + 1.2;
@@ -392,6 +412,7 @@ export class Player {
           this.air = false;
           this.vy = 0;
           this.lastSafe.copy(this.pos);
+          this.fig.land(hard);
           this.onLand?.(hard);
         } else if (g === null && this.pos.y < Math.min(this.lastSafe.y, 0) - 1.4) {
           this.air = false;
@@ -420,6 +441,19 @@ export class Player {
       }
     }
 
+    let turnRate = 0;
+    if (this.faceTo !== null) {
+      let d = this.faceTo - this.yaw;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      if (Math.abs(d) < 0.03 || (wish.lengthSq() > 0.01 && !this.frozen)) this.faceTo = null;
+      else {
+        const step = d * (1 - Math.exp(-dt * 9));
+        this.yaw += step;
+        turnRate = step / Math.max(dt, 1e-3);
+      }
+    }
+    fig.turnRate = turnRate;
     this.speed = Math.hypot(this.vel.x, this.vel.z);
     // vigor
     this.vigorDelay -= dt;
@@ -435,6 +469,9 @@ export class Player {
     }
 
     fig.airborne = this.air || this.falling;
+    // olhar: o alvo travado manda; senão, quem o jogo apontou por perto (morador, objeto)
+    if (this.lockTarget?.alive) fig.lookAt = this.lookP.set(this.lockTarget.pos.x, this.lockTarget.pos.y + 1.4, this.lockTarget.pos.z);
+    else fig.lookAt = this.lookHint;
     fig.speed = acting || this.dodging ? 0 : fig.airborne ? Math.max(this.speed, 3.6) : this.speed;
     fig.update(dt);
     fig.root.position.copy(this.pos);
@@ -468,23 +505,40 @@ export class Player {
       this.camYaw += d * Math.min(1, dt * 4);
       this.camPitch += (0.3 - this.camPitch) * Math.min(1, dt * 2);
     }
-    const pivot = new THREE.Vector3(this.pos.x, this.pos.y + 1.55, this.pos.z);
+    // conversa: gira devagar até ficar atrás do ombro do jogador, com o rosto do morador no terço da tela
+    this.frameK += ((this.frame ? 1 : 0) - this.frameK) * (1 - Math.exp(-2.4 * dt));
+    const fk = this.frameK;
+    if (this.frame && fk > 0.01) {
+      const want = Math.atan2(this.pos.x - this.frame.x, this.pos.z - this.frame.z) + 0.6;
+      let d = want - this.camYaw;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      this.camYaw += d * Math.min(1, dt * 2.6);
+      this.camPitch += (0.1 - this.camPitch) * Math.min(1, dt * 2);
+    }
+    this.focusT = Math.max(0, this.focusT - dt);
+    // entra em 0,35 s, segura e sai devagar
+    const u = 1 - this.focusT / this.focusDur;
+    const fw = this.focusT > 0 ? Math.min(1, u / 0.25) * Math.min(1, (1 - u) / 0.45) : 0;
+    const fws = fw * fw * (3 - 2 * fw);
+    const pivot = new THREE.Vector3(this.pos.x, this.pos.y + 1.55 - 0.05 * fk, this.pos.z);
     const cp = Math.cos(this.camPitch);
     const dir = new THREE.Vector3(Math.sin(this.camYaw) * cp, Math.sin(this.camPitch), Math.cos(this.camYaw) * cp);
     // enquadramento centrado: o personagem fica no meio da tela
     const right = new THREE.Vector3(Math.cos(this.camYaw), 0, -Math.sin(this.camYaw));
     pivot.addScaledVector(right, 0.0);
     // colisão: encurta o braço da câmera até o primeiro ponto livre
-    let dist = this.camDist;
+    const arm = this.camDist * (1 - 0.38 * fk) * (1 - 0.24 * fws);
+    let dist = arm;
     const steps = 14;
     for (let i = 1; i <= steps; i++) {
-      const d = (this.camDist * i) / steps;
+      const d = (arm * i) / steps;
       const px = pivot.x + dir.x * d;
       const py = pivot.y + dir.y * d;
       const pz = pivot.z + dir.z * d;
       const g = groundAt(region, px, pz, py + 2);
       if (pointBlocked(region.colliders, px, py, pz, 0.3) || (g !== null && py < g + 0.25)) {
-        dist = Math.max(0.7, (this.camDist * (i - 1)) / steps - 0.1);
+        dist = Math.max(0.7, (arm * (i - 1)) / steps - 0.1);
         break;
       }
     }
@@ -495,6 +549,11 @@ export class Player {
     } else this.camCur.lerp(target, Math.min(1, dt * 14));
     camera.position.copy(this.camCur);
     const lookAt = pivot.clone().addScaledVector(dir, -2.5);
-    camera.lookAt(lookAt);
+    // na conversa o olhar mira entre os dois rostos; na descoberta, desce até o que foi achado
+    if (this.frame && fk > 0.01) lookAt.lerp(this.frame, 0.45 * fk);
+    if (fws > 0) lookAt.lerp(this.focusP, 0.55 * fws);
+    if (!this.camLook.lengthSq()) this.camLook.copy(lookAt);
+    else this.camLook.lerp(lookAt, Math.min(1, dt * 10));
+    camera.lookAt(this.camLook);
   }
 }

@@ -166,15 +166,42 @@ export function buildArquivo(ctx: RegionCtx): BuiltRegion {
   const tc = trail([[0, -5], [-4, -9], [-9, -15.4]], 0x7fd8ff);
 
   // console das alavancas
-  const lever = (x: number, name: string) => {
+  // a haste gira no pé: puxada, desce em direção a quem puxa; a errada volta sozinha com um tranco
+  const rodGeo = new THREE.CylinderGeometry(0.035, 0.035, 0.9, 16);
+  const knobGeo = new THREE.SphereGeometry(0.08, 8, 6);
+  const lever = (x: number, name: string, id: string) => {
     b.box(M.stoneDark, 0.7, 1.0, 0.5, x, 0, -17.6, 0, true);
-    b.add(new THREE.CylinderGeometry(0.035, 0.035, 0.9, 16), M.iron, trs(x, 1.36, -17.5, 0, 0.5), false);
-    b.add(new THREE.SphereGeometry(0.08, 8, 6), M.bronze, trs(x, 1.76, -17.28), false);
+    const arm = new THREE.Group();
+    arm.position.set(x, 0.965, -17.716);
+    const rod = new THREE.Mesh(rodGeo, M.iron);
+    rod.position.y = 0.45;
+    const knob = new THREE.Mesh(knobGeo, M.bronze);
+    knob.position.y = 0.9;
+    arm.add(rod, knob);
+    const UP = 0.5;
+    const DOWN = 1.35;
+    const stays = id === 'alavanca_b';
+    arm.rotation.x = stays && opened ? DOWN : UP;
+    b.dynamic(arm);
     K.plaque(b, name, x, 0.6, -17.34, 0, 0.62, 0.2, '#e7d8b4', '#2a1418', '500 150px "IBM Plex Mono", monospace');
+    let t = -1;
+    r.actions['puxa_' + id] = () => {
+      t = 0;
+    };
+    b.updaters.push((dt) => {
+      if (t < 0) return;
+      t += dt;
+      // a mão chega em 0,35 s; a haste desce em 0,4 s; a errada segura meio segundo e volta
+      const down = Math.min(1, Math.max(0, (t - 0.35) / 0.4));
+      const back = stays ? 0 : Math.min(1, Math.max(0, (t - 1.3) / 0.25));
+      const k = down * down * (3 - 2 * down) * (1 - back * back);
+      arm.rotation.x = UP + (DOWN - UP) * k + (back > 0 && back < 1 ? Math.sin(back * Math.PI * 3) * 0.06 : 0);
+      if (t > 1.6) t = -1;
+    });
   };
-  lever(3.4, 'SINO');
-  lever(4.8, 'MARÉ');
-  lever(6.2, 'FAROL');
+  lever(3.4, 'SINO', 'alavanca_a');
+  lever(4.8, 'MARÉ', 'alavanca_b');
+  lever(6.2, 'FAROL', 'alavanca_c');
 
   // Sala dos Originais: estantes, pódio e velas
   for (const z of [-24, -30, -36]) {
