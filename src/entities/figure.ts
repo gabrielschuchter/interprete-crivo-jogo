@@ -3,6 +3,7 @@ import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { fixMaterials, instanceSkinned, loadGltf } from '../core/assets';
 import { M } from '../world/mats';
 import { report } from '../core/diag';
+import { TorchModel, WEAPON_LOOKS, buildWeapon, orientWeapon, preloadWeapon, weaponDir } from './weapons';
 
 /**
  * Figura humana procedural: proporções plausíveis, casaco longo, capa curta,
@@ -18,7 +19,10 @@ export interface FigureOpts {
   trousers?: number;
   scarf?: number | null;
   cape?: number | null;
-  staff?: boolean;
+  /** carrega arma e tocha */
+  armed?: boolean;
+  /** tipo de arma em WEAPON_LOOKS */
+  weapon?: string;
   satchel?: boolean;
   build?: number;
   apron?: number | null;
@@ -27,6 +31,8 @@ export interface FigureOpts {
   emblem?: Emblem | null;
   /** chave em public/models/manifest.json; se existir, o modelo glTF substitui o procedural */
   model?: string;
+  /** modelo de reserva quando `model` não está no manifesto */
+  modelAlt?: string;
   /** cor multiplicada sobre a textura de pele / cabelo do modelo externo */
   tintSkin?: number;
   tintHair?: number;
@@ -93,15 +99,16 @@ export async function preloadModels(): Promise<void> {
 /** Clipes de captura de movimento por ação. Ações sem clipe próprio usam o vizinho mais próximo. */
 const CLIP_FOR: Partial<Record<Action, string[]>> = {
   attack1: ['attack'],
-  attack2: ['attack'],
+  attack2: ['attack2', 'attack'],
   heavy: ['heavy', 'attack'],
-  dodge: ['dodge'],
+  // a captura de esquiva é um agachamento; no jogo a esquiva é um arranque em corrida
+  dodge: ['run', 'dodge'],
   hit: ['hit'],
   die: ['die'],
   interact: ['interact'],
   cast: ['cast', 'attack'],
   talk: ['talk'],
-  sit: ['sit'],
+  sit: ['idle'],
   shrug: ['shrug', 'talk'],
   think: ['listen', 'idle'],
   nod: ['talk'],
@@ -133,9 +140,14 @@ export class Figure {
   private shinR = new THREE.Group();
   private skirt: THREE.Mesh;
   private cape: THREE.Mesh | null = null;
-  staff: THREE.Group | null = null;
-  staffTip = new THREE.Object3D();
-  staffGlow: THREE.Mesh | null = null;
+  /** arma empunhada (lâmina em +Y); a ponta fica em weaponTip */
+  weapon: THREE.Group | null = null;
+  weaponTip = new THREE.Object3D();
+  weaponKind = '';
+  /** no ar após pulo ou queda: usa a passada de corrida */
+  airborne = false;
+  torch: TorchModel | null = null;
+  private clock = 0;
   private phase = Math.random() * 6;
   speed = 0;
   action: Action = 'none';
@@ -155,7 +167,7 @@ export class Figure {
   private idleT = 0;
   private lastYaw = 0;
   private bank = 0;
-  private ext: { mixer: THREE.AnimationMixer; clips: Map<string, THREE.AnimationAction>; cur: string; curAction: Action; hand: THREE.Object3D | null; head: THREE.Object3D | null } | null = null;
+  private ext: { mixer: THREE.AnimationMixer; clips: Map<string, THREE.AnimationAction>; cur: string; curAction: Action; hand: THREE.Object3D | null; handL: THREE.Object3D | null; head: THREE.Object3D | null } | null = null;
   private opts: FigureOpts;
   private lastActT = 0;
   /** cabeça do modelo externo (para olhos, marcadores) */
@@ -186,7 +198,7 @@ export class Figure {
     };
 
     this.root.add(this.body);
-    if (o.model) void this.useModel(o.model);
+    if (o.model) void this.useModel(o.model).then((ok) => (!ok && o.modelAlt ? this.useModel(o.modelAlt) : ok));
     this.body.scale.setScalar(k);
     this.hips.position.y = 0.93;
     this.body.add(this.hips);
@@ -410,28 +422,31 @@ export class Figure {
       thumb.rotation.z = sx * 0.5;
     }
 
-    if (o.staff) {
-      const st = (this.staff = new THREE.Group());
+    if (o.armed) {
+      // corpo procedural (reserva): arma na mão direita, tocha na esquerda
+      const st = (this.weapon = new THREE.Group());
       st.position.set(0, -0.275, 0);
       this.foreR.add(st);
-      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.021, 1.5, 12), M.woodDark);
-      shaft.position.y = -0.13;
-      shaft.castShadow = true;
-      st.add(shaft);
-      const ferr = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.016, 0.07, 7), M.bronze);
-      ferr.position.y = -0.88;
-      st.add(ferr);
-      // ponteira-lanterna
-      const cage = new THREE.Mesh(new THREE.OctahedronGeometry(0.075, 0), new THREE.MeshStandardMaterial({ color: 0x7a5a2a, metalness: 0.8, roughness: 0.4, wireframe: true }));
-      cage.position.y = 0.66;
-      st.add(cage);
-      const glow = (this.staffGlow = new THREE.Mesh(new THREE.SphereGeometry(0.034, 10, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffc27a).multiplyScalar(1.5) })));
-      glow.position.y = 0.66;
-      st.add(glow);
-      this.staffTip.position.y = 0.66;
-      st.add(this.staffTip);
+      this.torch = new TorchModel();
+      this.torch.group.position.set(0, -0.28, 0);
+      this.foreL.add(this.torch.group);
+      void this.equipWeapon(o.weapon ?? 'estoque');
     }
     this.pose(0);
+  }
+
+  /** Troca a arma na mão. Se o modelo não carrega, a figura segue desarmada em vez de falhar. */
+  async equipWeapon(kind: string): Promise<boolean> {
+    if (!this.weapon) return false;
+    this.weaponKind = kind;
+    if (!(await preloadWeapon(kind))) return false;
+    if (this.weaponKind !== kind) return false;
+    const w = buildWeapon(kind);
+    if (!w) return false;
+    for (const c of [...this.weapon.children]) this.weapon.remove(c);
+    this.weapon.add(w, this.weaponTip);
+    this.weaponTip.position.set(0, WEAPON_LOOKS[kind].length * (1 - WEAPON_LOOKS[kind].grip) * 0.96, 0);
+    return true;
   }
 
   play(a: Action): void {
@@ -493,13 +508,15 @@ export class Figure {
       clips.set(c.name.toLowerCase(), a);
     }
     const hand = scene.getObjectByName('RightHand') ?? null;
+    const handL = scene.getObjectByName('LeftHand') ?? null;
     const head = scene.getObjectByName('Head') ?? null;
-    if (this.staff) {
-      // o cajado sai do antebraço procedural e passa a seguir a mão do esqueleto
-      this.root.add(this.staff);
-      this.staff.position.set(0.2, 0.9, 0.1);
+    if (this.weapon) {
+      // arma e tocha saem do antebraço procedural e passam a seguir as mãos do esqueleto
+      this.root.add(this.weapon);
+      this.weapon.position.set(0.2, 0.9, 0.1);
+      if (this.torch) this.root.add(this.torch.group);
     }
-    this.ext = { mixer, clips, cur: '', curAction: 'none', hand, head };
+    this.ext = { mixer, clips, cur: '', curAction: 'none', hand, handL, head };
     return true;
   }
 
@@ -522,8 +539,10 @@ export class Figure {
     if (this.action !== 'none') {
       want = this.pickClip(CLIP_FOR[this.action]) ?? 'idle';
       timed = TIMED.includes(this.action);
-    } else want = this.speed > 3.4 ? 'run' : this.speed > 0.3 ? 'walk' : 'idle';
+    } else want = this.airborne ? (e.clips.has('jump') ? 'jump' : 'run') : this.speed > 3.4 ? 'run' : this.speed > 0.3 ? 'walk' : 'idle';
     if (!e.clips.has(want)) want = this.speed > 0.3 && e.clips.has('walk') ? 'walk' : 'idle';
+    // com a tocha na mão esquerda, o modelo do protagonista traz variantes de braço erguido (torch_*)
+    if (this.torch && e.clips.has('torch_' + want)) want = 'torch_' + want;
     const restart = this.action !== 'none' && (this.action !== e.curAction || this.actionT < this.lastActT);
     this.lastActT = this.actionT;
     if (e.cur !== want || restart) {
@@ -542,19 +561,28 @@ export class Figure {
     }
     e.curAction = this.action;
     const cur = e.clips.get(e.cur);
-    if (cur && (e.cur === 'walk' || e.cur === 'run')) {
+    const gait = e.cur.replace('torch_', '');
+    if (cur && (gait === 'walk' || gait === 'run')) {
       // passada acompanha a velocidade real (clipes: andar ~1,4 m/s, correr ~3,6 m/s)
-      const nat = e.cur === 'walk' ? 1.4 : 3.6;
+      const nat = gait === 'walk' ? 1.4 : 3.6;
       cur.setEffectiveTimeScale(THREE.MathUtils.clamp(this.speed / nat, 0.55, 1.7));
     }
     e.mixer.update(dt);
-    if (this.staff && e.hand) {
-      // cajado na mão direita, quase vertical; inclina no golpe
+    this.clock += dt;
+    if (this.weapon && e.hand) {
       e.hand.getWorldPosition(_v);
       this.root.worldToLocal(_v);
-      this.staff.position.copy(_v);
-      const swing = this.action === 'attack1' || this.action === 'attack2' || this.action === 'heavy' ? Math.sin(this.progress * Math.PI) * 1.1 : 0;
-      this.staff.rotation.set(0.12 + swing, 0, this.action === 'attack2' ? -swing * 0.4 : swing * 0.25);
+      this.weapon.position.copy(_v);
+      const act = this.action;
+      orientWeapon(this.weapon, weaponDir(act, act === 'none' ? 0 : this.progress));
+    }
+    if (this.torch && e.handL) {
+      e.handL.getWorldPosition(_v);
+      this.root.worldToLocal(_v);
+      this.torch.group.position.copy(_v);
+      // tocha erguida, levemente para fora e para a frente
+      this.torch.group.rotation.set(0.28, 0, -0.16);
+      this.torch.update(this.clock);
     }
   }
 
@@ -566,6 +594,7 @@ export class Figure {
       }
       return this.updateExternal(dt);
     }
+    this.clock += dt;
     this.phase += dt * (2.2 + this.speed * 1.55);
     this.breathe += dt;
     this.idleT += dt;
@@ -623,7 +652,7 @@ export class Figure {
     let aLz = 0.1;
     let fLx = -0.18 - sp * 0.7;
     // braço direito: segura o cajado
-    const hasStaff = !!this.staff;
+    const hasStaff = !!this.weapon;
     let aRx = hasStaff ? -0.35 - s * 0.12 * stride : -s * 0.62 * stride;
     let aRz = hasStaff ? -0.16 : -0.1;
     let aRy = 0;
@@ -927,7 +956,8 @@ export class Figure {
     this.armR.rotation.set(aRx, aRy, aRz, 'YXZ');
     this.foreL.rotation.x = fLx;
     this.foreR.rotation.x = fRx;
-    if (this.staff) this.staff.rotation.set(stW - aRx - fRx, 0, stRz);
+    if (this.weapon) this.weapon.rotation.set(stW - aRx - fRx + 1.0, 0, stRz);
+    if (this.torch) this.torch.update(this.clock);
     this.skirt.rotation.x = skirtRx - hipsRx * 0.6;
     if (this.cape) this.cape.rotation.x = capeRx;
     this.body.rotation.x = rootRx;

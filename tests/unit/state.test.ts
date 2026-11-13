@@ -150,7 +150,9 @@ describe('registro e configurações resistem a dados corrompidos', () => {
     expect(back.level).toBe(D.MAX_LEVEL);
     expect(back.coins).toBe(0);
     expect(Number.isFinite(back.pos.x) && Number.isFinite(back.pos.z)).toBe(true);
-    expect(back.inventory).toEqual({ limao_lind: 2 });
+    // registro sem arma recebe a inicial, já empunhada
+    expect(back.inventory).toEqual({ limao_lind: 2, estoque_aprendiz: 1 });
+    expect(back.equipment.arma).toBe('estoque_aprendiz');
     expect(back.quests.ponte).toBeUndefined();
     expect(back.quests.chegada.step).toBe(0);
     expect(back.flags).toEqual(['a']);
@@ -188,3 +190,38 @@ describe('remapeamento', () => {
     expect(i.pad).toEqual({ ataque: 3, golpe: 2 });
   });
 });
+
+describe('armas e armaduras', () => {
+  it('equipar e guardar devolvem os atributos exatamente ao valor anterior', async () => {
+    const { GEAR } = await import('../../src/domain/gear');
+    const s = D.newGame('Teste', 'aprendiz', { skin: 0, hair: 0, coat: 0 });
+    const base = JSON.stringify(D.computeStats(s));
+    for (const g of Object.values(GEAR)) {
+      D.addItem(s, g.id, 1);
+      const prev = s.equipment[g.slot];
+      D.equip(s, g.slot, g.id);
+      const st = D.computeStats(s);
+      expect(st.defense).toBeLessThanOrEqual(0.6);
+      if (prev) D.equip(s, g.slot, prev);
+      else D.unequip(s, g.slot);
+      expect(JSON.stringify(D.computeStats(s))).toBe(base);
+    }
+  });
+  it('alvos de equilíbrio: Fiapo cai em 2 a 4 golpes leves de qualquer arma no nível 1', async () => {
+    const { GEAR } = await import('../../src/domain/gear');
+    for (const g of Object.values(GEAR)) {
+      if (g.slot !== 'arma') continue;
+      const hits = Math.ceil(46 / g.dmg!);
+      expect(hits, g.id).toBeGreaterThanOrEqual(2);
+      expect(hits, g.id).toBeLessThanOrEqual(3);
+    }
+  });
+  it('chefes entregam primeiro a peça própria e não repetem o que o jogador já tem', async () => {
+    const { rollDrop } = await import('../../src/domain/gear');
+    expect(rollDrop('veredito', () => false, 0, 0.99)).toBe('estoque_replicacao');
+    expect(rollDrop('veredito', (id) => id === 'estoque_replicacao', 0, 0.5)).toBe('armadura_protocolo');
+    expect(rollDrop('fiapo', () => false, 0.5, 0.5)).toBeNull();
+    expect(rollDrop('vulto', () => true, 0, 0.5)).toBeNull();
+  });
+});
+

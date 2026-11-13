@@ -24,7 +24,7 @@ Lia é sineira e tem "vertigem de torre", condição inventada. O dossiê mostra
 
 ## Combate
 
-Golpe leve em sequência alternada de dois movimentos, golpe firme que quebra postura, esquiva com janela de invulnerabilidade, vigor que limita tudo isso e mira travável. Inimigos anunciam o golpe antes de dar. Fiapos avançam em grupo, Vultos sopram de longe e obrigam a andar de lado, o Eco repete em anel o que o jogador acabou de fazer, e o Veredito alterna projéteis, anéis e recitação. O Crivo tem duas habilidades ativas alternáveis: o pulso de atenção, que atordoa e interrompe, e a lupa curiosa, que revela o que está escondido. Há dois níveis de dificuldade, Padrão e História.
+Espada de uma mão na direita e tocha na esquerda. Golpe leve em sequência alternada de dois movimentos, golpe firme que quebra postura, esquiva com janela de invulnerabilidade, pulo com buffer e tempo de coiote (só um pulo leva ao vazio; andar e esquivar param na borda), vigor que limita tudo isso e mira travável. Inimigos anunciam o golpe antes de dar. Fiapos avançam em grupo, Vultos sopram de longe e obrigam a andar de lado, o Eco repete em anel o que o jogador acabou de fazer, e o Veredito alterna projéteis, anéis e recitação. O Crivo tem duas habilidades ativas alternáveis: o pulso de atenção, que atordoa e interrompe, e a lupa curiosa, que revela o que está escondido. Há dois níveis de dificuldade, Padrão e História.
 
 ## Progressão
 
@@ -33,3 +33,10 @@ Experiência e níveis dão pontos de habilidade para três ramos do jogador (Ex
 ## Registro e acessibilidade
 
 O jogo grava ao trocar de região, ao descansar e em pontos-chave das missões. Ajustes inclui três níveis de qualidade, quatro volumes, sensibilidade, eixo invertido, campo de visão, escala de texto, alto contraste, redução de movimento, granulado, vinheta, remapeamento de todas as ações e a opção de esconder a interface.
+
+
+## Armas, armaduras e focos (12/11/2026)
+
+Oito armas e três armaduras em `src/domain/gear.ts`, com raridade Comum, Incomum, Rara, Épica e Lendária. Cada peça leva o nome de uma ideia de prática baseada em evidências e o efeito imita a ideia: o Facão da Amostra de Conveniência varia 45% a cada golpe, a Adaga do Intervalo Estreito quase não varia e tem crítico, a Maça da Diferença Absoluta dá dano fixo, o Machado do Número Necessário decide um golpe em cada três, o Martelo da Síntese acerta em círculo, o Estoque da Replicação soma dano em acertos seguidos e o Sabre do Desfecho Registrado rende mais contra chefes. Fiapos e Vultos às vezes deixam uma peça no chão, com um facho na cor da raridade; chefes entregam primeiro a peça que é deles. Dalva vende a gazua e as peças de entrada.
+
+Depois do Veredito, a missão Focos Residuais traz três grupos maiores de inimigos (clareira do Bosque, salão do Arquivo, terraço do Observatório). Cada foco apagado deixa um erro de leitura descrito sem jargão: regressão à média, publicação seletiva e confusão. Heloísa fecha a missão perguntando o que os três tinham em comum, e a Armadura do Protocolo é a recompensa.

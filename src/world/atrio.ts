@@ -65,7 +65,9 @@ export function buildAtrio(ctx: RegionCtx): BuiltRegion {
     K.lampPost(b, sgn * 6.4, -23.0, 3.4, TH, 1);
   }
   // corpo da Academia
-  K.building(b, 0, -37, 0, 34, 22, 14, { floors: 3, bays: 8, windowW: 1.5, windowH: 4.4, lit: 0.55, mat: M.stoneDark, buttresses: true, seed: 5, roof: 'gable' });
+  // o centro da fachada fica livre: ali estão o portal e a janela grande (antes, um contraforte caía no meio do portal
+  // e janelas da fachada apareciam por baixo do arco e atrás dos estandartes)
+  K.building(b, 0, -37, 0, 34, 22, 14, { floors: 3, bays: 8, windowW: 1.5, windowH: 4.4, lit: 0.55, mat: M.stoneDark, buttresses: true, seed: 5, roof: 'gable', gap: 4.6 });
   // portal principal com portas de madeira (entrada do Observatório)
   K.archWall(b, 0, -29.6, 0, 9, 9.5, 1.2, 4.6, 4.2, M.stone, TH, false);
   const doorScan = b.place('large_castle_door', 0, TH, -29.85, 0, { size: 4.7, fit: 'w', collide: false });
@@ -224,8 +226,9 @@ export function buildAtrio(ctx: RegionCtx): BuiltRegion {
   K.banner(b, -21.3, 9.4, 5.6, Math.PI / 2);
   K.banner(b, 21.3, 9.4, -5.6, -Math.PI / 2);
   K.banner(b, 21.3, 9.4, 5.6, -Math.PI / 2);
-  K.banner(b, -6.9, 12.5, -29.9, 0, 1.6, 4.4);
-  K.banner(b, 6.9, 12.5, -29.9, 0, 1.6, 4.4);
+  // estandartes nos pilares do próprio portal, sem janela atrás
+  K.banner(b, -3.72, TH + 9.1, -28.86, 0, 1.3, 3.6);
+  K.banner(b, 3.72, TH + 9.1, -28.86, 0, 1.3, 3.6);
 
   // quadro de missões e casos (Atlas O-01)
   b.box(M.woodDark, 2.6, 2.0, 0.14, 7.4, 0.9, 12.6, -0.5, false);
@@ -273,12 +276,15 @@ export function buildAtrio(ctx: RegionCtx): BuiltRegion {
   b.collideBox(-21.6, -17, 0.6, 5, 0, -1, 30);
   b.collideBox(21.6, -17, 0.6, 5, 0, -1, 30);
 
+  // cidade ao longe: telhados, torres e agulhas além dos muros, para o olhar ter onde pousar
+  K.skyline(b, 0, 0, 62, 120, { count: 46, color: 0x151b27, seed: 31, minH: 14, maxH: 42, y0: -1 });
+  K.skyline(b, 0, 0, 150, 220, { count: 30, color: 0x1b2232, seed: 77, minH: 26, maxH: 70, y0: -4, windows: 0.15 });
   b.finalize();
 
   r.spawns = {
     inicio: { x: 0, z: 17.5, yaw: Math.PI },
-    de_bosque: { x: 18.5, z: 0, yaw: Math.PI / 2 },
-    de_arquivo: { x: -18.5, z: 0, yaw: -Math.PI / 2 },
+    de_bosque: { x: 18.5, z: 0, yaw: -Math.PI / 2 },
+    de_arquivo: { x: -18.5, z: 0, yaw: Math.PI / 2 },
     de_observatorio: { x: 0, z: -26.5, yaw: 0, y: TH },
     descanso: { x: -4.4, z: 6.4, yaw: Math.PI * 0.75 },
   };

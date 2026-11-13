@@ -116,6 +116,13 @@ export class Player {
   falling = false;
   onFall: (() => void) | null = null;
   lastSafe = new THREE.Vector3();
+  /** no ar após um pulo */
+  air = false;
+  private vy = 0;
+  private jumpBuf = 0;
+  private groundedRecently = 0;
+  onJump: (() => void) | null = null;
+  onLand: ((hard: boolean) => void) | null = null;
 
   constructor(look: Look, profession: string) {
     const prof = PROFESSIONS.find((p) => p.id === profession) ?? PROFESSIONS[5];
@@ -127,9 +134,14 @@ export class Player {
       emblem: EMBLEM[prof.id] ?? null,
       scarf: new THREE.Color(BRAND.darkAmaranth).getHex(),
       cape: new THREE.Color(COAT_COLORS[look.coat % COAT_COLORS.length]).lerp(new THREE.Color(BRAND.darkAmaranth), 0.45).multiplyScalar(0.95).getHex(),
-      staff: true,
+      height: look.body === 'masc' ? 1.8 : look.body === 'fem' ? 1.68 : undefined,
+      build: look.body === 'masc' ? 1.08 : undefined,
+      armed: true,
+      weapon: 'estoque',
       satchel: true,
-      model: 'player_' + ((['curto', 'coque', 'longo', 'capuz'] as const)[Math.floor(look.hair / HAIRS.length) % 4] ?? 'curto'),
+      // corpo e corte: player_<fem|masc>_<corte> quando existir; senão o modelo antigo do corte
+      model: look.body ? `player_${look.body}_${(['curto', 'coque', 'longo', 'capuz'] as const)[Math.floor(look.hair / HAIRS.length) % 4] ?? 'curto'}` : 'player_' + ((['curto', 'coque', 'longo', 'capuz'] as const)[Math.floor(look.hair / HAIRS.length) % 4] ?? 'curto'),
+      modelAlt: 'player_' + ((['curto', 'coque', 'longo', 'capuz'] as const)[Math.floor(look.hair / HAIRS.length) % 4] ?? 'curto'),
       tintSkin: skinTint(SKINS[look.skin % SKINS.length]),
       tintHair: new THREE.Color(HAIRS[look.hair % HAIRS.length]).multiplyScalar(2.4).getHex(),
       tintCoat: new THREE.Color(COAT_COLORS[look.coat % COAT_COLORS.length]).multiplyScalar(2.2).getHex(),
@@ -137,7 +149,35 @@ export class Player {
     this.light.castShadow = false;
   }
 
+  private lantern: THREE.Group | null = null;
+  /** criada sempre e só apagada (intensidade 0): ligar e desligar uma luz muda a contagem de luzes e obriga o
+   *  navegador a recompilar todos os materiais da cena, um engasgo de segundos */
+  private lanternLight = new THREE.PointLight(0xdfe8ff, 0, 7, 1.6);
+  /** Lanterna da Transparência equipada: pende do cinto, à direita, e ilumina com luz fria e estável. */
+  setLantern(on: boolean): void {
+    if (on && !this.lantern) {
+      const g = new THREE.Group();
+      const brass = new THREE.MeshStandardMaterial({ color: 0x8a6a34, metalness: 0.7, roughness: 0.45 });
+      const cage = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, 0.16, 6, 1, true), new THREE.MeshStandardMaterial({ color: 0xfff2c8, emissive: 0xfff0c0, emissiveIntensity: 1.6, transparent: true, opacity: 0.85 }));
+      const cap = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.07, 6), brass);
+      cap.position.y = 0.115;
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.025, 6), brass);
+      base.position.y = -0.09;
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.006, 4, 10), brass);
+      ring.position.y = 0.17;
+      g.add(cage, cap, base, ring);
+      g.position.set(-0.24, 0.9, 0.06);
+      this.fig.root.add(g);
+      this.lantern = g;
+    }
+    if (this.lantern) this.lantern.visible = on;
+    this.lanternLight.intensity = on ? 4 : 0;
+    if (this.lantern && on) this.lantern.rotation.z = Math.sin(performance.now() / 260) * 0.12 * Math.min(1, this.speed / 3);
+  }
+
   addTo(scene: THREE.Scene): void {
+    this.lanternLight.position.set(-0.24, 0.9, 0.06);
+    this.fig.root.add(this.lanternLight);
     scene.add(this.fig.root, this.light, this.trail.mesh);
   }
   removeFrom(scene: THREE.Scene): void {
@@ -153,6 +193,8 @@ export class Player {
     this.vel.set(0, 0, 0);
     this.camInit = false;
     this.falling = false;
+    this.air = false;
+    this.vy = 0;
     this.fig.root.position.copy(this.pos);
     this.fig.root.rotation.y = yaw;
   }
@@ -233,6 +275,18 @@ export class Player {
       fig.play('dodge');
       this.onDodge?.();
     }
+
+    // pulo: o toque vale por 0,14 s antes de tocar o chão e por 0,1 s depois de sair da borda
+    if (controls && !this.dead && !this.frozen && input.took('pular')) this.jumpBuf = 0.14;
+    this.jumpBuf = Math.max(0, this.jumpBuf - dt);
+    if (this.jumpBuf > 0 && !this.air && !this.falling && !this.dodging && fig.action !== 'hit' && fig.action !== 'heavy' && !this.dead && this.groundedRecently > 0) {
+      this.air = true;
+      this.vy = 6.4;
+      this.jumpBuf = 0;
+      this.groundedRecently = 0;
+      this.onJump?.();
+    }
+    this.groundedRecently = this.air || this.falling ? 0 : 0.1;
 
     // ataques (com fila curta para o combo)
     if (controls && !this.dead && !this.frozen) {
@@ -323,19 +377,32 @@ export class Player {
       const cx = THREE.MathUtils.clamp(res.x, b.minX, b.maxX);
       const cz = THREE.MathUtils.clamp(res.z, b.minZ, b.maxZ);
       const g = groundAt(region, cx, cz, this.pos.y);
-      if (g === null) {
-        // sem chão: fora da esquiva o jogador para na borda; na esquiva, cai
-        if (this.dodging) {
-          this.pos.x = cx;
-          this.pos.z = cz;
+      if (this.air) {
+        // no ar: a trajetória vale mesmo sem chão embaixo; só o pulo pode levar a um abismo
+        this.pos.x = cx;
+        this.pos.z = cz;
+        this.vy -= 18 * dt;
+        this.pos.y += this.vy * dt;
+        if (g !== null && this.vy <= 0 && this.pos.y <= g + 0.05) {
+          // pouso, ou degrau ao alcance: sobe na borda em vez de bater nela
+          const hard = this.vy < -8;
+          this.pos.y = g;
+          this.air = false;
+          this.vy = 0;
+          this.lastSafe.copy(this.pos);
+          this.onLand?.(hard);
+        } else if (g === null && this.pos.y < Math.min(this.lastSafe.y, 0) - 1.4) {
+          this.air = false;
           this.falling = true;
-          this.vel.y = 0;
+          this.vel.y = this.vy;
         }
+      } else if (g === null) {
+        // sem chão: andando ou esquivando, o jogador para na borda; só um pulo atravessa o vazio
       } else {
         this.pos.x = cx;
         this.pos.z = cz;
         if (g < this.pos.y - 0.7) {
-          // degrau alto para baixo: desce com gravidade
+          // degrau alto para baixo: cai com gravidade e conta como queda curta
           this.pos.y = Math.max(g, this.pos.y - dt * 9);
         } else this.pos.y += (g - this.pos.y) * Math.min(1, dt * 16);
         if (Math.abs(g - this.pos.y) < 0.1) this.lastSafe.lerp(this.pos, 1 - Math.exp(-1.2 * dt)); // independe da taxa de quadros
@@ -365,20 +432,24 @@ export class Player {
       }
     }
 
-    fig.speed = acting || this.dodging ? 0 : this.speed;
+    fig.airborne = this.air || this.falling;
+    fig.speed = acting || this.dodging ? 0 : fig.airborne ? Math.max(this.speed, 3.6) : this.speed;
     fig.update(dt);
     fig.root.position.copy(this.pos);
     fig.root.rotation.y = this.yaw;
     fig.setTint(this.iframes > 0 && this.dodging ? 0x6688aa : this.hurtT > 0 ? 0xd62839 : 0x000000, this.hurtT > 0 ? 0.6 : this.dodging ? 0.25 : 0);
 
-    // lanterna do cajado
+    // luz da tocha e rastro da lâmina
     const tip = new THREE.Vector3();
-    fig.staffTip.getWorldPosition(tip);
+    if (fig.torch) fig.torch.tip.getWorldPosition(tip);
+    else tip.set(this.pos.x, this.pos.y + 1.6, this.pos.z);
     this.light.position.copy(tip);
-    if (acting && fig.progress > 0.2 && fig.progress < 0.62) {
+    if (acting && fig.weapon && fig.progress > 0.2 && fig.progress < 0.66) {
+      const bt = new THREE.Vector3();
       const base = new THREE.Vector3();
-      fig.staff!.getWorldPosition(base);
-      this.trail.push(tip, base.lerp(tip, 0.35));
+      fig.weaponTip.getWorldPosition(bt);
+      fig.weapon.getWorldPosition(base);
+      this.trail.push(bt, base.lerp(bt, 0.4));
     }
     this.trail.update(dt);
 
@@ -398,9 +469,9 @@ export class Player {
     const pivot = new THREE.Vector3(this.pos.x, this.pos.y + 1.55, this.pos.z);
     const cp = Math.cos(this.camPitch);
     const dir = new THREE.Vector3(Math.sin(this.camYaw) * cp, Math.sin(this.camPitch), Math.cos(this.camYaw) * cp);
-    // enquadramento sobre o ombro
+    // enquadramento centrado: o personagem fica no meio da tela
     const right = new THREE.Vector3(Math.cos(this.camYaw), 0, -Math.sin(this.camYaw));
-    pivot.addScaledVector(right, 0.42);
+    pivot.addScaledVector(right, 0.0);
     // colisão: encurta o braço da câmera até o primeiro ponto livre
     let dist = this.camDist;
     const steps = 14;

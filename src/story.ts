@@ -6,7 +6,7 @@
  */
 import type { Game } from './game';
 import type { PropPlacement } from './world/region';
-import { CODEX, MESTRES_IDS, OBRAS_IDS, PAGES, PROFESSIONS } from './content/data';
+import { CODEX, MESTRES_IDS, OBRAS_IDS, PAGES, PROFESSIONS, QUESTS } from './content/data';
 import * as D from './domain/state';
 
 type G = Game;
@@ -48,7 +48,7 @@ export function npcHasBusiness(g: G, id: string): boolean {
   const st = (q: string) => D.questStep(s, q);
   switch (id) {
     case 'heloisa':
-      return st('chegada') === 0 || (s.flags.includes('arquivo_concluido') && st('veredito') < 0) || st('veredito') === 0 || st('veredito') === 4;
+      return st('chegada') === 0 || (s.flags.includes('arquivo_concluido') && st('veredito') < 0) || st('veredito') === 0 || st('veredito') === 4 || st('focos') === 1 || (s.flags.includes('epilogo') && st('focos') < 0);
     case 'iris':
       return st('ponte') === 0 || st('ponte') === 6 || (s.flags.includes('epilogo') && s.flags.includes('braseiro_vila') && !s.rewards.includes('presente_iris'));
     case 'anselmo':
@@ -199,7 +199,7 @@ async function heloisa(g: G): Promise<void> {
       'Por onde eu começo?',
     );
     await H(`Pela ponte. Íris, a mensageira, está junto ao arco leste e conhece o Bosque pelos pés. ${prof(g).id === 'aprendiz' ? 'Não ter ofício ainda não atrapalha: lá ninguém vai perguntar.' : `Gente de ${prof(g).name} costuma se dar bem com ela.`}`);
-    await H('Leve o cajado. Os Fiapos não escutam argumento. E descanse no marco ao lado da fonte quando precisar: ele guarda o seu caminho.');
+    await H('Leve o estoque e a tocha. Os Fiapos não escutam argumento. E descanse no marco ao lado da fonte quando precisar: ele guarda o seu caminho.');
     g.completeQuest('chegada', { xp: 20, talk: true });
     g.startQuest('ponte');
     D.unlockCodex(s, 'atrio');
@@ -210,14 +210,45 @@ async function heloisa(g: G): Promise<void> {
     await H(s.flags.includes('braseiro_vila') ? 'E vi o braseiro da estrada aceso. Você lutou no escuro para que outros andassem no claro. Há um preço nisso, e você pagou.' : 'E vi o terraço iluminado. Você escolheu enxergar o que enfrentava. A estrada da Vila esperou mais uma noite, e essa conta também é sua.');
     await H('A Névoa não foi embora. Nunca vai. Ficou do tamanho certo, que é o tamanho em que dá para trabalhar com ela.');
     await g.say('', 'O Crivo encosta em você, só um instante. Depois finge que não foi nada.');
+    await H('Mas não terminou. Daqui eu vejo três pontos onde ela ainda se junta: a clareira do Bosque, o salão do Arquivo e o terraço lá em cima. Focos. Cada um se sustenta num jeito errado de ler o que aconteceu.');
     g.completeQuest('veredito', { xp: 300, coins: 80, crivoPoints: 1, talk: true });
     g.flag('epilogo');
     g.flag('crivo_capa');
+    g.startQuest('focos');
+    const left = ['lia', 'vento', 'encomenda', 'paginas', 'mestres'].filter((q) => !D.questDone(s, q)).map((q) => QUESTS[q].title);
     g.showEnding([
       'A ponte voltou a responder a quem atravessa, o registro do cais está na estante certa e o Observatório tem, de novo, mais perguntas do que sentenças.',
-      'O Pátio amanhece na próxima vez que você entrar nele. As missões paralelas, as páginas soltas e os segredos de cada região continuam onde estavam.',
+      'O que vem agora: a missão Focos Residuais. Três grupos maiores de inimigos voltaram, um no Bosque, um no Arquivo e um no Observatório. Apague os três e conte a Heloísa o que eles tinham em comum.',
+      left.length ? `Ainda em aberto: ${left.join(', ')}. O Diário mostra onde cada uma começa.` : 'Todas as missões paralelas estão fechadas. Os segredos de cada região continuam onde estavam.',
       'Uma capa esmeralda para o Crivo espera você em Habilidades. Ele vai fingir que não gostou.',
     ]);
+    return;
+  }
+  if (g.step('focos') === 1) {
+    await H('Os três? Então me diga o que eles tinham em comum.');
+    const ok = await g.choose([
+      { text: 'Todos pareciam maiores do que eram, porque eu só via o que chamava atenção.' },
+      { text: 'Nenhum era a Névoa sozinha. Cada um se apoiava num jeito errado de ler o que aconteceu.' },
+      { text: 'Eram fortes. Precisei de mais golpes.' },
+    ]);
+    if (ok === 2) await H('Eram, e você aguentou. Mas força não explica por que voltaram. Pense de novo no que cada um deixou para trás.');
+    else {
+      await H(ok === 1 ? 'Isso. A clareira crescia porque só as noites piores eram lembradas. O Arquivo guardava só as vozes que concordavam. E no terraço o vento levava a culpa do frio. Três leituras erradas, e a Névoa morando no meio delas.' : 'Em parte. Isso explica a clareira. O Arquivo e o terraço erraram de outro jeito: um escondeu as vozes que discordavam, o outro culpou o vento pelo que era do frio. Mas você viu os três, e isso conta.');
+      g.completeQuest('focos', { xp: 220, coins: 120, crivoPoints: 1, talk: true });
+      if (!D.countItem(s, 'armadura_protocolo')) g.give('armadura_protocolo');
+      await H('Leve isto. Foi desenhada antes de qualquer batalha e ninguém trocou uma placa no meio do caminho. Combina com você.');
+      return;
+    }
+    return;
+  }
+  if (s.flags.includes('epilogo') && g.step('focos') < 0) {
+    // saves de antes desta missão: o final já aconteceu, a missão começa aqui
+    await H('Ainda há três pontos onde a Névoa se junta: a clareira do Bosque, o salão do Arquivo e o terraço do Observatório. Focos. Apague os três e venha me contar o que viu.');
+    g.startQuest('focos');
+    return;
+  }
+  if (g.step('focos') === 0) {
+    await H('Os focos: clareira do Bosque, salão do Arquivo, terraço do Observatório. Apague os três e venha me contar o que viu.');
     return;
   }
   if (s.flags.includes('arquivo_concluido') && g.step('veredito') < 0) {
@@ -474,7 +505,22 @@ export function onGroupCleared(g: G, region: string, group: string): void {
     g.region.actions.clarear?.();
     g.ui.banner('O Veredito cedeu', 'A Névoa ficou menor', 'Não foi destruída. Ficou do tamanho em que dá para trabalhar com ela.');
   }
+  if (group === 'foco' && FOCO[region]) {
+    const s = g.state!;
+    const f = FOCO[region];
+    g.ui.banner(f.title, 'Foco apagado', f.text);
+    const n = ['bosque', 'arquivo', 'observatorio'].filter((r) => s.flags.includes(`limpo:${r}:foco`)).length;
+    if (n >= 3 && g.step('focos') === 0) g.advance('focos', 1);
+    else g.toast(`${n} de 3 focos residuais`);
+  }
 }
+
+/** O que cada foco residual deixa para trás: um erro de leitura, dito sem jargão. */
+const FOCO: Record<string, { title: string; text: string }> = {
+  bosque: { title: 'O foco da clareira', text: 'Parecia crescer a cada noite. Contado de novo, era do tamanho de sempre: as noites piores é que ficavam na memória. Quem mede no pior dia vê melhora em qualquer coisa que fizer depois.' },
+  arquivo: { title: 'O foco do salão', text: 'Na estante, só as vozes que concordavam. As que discordavam estavam no chão, sem capa e sem número. Quem lê só o que foi guardado acha que todo mundo concordou.' },
+  observatorio: { title: 'O foco do terraço', text: 'Toda vez que o vento soprava, a névoa subia, e o vento levou a culpa. Mas as noites de vento eram as noites frias, e era o frio que trazia a névoa. Duas coisas juntas não querem dizer que uma fez a outra.' },
+};
 
 export function onCollected(g: G, id: string): void {
   const s = g.state!;
@@ -517,6 +563,7 @@ export async function useProp(g: G, p: PropPlacement): Promise<void> {
       g.toast(`+${data.coins} moedas`);
     }
     if (data.item) g.give(String(data.item), Number(data.qty ?? 1));
+    if (data.item2) g.give(String(data.item2));
     if (p.id === 'bau_selo') {
       await N('Dentro, um lacre de cera verde, ainda morno. No verso, alguém escreveu: "viajante a pé, carga leve, sob névoa". É a descrição de quem atravessa hoje.');
       g.advance('ponte', 4);
@@ -593,11 +640,21 @@ export async function useProp(g: G, p: PropPlacement): Promise<void> {
   }
 
   if (p.kind === 'door') {
-    if (data.skill && !s.skills.includes(String(data.skill))) return void (await N('Uma grade de ferro com tranca antiga. Quem conhece atalhos saberia por onde começar.'));
+    // três saídas legítimas: a habilidade Atalhos, uma gazua, ou chegar por dentro pulando o muro desmoronado
+    const inside = p.id === 'grade_bosque' && (g.player?.pos.z ?? 0) > 13.6;
+    const skill = !data.skill || s.skills.includes(String(data.skill));
+    const pick = D.countItem(s, 'gazua') > 0;
+    if (!inside && !skill && !pick) {
+      await N('Uma grade de ferro com tranca antiga. Do lado de dentro, um baú.');
+      await N('Três caminhos possíveis: a habilidade Atalhos, uma gazua (a banca da Dalva, no Pátio, vende uma), ou o muro leste, onde as pedras caíram e os caixotes ajudam a subir.');
+      return;
+    }
     if (g.flag('aberta:' + p.id)) {
       g.region.actions[p.id]?.();
       g.audio.sfx('porta');
-      await N('A tranca tinha um pino solto, como quase toda tranca que ninguém confere. A grade abre.');
+      if (inside) await N('Por dentro a tranca é só um ferrolho. Ele corre, e a grade abre para fora.');
+      else if (!skill && pick) await N('A gazua encontra o pino solto na segunda tentativa. Quem confere a tranca em vez de supor que ela está boa abre o que os outros contornam.');
+      else await N('A tranca tinha um pino solto, como quase toda tranca que ninguém confere. A grade abre.');
     }
     return;
   }

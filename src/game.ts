@@ -25,12 +25,15 @@ import * as D from './domain/state';
 import type { GameState, Look, ProfessionId, Reward, SaveAdapter, SkillDef, Stats } from './domain/state';
 import type { CaseFeedback, ClinicalCase } from './domain/clinical';
 import * as Story from './story';
+import { GEAR, RARITY_COLOR, RARITY_LABEL, rollDrop } from './domain/gear';
+import { buildWeapon, WEAPON_LOOKS } from './entities/weapons';
 
 /** Piso e laços gravados de cada região. */
 const REGION_SOUND: Record<RegionId, { surface: Surface; loops: Partial<Record<AmbienceLoop, number>> }> = {
   atrio: { surface: 'pedra', loops: { salao: 0.12, poca: 0.35 } },
   bosque: { surface: 'terra', loops: { agua: 0.4 } },
-  arquivo: { surface: 'pedra', loops: { sala: 0.18 } },
+  // sala.mp3 é ruído largo (centroide perto de 2 kHz) e soa como chuva no telhado: fora do Arquivo, que é interior seco
+  arquivo: { surface: 'pedra', loops: { salao: 0.14 } },
   observatorio: { surface: 'entulho', loops: { poca: 0.3 } },
 };
 
@@ -86,6 +89,8 @@ interface Spark {
   max: number;
   size: number;
 }
+
+const SCRIPT_CANCEL = Symbol('cancelado');
 
 export class Game {
   engine: Engine;
@@ -346,7 +351,7 @@ export class Game {
     await this.ui.fade(false);
     this.busy = false;
     this.ui.regionTitle(this.region.name, this.region.subtitle);
-    this.runScript(() => Story.opening(this));
+    this.runScript(() => Story.opening(this), null, true);
   }
 
   async continueGame(): Promise<void> {
@@ -410,6 +415,8 @@ export class Game {
     this.crivo.model.root.visible = false;
   }
 
+  /** tempos da última troca de região, em ms (diagnóstico de desempenho) */
+  loadTimes: Record<string, string | number> = {};
   private async loadRegion(id: RegionId, flags: Set<string>, progress?: (p: number) => void): Promise<void> {
     const sc = this.engine.scene;
     this.despawn();
@@ -423,8 +430,11 @@ export class Game {
     }
     progress?.(0.3);
     await this.nextPaint();
+    const t0 = performance.now();
     if (id !== 'atrio') await this.restProps;
+    const t1 = performance.now();
     this.region = buildRegion(id, { flags, quality: this.settings.quality });
+    const t2 = performance.now();
     sc.add(this.region.root);
     this.engine.applyEnv(this.region.env);
     this.engine.setFogAmount(1);
@@ -432,9 +442,17 @@ export class Game {
     this.audio.setAmbience(this.region.env.rain, this.region.env.interior ? 0.05 : 0.35);
     this.audio.setLoops(REGION_SOUND[id].loops);
     progress?.(0.8);
+    const t2b = performance.now();
+    const progs0 = this.engine.renderer.info.programs?.length ?? 0;
+    await this.engine.precompile(sc);
+    const t2c = performance.now();
     await this.nextPaint();
     // compila os materiais antes de revelar a cena
+    const t3 = performance.now();
     this.engine.render(0.016, this.focus);
+    const t4 = performance.now();
+    this.loadTimes = { region: id, props: Math.round(t1 - t0), build: Math.round(t2 - t1), env: Math.round(t2b - t2), compile: Math.round(t2c - t2b), paint: Math.round(t3 - t2c), firstFrame: Math.round(t4 - t3), programs: `${progs0}>${this.engine.renderer.info.programs?.length ?? 0}` };
+    console.info('[carga]', JSON.stringify(this.loadTimes));
     progress?.(1);
   }
 
@@ -527,7 +545,29 @@ export class Game {
       const g = new THREE.Group();
       g.position.copy(pos);
       if (def.kind === 'pickup') {
-        if (def.data?.item === 'moedas') {
+        if (def.data?.gear) {
+          const gd = GEAR[String(def.data.gear)];
+          const col = RARITY_COLOR[gd.rarity];
+          const w = gd.look ? buildWeapon(gd.look) : null;
+          if (w) {
+            // arma deitada no chão
+            w.rotation.set(0, 0, Math.PI / 2);
+            w.position.set(-(WEAPON_LOOKS[gd.look!].length * 0.3), 0.06, 0);
+            g.add(w);
+          } else {
+            // armadura dobrada: peitoral simples, de poucas faces, como nos jogos da época
+            const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.2, 0.42, 8, 1, true, -Math.PI / 2, Math.PI), M.iron);
+            plate.rotation.set(Math.PI / 2, 0, 0);
+            plate.position.y = 0.12;
+            g.add(plate);
+          }
+          const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.3, 3.2, 10, 1, true), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: true }));
+          beam.position.y = 1.6;
+          g.add(beam);
+          const h = halo(1.4, col, 0.55);
+          h.position.y = 0.2;
+          g.add(h);
+        } else if (def.data?.item === 'moedas') {
           for (let i = 0; i < 5; i++) {
             const c = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.02, 10), M.bronze);
             c.position.set(Math.sin(i * 2.4) * 0.09, 0.02 + i * 0.021, Math.cos(i * 2.4) * 0.09);
@@ -609,9 +649,19 @@ export class Game {
 
   // ---------- diálogo e roteiros ----------
   private talkingNpc: Npc | null = null;
-  async runScript(fn: () => Promise<void>, npc: Npc | null = null): Promise<void> {
+  private cancelled = false;
+  private scriptLocked = false;
+  /** Esc, B ou o botão de sair: encerra a conversa ou o exame em curso. Cenas essenciais (abertura) não cancelam. */
+  cancelScript(): void {
+    if (this.mode !== 'dialogue' || this.scriptLocked) return;
+    this.cancelled = true;
+    this.ui.abortDialogue();
+  }
+  async runScript(fn: () => Promise<void>, npc: Npc | null = null, essential = false): Promise<void> {
     if (this.mode !== 'play') return;
     this.mode = 'dialogue';
+    this.cancelled = false;
+    this.scriptLocked = essential;
     this.input.releaseLock();
     this.ui.prompt(null);
     this.talkingNpc = npc;
@@ -620,9 +670,12 @@ export class Game {
     try {
       await fn();
     } catch (err) {
-      this.errors.push(String(err));
-      console.error(err);
+      if (err !== SCRIPT_CANCEL) {
+        this.errors.push(String(err));
+        console.error(err);
+      }
     }
+    this.cancelled = false;
     this.ui.endDialogue();
     if (npc) npc.talking = false;
     this.talkingNpc = null;
@@ -636,12 +689,17 @@ export class Game {
     this.checkpoint();
   }
   /** who: id de NPC, ou '' para narração */
-  say(who: string, text: string): Promise<void> {
+  async say(who: string, text: string): Promise<void> {
+    if (this.cancelled) throw SCRIPT_CANCEL;
     const def = NPCS[who];
-    return this.ui.say(def?.name ?? who, def?.role ?? '', text);
+    await this.ui.say(def?.name ?? who, def?.role ?? '', text);
+    if (this.cancelled) throw SCRIPT_CANCEL;
   }
-  choose(options: Array<{ text: string; tag?: string }>, pre?: number): Promise<number> {
-    return this.ui.choose(options, this.autoChoice ?? pre);
+  async choose(options: Array<{ text: string; tag?: string }>, pre?: number): Promise<number> {
+    if (this.cancelled) throw SCRIPT_CANCEL;
+    const r = await this.ui.choose(options, this.autoChoice ?? pre);
+    if (this.cancelled || r < 0) throw SCRIPT_CANCEL;
+    return r;
   }
   /** escolha forçada nos testes automatizados */
   autoChoice: number | undefined;
@@ -953,9 +1011,12 @@ export class Game {
       const dx = e.pos.x - origin.x;
       const dz = e.pos.z - origin.z;
       const d = Math.hypot(dx, dz);
-      if (d - e.radius > range || Math.abs(e.pos.y - (origin.y - 1)) > 2.6) continue;
-      if (d > 0.6 && (dx * dir.x + dz * dir.z) / d < Math.cos(arc)) continue;
-      const dealt = e.damage(heavy ? st.heavyDamage : st.damage, heavy, st.heavyStagger);
+      // alcance da arma equipada; o Martelo da Síntese fecha o círculo no golpe firme
+      const reach = range + (st.reach - 2.5);
+      if (d - e.radius > reach || Math.abs(e.pos.y - (origin.y - 1)) > 2.6) continue;
+      const fullCircle = heavy && st.special === 'sintese';
+      if (!fullCircle && d > 0.6 && (dx * dir.x + dz * dir.z) / d < Math.cos(arc)) continue;
+      const dealt = e.damage(this.weaponDamage(e, heavy), heavy, st.heavyStagger);
       if (dealt > 0) {
         hit = true;
         this.burst(new THREE.Vector3(e.pos.x, e.pos.y + 1.1 * e.cfg.scale, e.pos.z), e.cfg.eye, heavy ? 12 : 7, heavy ? 4.5 : 3);
@@ -966,6 +1027,36 @@ export class Game {
       this.engine.shake = Math.max(this.engine.shake, heavy ? 0.55 : 0.25);
       this.audio.sfx('impacto', heavy ? 1.2 : 1);
     } else if (heavy) this.audio.sfx('impactoChao');
+  }
+
+  private nntCount = 0;
+  private repTarget: Enemy | null = null;
+  private repStack = 0;
+  /** Dano de um golpe com a arma equipada: variação, crítico e o efeito especial de cada peça. */
+  private weaponDamage(e: Enemy, heavy: boolean): number {
+    const st = this.stats;
+    let dmg = heavy ? st.heavyDamage : st.damage;
+    dmg *= 1 + (Math.random() * 2 - 1) * st.variance;
+    let crit = Math.random() < st.crit;
+    if (st.special === 'nnt' && ++this.nntCount >= 3) {
+      this.nntCount = 0;
+      dmg *= 2.2 / st.critMult;
+      crit = true;
+    }
+    if (crit) {
+      dmg *= st.critMult;
+      this.engine.flash = Math.max(this.engine.flash, 0.12);
+    }
+    if (st.special === 'desfecho' && e.cfg.boss) dmg *= 1.3;
+    if (st.special === 'replicacao') {
+      if (this.repTarget === e) this.repStack = Math.min(5, this.repStack + 1);
+      else {
+        this.repTarget = e;
+        this.repStack = 0;
+      }
+      dmg *= 1 + 0.12 * this.repStack;
+    }
+    return Math.max(1, Math.round(dmg));
   }
 
   private hitPlayer(dmg: number, from: THREE.Vector3): void {
@@ -1014,12 +1105,44 @@ export class Game {
     const [a, b] = e.cfg.coins;
     s.coins += Math.round((a + Math.random() * (b - a)) * (1 + this.stats.coinBonus));
     if (D.unlockCodex(s, e.kind)) this.ui.toast(`Novo verbete no códice: ${ENEMY_CFG[e.kind].name}`);
+    const drop = rollDrop(e.kind, (id) => D.countItem(s, id) > 0 || this.props.some((p) => p.def.data?.gear === id && this.propVisible(p)), Math.random(), Math.random());
+    if (drop) this.spawnDrop(drop, e.pos.x, e.pos.y + 1.2 * e.cfg.scale, e.pos.z);
     if (this.player?.lockTarget === e) this.player.lockTarget = null;
     if (!this.enemies.some((o) => o !== e && o.alive && o.group === e.group)) {
       if (D.setFlag(s, `limpo:${r.id}:${e.group}`)) Story.onGroupCleared(this, r.id, e.group);
       this.refreshProps();
       this.checkpoint();
     }
+  }
+
+  /** Peça de equipamento que cai do inimigo: desce girando, assenta no chão e fica marcada por um facho da cor da raridade. */
+  private spawnDrop(id: string, x: number, y: number, z: number): void {
+    const g = GEAR[id];
+    const def: PropPlacement = { id: `drop_${id}_${Math.round(performance.now())}`, kind: 'pickup', x, z, y: groundAt(this.region, x, z, y) ?? 0, label: `Pegar ${g.name} (${RARITY_LABEL[g.rarity]})`, radius: 1.9, data: { item: id, gear: id } };
+    this.region.props.push(def);
+    const rt = this.makeProp(def);
+    this.props.push(rt);
+    if (rt.obj) {
+      rt.obj.position.y = y;
+      this.drops.push({ obj: rt.obj, vy: 2.4, ground: rt.pos.y, spin: 7 });
+    }
+    this.audio.sfx('pegar', 0.6);
+    this.ui.toast(`${g.name} caiu no chão`, RARITY_LABEL[g.rarity]);
+  }
+  private drops: Array<{ obj: THREE.Object3D; vy: number; ground: number; spin: number }> = [];
+  private updateDrops(dt: number): void {
+    for (const d of this.drops) {
+      d.vy -= 14 * dt;
+      d.obj.position.y += d.vy * dt;
+      d.obj.rotation.y += d.spin * dt;
+      if (d.obj.position.y <= d.ground) {
+        d.obj.position.y = d.ground;
+        if (Math.abs(d.vy) > 2) d.vy = -d.vy * 0.3;
+        else d.vy = 0;
+        d.spin *= 0.5;
+      }
+    }
+    this.drops = this.drops.filter((d) => d.vy !== 0 || d.obj.position.y > d.ground);
   }
 
   private fell(): void {
@@ -1247,6 +1370,8 @@ export class Game {
         else if (inp.took('diario')) this.openBookTab('diario');
         else if (inp.took('mapa')) this.openBookTab('mapa');
         else if (inp.took('habilidades')) this.openBookTab('habilidades');
+      } else if (m === 'dialogue') {
+        if (inp.took('pausa')) this.cancelScript();
       } else if (m === 'book' || m === 'pause' || m === 'shop') {
         if (inp.took('pausa')) this.closeOverlay();
         else if (m === 'book') {
@@ -1393,9 +1518,14 @@ export class Game {
     p.invertY = this.settings.invertY;
     const lantern = D.isEquipped(s, 'lanterna_transparencia');
     // 9 estourava o rosto visto de frente (auditoria, item 3); a lanterna segue sendo o ganho de alcance
-    p.light.intensity = lantern ? 20 : 5.5;
-    p.light.distance = lantern ? 16 : 9;
+    // a tocha tremula; a Lanterna da Transparência pende do cinto e soma uma luz fria e estável
+    const fl = 1 + Math.sin(this.engine.time * 11) * 0.06 + Math.sin(this.engine.time * 27.3) * 0.04;
+    p.light.intensity = (lantern ? 16 : 7) * fl;
+    p.light.distance = lantern ? 16 : 10;
+    p.setLantern(lantern);
+    if (p.fig.weaponKind !== st.weaponLook) void p.fig.equipWeapon(st.weaponLook);
     p.update(dt, inp, r, st, cam, controls);
+    this.updateDrops(dt);
     this.focus.copy(p.pos);
 
     // inimigos e projéteis
@@ -1580,6 +1710,8 @@ export class Game {
       ability: s.crivoActive === 'lupa' && s.crivoSkills.includes('lupa') ? 'lupa' : 'pulso',
       abilityCd: Math.min(1, this.abilityCd / cdMax),
       caldo: D.countItem(s, 'caldo'),
+      points: s.skillPoints,
+      crivoPoints: s.crivoPoints,
       boss: boss ? { name: boss.cfg.name, frac: boss.hp / boss.maxHp, recite: boss.reciteProgress } : null,
     });
 

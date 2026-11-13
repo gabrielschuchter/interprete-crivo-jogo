@@ -22,7 +22,8 @@ export function buildObservatorio(ctx: RegionCtx): BuiltRegion {
   const AZ = -24;
 
   // patamar e passarela
-  b.box(M.stoneDark, 13, 30, 25, 0, -30, 2.5, 0);
+  // topo do bloco 2 cm abaixo do piso (no mesmo plano, cintilava de longe)
+  b.box(M.stoneDark, 13, 29.98, 25, 0, -30, 2.5, 0);
   b.add(new THREE.PlaneGeometry(13, 25), M.flag, trs(0, 0.01, 2.5, 0, -Math.PI / 2), false, false);
   b.platform(0, 2.5, 6.3, 12.5, 0, 0);
   // arena circular
@@ -31,7 +32,7 @@ export function buildObservatorio(ctx: RegionCtx): BuiltRegion {
   for (const rr of [4, 8.5, 12.5]) b.add(new THREE.RingGeometry(rr, rr + 0.16, 64), M.bronze, trs(0, 0.03, AZ, 0, -Math.PI / 2), false, false);
   for (let i = 0; i < 12; i++) {
     const a = (i / 12) * Math.PI * 2;
-    b.add(new THREE.PlaneGeometry(0.1, 8.5), M.bronze, trs(Math.sin(a) * 8.3, 0.03, AZ + Math.cos(a) * 8.3, a, -Math.PI / 2), false, false);
+    b.add(new THREE.PlaneGeometry(0.1, 8.5), M.bronze, trs(Math.sin(a) * 8.3, 0.036, AZ + Math.cos(a) * 8.3, a, -Math.PI / 2), false, false);
   }
   b.platform(0, AZ, R + 0.4, R + 0.4, 0, 0);
   // parapeito da arena (aberto ao sul, onde fica a grade)
@@ -53,11 +54,18 @@ export function buildObservatorio(ctx: RegionCtx): BuiltRegion {
     K.pinnacle(b, sx * 6.25, 1.15, -9.4, 0.7, 2.4, M.stoneDark);
     K.lampPost(b, sx * 5.2, 9.5, 3.4);
   }
-  // casa da escada (de onde se chega)
-  b.box(M.stone, 7, 6.5, 2.2, 0, 0, 15.9, 0, true);
-  K.archWall(b, 0, 14.75, 0, 7, 6.5, 0.5, 2.8, 2.6, M.stone, 0, false);
+  // casa da escada (de onde se chega): ocupa toda a largura do patamar e desce até a base da torre, para
+  // que atrás da porta e dos lados dela haja parede, e não o vazio que o Gabriel viu
+  b.box(M.stoneDark, 13.5, 30, 5.5, 0, -30, 17.8, 0);
+  b.box(M.stone, 13.5, 9, 5.5, 0, 0, 17.8, 0, true);
+  K.archWall(b, 0, 14.75, 0, 13.5, 9, 0.5, 2.8, 2.6, M.stone, 0, false);
   if (!b.place('large_castle_door', 0, 0, 14.7, Math.PI, { size: 2.9, fit: 'w', collide: false })) b.box(M.woodDark, 2.8, 5, 0.2, 0, 0, 14.9, 0);
-  K.gableRoof(b, 0, 6.5, 15.9, 0, 7.4, 2.6, 2.4);
+  K.gableRoof(b, 0, 9, 17.8, 0, 13.9, 5.9, 2.8);
+  for (const sx of [-1, 1]) {
+    K.gothicWindow(b, sx * 4.4, 4.6, 14.44, Math.PI, 1.3, 3.2, true);
+    K.pinnacle(b, sx * 6.75, 9, 15.05, 0.8, 3.2, M.stoneDark);
+  }
+  b.add(new THREE.BoxGeometry(14, 0.24, 0.7), M.carved, trs(0, 8.9, 14.75));
   K.wallLantern(b, 2.4, 3.2, 14.5, Math.PI);
   K.wallLantern(b, -2.4, 3.2, 14.5, Math.PI);
 
@@ -196,10 +204,20 @@ export function buildObservatorio(ctx: RegionCtx): BuiltRegion {
   K.bench(b, 4.9, 4, Math.PI / 2);
   K.plaque(b, 'Há algo gravado, apagado pela chuva', 5.96, 1.5, 6.6, -Math.PI / 2, 2.2, 0.26, '#6a6470', null, 'italic 400 46px "Source Serif 4", Georgia, serif');
 
+  // a Academia está lá embaixo: telhados e torres da cidade abaixo do terraço, e serras ao longe
+  K.skyline(b, 0, -10, 45, 110, { count: 50, color: 0x10172a, seed: 13, minH: 8, maxH: 30, y0: -42 });
+  K.skyline(b, 0, -10, 130, 200, { count: 26, color: 0x172038, seed: 59, minH: 20, maxH: 55, y0: -40, windows: 0.1 });
   b.finalize();
 
   r.spawns = { de_atrio: { x: 0, z: 12.4, yaw: Math.PI } };
-  r.enemies = [{ kind: 'veredito', x: 0, z: AZ - 3, group: 'veredito', ifFlag: 'grade_aberta' }];
+  r.enemies = [
+    { kind: 'veredito', x: 0, z: AZ - 3, group: 'veredito', ifFlag: 'grade_aberta' },
+    { kind: 'vulto', x: -5, z: AZ + 2, group: 'foco', ifFlag: 'epilogo' },
+    { kind: 'vulto', x: 5, z: AZ + 2, group: 'foco', ifFlag: 'epilogo' },
+    { kind: 'vulto', x: 0, z: AZ - 6, group: 'foco', ifFlag: 'epilogo' },
+    { kind: 'fiapo', x: -3, z: AZ - 2, group: 'foco', ifFlag: 'epilogo' },
+    { kind: 'fiapo', x: 3, z: AZ - 2, group: 'foco', ifFlag: 'epilogo' },
+  ];
   r.props = [
     { id: 'portal_atrio', kind: 'portal', x: 0, z: 14, label: 'Descer ao Pátio dos Caminhos', radius: 1.9, data: { to: 'atrio', spawn: 'de_observatorio' } },
     { id: 'braseiro_vila', kind: 'brazier', x: -4.2, z: -4.4, label: 'Examinar o braseiro da estrada', radius: 1.9, data: { group: 'braseiros' } },

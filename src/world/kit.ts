@@ -158,6 +158,8 @@ export interface FacadeOpts {
   /** quais faces recebem janelas: frente (+z local) e/ou fundo */
   back?: boolean;
   sides?: boolean;
+  /** meia-largura, no centro da frente, sem janelas nem contrafortes (portal, janela grande) */
+  gap?: number;
 }
 
 /** Edifício: corpo, janelas, cornija, telhado. Frente voltada para +z local. */
@@ -195,6 +197,7 @@ export function building(b: RegionBuilder, x: number, z: number, rot: number, w:
       const fy = y0 + (h / floors) * f + (h / floors - wh) * 0.45 + (f === 0 ? 0.6 : 0);
       for (let i = 0; i < nb; i++) {
         const lx = (i + 0.5) * (face.len / nb) - face.len / 2;
+        if (face.r === rot && o.gap && Math.abs(lx) < o.gap) continue;
         let px: number;
         let pz: number;
         if (face.axis === 'x') [px, pz] = at(face.r === rot ? lx : -lx, face.lz);
@@ -206,6 +209,7 @@ export function building(b: RegionBuilder, x: number, z: number, rot: number, w:
   if (o.buttresses) {
     for (let i = 0; i <= bays; i++) {
       const lx = i * (w / bays) - w / 2;
+      if (o.gap && Math.abs(lx) < o.gap) continue;
       const [px, pz] = at(lx, d / 2);
       buttress(b, px, pz, rot, h * 0.92, 1.0, 0.7, y0);
     }
@@ -763,4 +767,69 @@ export function column(b: RegionBuilder, x: number, z: number, h: number, r = 0.
   b.add(new THREE.CylinderGeometry(r, r * 1.08, h - 0.8, 22), M.stone, trs(x, y0 + h / 2, z), false);
   b.add(new THREE.CylinderGeometry(r * 1.5, r, 0.4, 22), M.carved, trs(x, y0 + h - 0.2, z), false);
   b.collideCircle(x, z, r * 1.3, y0 - 1, y0 + h);
+}
+
+/**
+ * Silhuetas distantes, ao estilo das cidades pintadas dos jogos de PS2: blocos, torres e agulhas de
+ * poucas faces, numa cor só (entre a névoa e o preto) e com janelas quentes esparsas. Não recebem
+ * névoa nem sombra e custam uma chamada de desenho por material. Ver docs/game/DIRECAO_DE_ARTE.md.
+ */
+export function skyline(
+  b: RegionBuilder,
+  cx: number,
+  cz: number,
+  r0: number,
+  r1: number,
+  o: { count?: number; color: number; seed?: number; a0?: number; a1?: number; minH?: number; maxH?: number; y0?: number; windows?: number },
+): void {
+  let s = o.seed ?? 7;
+  const rnd = () => {
+    s = (s * 16807) % 2147483647;
+    return (s & 0xffff) / 0xffff;
+  };
+  const near = new THREE.MeshBasicMaterial({ color: o.color, fog: false });
+  const far = new THREE.MeshBasicMaterial({ color: new THREE.Color(o.color).lerp(new THREE.Color(0x000000), -0.35).getHex(), fog: false });
+  const lit = new THREE.MeshBasicMaterial({ color: 0xd9a35a, fog: false });
+  const a0 = o.a0 ?? 0;
+  const a1 = o.a1 ?? Math.PI * 2;
+  const n = o.count ?? 40;
+  const y0 = o.y0 ?? -2;
+  for (let i = 0; i < n; i++) {
+    const a = a0 + ((i + rnd() * 0.8) / n) * (a1 - a0);
+    const rr = r0 + rnd() * (r1 - r0);
+    const x = cx + Math.sin(a) * rr;
+    const z = cz + Math.cos(a) * rr;
+    const mat = rr > (r0 + r1) / 2 ? far : near;
+    const w = 6 + rnd() * 14;
+    const d = 5 + rnd() * 8;
+    const h = (o.minH ?? 10) + rnd() * ((o.maxH ?? 34) - (o.minH ?? 10));
+    const rot = -a + (rnd() - 0.5) * 0.3;
+    const kind = rnd();
+    b.add(new THREE.BoxGeometry(w, h, d), mat, trs(x, y0 + h / 2, z, rot), false, false);
+    if (kind < 0.45) {
+      // telhado de duas águas
+      const roof = new THREE.CylinderGeometry(0.01, d * 0.72, h * 0.32, 4, 1);
+      b.add(roof, mat, trs(x, y0 + h + h * 0.16, z, rot + Math.PI / 4, 0, 0, w / (d * 1.02), 1, 1), false, false);
+    } else if (kind < 0.8) {
+      // torre com agulha
+      const tw = 2 + rnd() * 3;
+      const th = h * (0.4 + rnd() * 0.6);
+      b.add(new THREE.BoxGeometry(tw, th, tw), mat, trs(x + (rnd() - 0.5) * w * 0.5, y0 + h + th / 2, z, rot), false, false);
+      b.add(new THREE.ConeGeometry(tw * 0.75, th * 1.1, 4), mat, trs(x + (rnd() - 0.5) * 0.2, y0 + h + th + th * 0.55, z, rot + Math.PI / 4), false, false);
+    } else {
+      // cúpula baixa de observatório ou capela
+      b.add(new THREE.SphereGeometry(Math.min(w, d) * 0.42, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2), mat, trs(x, y0 + h, z, rot), false, false);
+    }
+    // janelas: poucas e quentes, nunca uma grade regular
+    const win = o.windows ?? 0.35;
+    for (let k = 0; k < 6; k++) {
+      if (rnd() > win) continue;
+      const wy = y0 + 2 + rnd() * (h - 4);
+      const off = (rnd() - 0.5) * (w - 2);
+      // face voltada para o centro
+      const fx = x - Math.sin(a) * (d / 2 + 0.05) + Math.cos(rot) * off;
+      const fz = z - Math.cos(a) * (d / 2 + 0.05) - Math.sin(rot) * off;
+      b.add(new THREE.PlaneGeometry(0.9, 1.6), lit, trs(fx, wy, fz, a + Math.PI), false, false);
+    }
+  }
 }

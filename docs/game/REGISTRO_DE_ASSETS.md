@@ -65,3 +65,9 @@ O que ficou de fora do lote, por não aderir à estética: baseball_bat, modern_
 ## Modelos glTF externos (opcional)
 
 O jogo carrega modelos de alta resolução de `public/models/`, listados em `manifest.json` por chave (`player` e o id de cada NPC). Sem entrada, vale o corpo procedural. Os modelos do lote 1 estão listados acima; cada arquivo novo adicionado entra aqui com origem, autor e licença. Detalhes de formato e nomes de animação em `public/models/LEIA-ME.md`.
+
+## Uso novo de assets já registrados e geometria procedural (12/11/2026)
+
+As sete armas do Poly Haven listadas no lote 1 (antique_estoc, wooden_handle_saber, ornate_medieval_dagger, machete, ornate_medieval_mace, ornate_war_hammer, wooden_axe) deixaram de ser só adereço e agora são as armas empunhadas e as armas caídas no chão. A licença continua CC0; a única alteração é a normalização em tempo de carga (`src/entities/weapons.ts`), que mede a lâmina, põe a origem no punho e esconde a bainha.
+
+Feitos em código, sem arquivo externo e sem licença de terceiros: a tocha da mão esquerda (cabo torneado, anéis de corda, chama em três planos com shader, em `src/entities/weapons.ts`), a lanterna de latão da Lanterna da Transparência (`src/entities/player.ts`) e as silhuetas de cidade ao longe no Pátio e abaixo do terraço do Observatório (`skyline` em `src/world/kit.ts`).
