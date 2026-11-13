@@ -33,13 +33,14 @@
   "forma": { "raio": 0, "filete": 2, "moldura": "2px escuro por fora, 1px ouro por dentro", "espaco": [4, 8, 12, 16, 24, 32, 48] },
   "movimento": { "rapido": 100, "base": 160, "lento": 320, "curva": "steps(4, end)", "passosFade": 6 },
   "render": {
-    "$nota": "textura = filtro de ampliação das texturas (linear é o borrão de 2003, nearest é a escada de 1996); ampliacao = como o buffer baixo sobe para a tela (suave imita a TV, pixel imita emulador em escala inteira). alturaInterna em pixels de linha; niveis = degraus por canal antes do dither; snap = fator da grade de vértices (0 desliga, 1 = 1 px interno, 2 = meio pixel).",
-    "padrao": "ps2",
+    "$nota": "textura = filtro de ampliação das texturas (linear é o borrão de 2003, nearest é a escada de 1996); ampliacao = como o buffer baixo sobe para a tela (suave imita a TV, pixel imita emulador em escala inteira). alturaInterna em pixels de linha; niveis = degraus por canal antes do dither; snap = fator da grade de vértices (0 desliga, 1 = 1 px interno, 2 = meio pixel). Campos opcionais da PS2 tardia: alturaPorQualidade = altura interna conforme a Qualidade dos Ajustes; niveisMip trilinear mistura os mipmaps (o piso ao longe para de serrilhar); anisotropia = amostras do filtro anisotrópico; suavizar = anti-serrilhado leve guiado pelo contraste de luma (0 desliga); nevoaBaixa = força da névoa rasteira, em camada sobre a de distância; nevoaAlturaM = altura em metros onde ela some; sombraSuave = filtro PCF suave; contraste = curva do passe de cor.",
+    "padrao": "tardia",
     "predefinicoes": {
       "a": { "nome": "Necrópole fria", "alturaInterna": 360, "niveis": 20, "dither": 1.0, "snap": 1, "saturacao": 0.55, "crush": 0.03, "nevoaPerto": 0.04, "nevoaLonge": 1.7, "bloom": 0.35, "textura": "nearest", "ampliacao": "pixel" },
       "b": { "nome": "Sala de vela", "alturaInterna": 448, "niveis": 32, "dither": 0.8, "snap": 2, "saturacao": 0.85, "crush": 0.02, "nevoaPerto": 0.08, "nevoaLonge": 2.4, "bloom": 0.5, "textura": "linear", "ampliacao": "suave" },
       "c": { "nome": "Vitral regional", "alturaInterna": 360, "niveis": 24, "dither": 0.9, "snap": 1, "saturacao": 1.15, "crush": 0.04, "nevoaPerto": 0.05, "nevoaLonge": 2.0, "bloom": 0.6, "textura": "linear", "ampliacao": "pixel" },
-      "ps2": { "nome": "Luz de estudo", "alturaInterna": 448, "niveis": 32, "dither": 0.7, "snap": 2, "saturacao": 0.72, "crush": 0.03, "nevoaPerto": 0.06, "nevoaLonge": 2.0, "bloom": 0.4, "textura": "linear", "ampliacao": "suave" }
+      "ps2": { "nome": "Luz de estudo", "alturaInterna": 448, "niveis": 32, "dither": 0.7, "snap": 2, "saturacao": 0.72, "crush": 0.03, "nevoaPerto": 0.06, "nevoaLonge": 2.0, "bloom": 0.4, "textura": "linear", "ampliacao": "suave" },
+      "tardia": { "nome": "PS2 tardia", "alturaInterna": 576, "alturaPorQualidade": { "baixa": 448, "media": 512, "alta": 576 }, "niveis": 64, "dither": 0.45, "snap": 4, "saturacao": 0.8, "crush": 0.025, "nevoaPerto": 0.05, "nevoaLonge": 2.1, "bloom": 0.55, "textura": "linear", "ampliacao": "suave", "niveisMip": "trilinear", "anisotropia": 4, "suavizar": 0.6, "nevoaBaixa": 0.38, "nevoaAlturaM": 1.8, "sombraSuave": true, "contraste": 1.14 }
     }
   }
 }

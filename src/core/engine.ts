@@ -5,7 +5,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import type { LampSpec } from '../world/builder';
-import { Ps2, readPs2Preset } from './ps2';
+import { Ps2, readPs2Preset, type Aparencia } from './ps2';
 
 export interface EnvPreset {
   skyTop: number;
@@ -173,9 +173,9 @@ export class Engine {
   settings = { vignette: true, grain: true, reduceMotion: false, highContrast: false, fov: 58 };
 
   /** Aparência com que a cena foi montada; trocar exige recarregar, porque a camada altera os materiais */
-  readonly aparencia: 'ps2' | 'limpa';
+  readonly aparencia: Aparencia;
 
-  constructor(canvas: HTMLCanvasElement, aparencia: 'ps2' | 'limpa' = 'ps2') {
+  constructor(canvas: HTMLCanvasElement, aparencia: Aparencia = 'tardia') {
     this.aparencia = aparencia;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
     // em produção não pede o registro de erro de cada shader: a consulta força a espera da compilação no meio do quadro
@@ -264,6 +264,9 @@ export class Engine {
       document.documentElement.dataset.arte = 'ps2';
       // a camada PS2 já quantiza com dither: o do GradeShader sai para não pontilhar duas vezes
       this.grade.uniforms.uLevels.value = 0;
+      // PS2 tardia: penumbra filtrada e curva de contraste um pouco mais funda (luz baixa, poucos pontos quentes)
+      if (art.sombraSuave) this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      if (art.contraste) this.grade.uniforms.uContrast.value = art.contraste;
     } else {
       // Aparência Limpa (ou ?arte=off): a interface também volta à versão sem moldura de época
       document.documentElement.removeAttribute('data-arte');
@@ -278,7 +281,7 @@ export class Engine {
     // resolução interna de console antigo: 540, 480 ou 400 linhas, ampliadas com filtro suave (direção PS2 e o
     // maior ganho de desempenho). Com ?arte=, a camada opcional de src/core/ps2.ts decide a proporção.
     const lines = this.quality === 'baixa' ? 400 : this.quality === 'media' ? 480 : 540;
-    const ratio = this.ps2 ? this.ps2.pixelRatioFor(h) : Math.min(window.devicePixelRatio, lines / Math.max(1, h));
+    const ratio = this.ps2 ? this.ps2.pixelRatioFor(h, this.quality) : Math.min(window.devicePixelRatio, lines / Math.max(1, h));
     this.renderer.setPixelRatio(ratio);
     this.renderer.setSize(w, h, false);
     this.ps2?.setSize(w, h, ratio);
@@ -575,6 +578,7 @@ export class Engine {
       this.shake = Math.max(0, this.shake - dt * 2.2);
     } else this.shake = 0;
     this.ps2?.sweep(this.scene, dt);
+    this.ps2?.follow(focus.y, dt);
     if (this.quality === 'baixa' && !this.ps2) this.renderer.render(this.scene, this.camera);
     else this.composer.render(dt);
     // o giro do tremor vale só para este quadro
