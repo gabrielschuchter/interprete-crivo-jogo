@@ -10,6 +10,12 @@ export interface Settings {
   volEfeitos: number;
   volAmbiente: number;
   sens: number;
+  /** multiplicador do eixo vertical sobre a sensibilidade geral */
+  sensY: number;
+  /** distância da câmera ao personagem, em metros */
+  camDist: number;
+  /** escala da interface durante o jogo (barras, bússola, atalhos) */
+  hudScale: number;
   invertY: boolean;
   grain: boolean;
   vignette: boolean;
@@ -44,6 +50,9 @@ export const DEFAULT_SETTINGS: Settings = {
   volEfeitos: 0.85,
   volAmbiente: 0.7,
   sens: 1,
+  sensY: 1,
+  camDist: 4.6,
+  hudScale: 1,
   invertY: false,
   grain: true,
   vignette: true,
@@ -81,7 +90,7 @@ export function sanitizeSettings(raw: unknown): Settings {
   if (d.difficulty === 'historia' || d.difficulty === 'padrao') s.difficulty = d.difficulty;
   if (d.aparencia === 'ps2' || d.aparencia === 'limpa') s.aparencia = d.aparencia;
   num('volGeral', 0, 1); num('volMusica', 0, 1); num('volEfeitos', 0, 1); num('volAmbiente', 0, 1);
-  num('sens', 0.3, 2.5); num('textScale', 0.9, 1.6); num('fov', 48, 75); num('touchScale', 0.8, 1.4);
+  num('sens', 0.3, 2.5); num('sensY', 0.4, 2); num('camDist', 3.2, 6.5); num('hudScale', 0.8, 1.4); num('textScale', 0.9, 1.6); num('fov', 48, 75); num('touchScale', 0.8, 1.4);
   num('padDeadzone', 0.05, 0.45); num('noticeTime', 0.5, 4);
   for (const k of ['invertY', 'grain', 'vignette', 'reduceMotion', 'highContrast', 'hud', 'touchEasyRun', 'hudNumbers', 'reduceMotionSet'] as const) bool(k);
   if (d.keys && typeof d.keys === 'object') {

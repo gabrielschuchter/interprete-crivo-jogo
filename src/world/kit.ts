@@ -638,10 +638,11 @@ export function plaque(b: RegionBuilder, text: string, x: number, y: number, z: 
 export function fountain(b: RegionBuilder, x: number, z: number): THREE.Group {
   b.add(new THREE.CylinderGeometry(3.3, 3.5, 0.7, 24), M.stoneDark, trs(x, 0.35, z), false);
   b.add(new THREE.CylinderGeometry(3.45, 3.45, 0.14, 24), M.carved, trs(x, 0.72, z), false);
-  b.add(new THREE.CylinderGeometry(3.0, 3.0, 0.06, 24), M.water, trs(x, 0.6, z), true, false);
+  // espelhos d'água 2 a 4 cm acima da pedra: no mesmo plano do topo da bacia eles cintilavam (z-fighting)
+  b.add(new THREE.CylinderGeometry(3.0, 3.0, 0.06, 24), M.water, trs(x, 0.8, z), true, false);
   b.add(new THREE.CylinderGeometry(0.75, 1.1, 1.6, 22), M.stoneDark, trs(x, 0.8, z), false);
   b.add(new THREE.CylinderGeometry(1.5, 0.5, 0.5, 16), M.carved, trs(x, 1.85, z), false);
-  b.add(new THREE.CylinderGeometry(1.4, 1.4, 0.04, 16), M.water, trs(x, 2.08, z), true, false);
+  b.add(new THREE.CylinderGeometry(1.4, 1.4, 0.04, 16), M.water, trs(x, 2.1, z), true, false);
   b.add(new THREE.CylinderGeometry(0.2, 0.3, 1.1, 22), M.bronze, trs(x, 2.6, z), false);
   // esfera armilar: anéis de bronze que giram devagar
   const arm = new THREE.Group();
