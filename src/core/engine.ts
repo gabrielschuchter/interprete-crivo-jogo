@@ -260,6 +260,28 @@ export class Engine {
     this.resize();
   }
 
+  /**
+   * Compila os shaders da cena em paralelo (KHR_parallel_shader_compile) e espera ficarem prontos, sem travar a
+   * tela de carga. Não usa renderer.compileAsync: se um material for descartado durante a espera, ele lança erro
+   * dentro de um setTimeout próprio e a promessa nunca resolve. Aqui o material sem programa sai da lista.
+   */
+  async precompile(scene: THREE.Object3D, maxMs = 15000): Promise<void> {
+    let mats: Set<THREE.Material>;
+    try {
+      mats = this.renderer.compile(scene, this.camera) as unknown as Set<THREE.Material>;
+    } catch {
+      return;
+    }
+    const t0 = performance.now();
+    while (mats.size && performance.now() - t0 < maxMs) {
+      for (const m of mats) {
+        const prog = (this.renderer.properties.get(m) as { currentProgram?: { isReady(): boolean } }).currentProgram;
+        if (!prog || prog.isReady()) mats.delete(m);
+      }
+      if (mats.size) await new Promise((r) => setTimeout(r, 16));
+    }
+  }
+
   applyEnv(e: EnvPreset): void {
     this.env = e;
     const u = this.skyMat.uniforms;

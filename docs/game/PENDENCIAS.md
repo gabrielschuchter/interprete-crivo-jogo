@@ -42,11 +42,11 @@ Expressão facial: os doze personagens não têm morph targets, e o pipeline rem
 
 ## Trabalho de design e acessibilidade ainda não feito
 
-Trocar de alvo travado (36). Dificuldade por componente (72). Paleta para daltonismo e avisos de ataque que não dependam de cor (73, 77). Sensibilidade por eixo (75). Escala própria da HUD (60). Distância e ombro da câmera, colisão contínua de câmera (55, 56). Queda ao andar em borda (53). Consulta sob demanda do estado de combate para leitor de tela (43). Enigmas: calibragem da ponte, erro repetido, braseiro e névoa, explicações menos imediatas (97 a 101). Nó cooperativo visível na árvore (102). Mais opções na criação (103). Matriz das 39 superfícies P0 do atlas (108). Perfis de reverberação, mais superfícies de passo, som posicional, voz do Crivo (163 a 167, 170).
+Trocar de alvo travado (36). Dificuldade por componente (72). Paleta para daltonismo e avisos de ataque que não dependam de cor (73, 77). Sensibilidade por eixo (75). Escala própria da HUD (60). Distância e ombro da câmera, colisão contínua de câmera (55, 56). Consulta sob demanda do estado de combate para leitor de tela (43). Enigmas: calibragem da ponte, erro repetido, braseiro e névoa, explicações menos imediatas (97 a 101). Nó cooperativo visível na árvore (102). Mais opções na criação (103). Matriz das 39 superfícies P0 do atlas (108). Perfis de reverberação, mais superfícies de passo, som posicional, voz do Crivo (163 a 167, 170).
 
 ## Técnicas, sem bloqueio
 
-Dividir o pacote de JavaScript. Caminhos a pé no Arquivo, onde o jogador automático prende em estantes. Cooperativo não está implementado; a arquitetura separa o que um servidor precisaria. O zip `Interprete_RPG_Documentacao_v0_1.zip` nunca chegou à biblioteca do projeto.
+Medir a carga de região numa GPU real: no Chromium com SwiftShader a compilação de shaders domina (cerca de 10 s por região nova); o log `[carga]` no console mostra props, build, compile e paint. Dividir o pacote de JavaScript. Caminhos a pé no Arquivo, onde o jogador automático prende em estantes. Cooperativo não está implementado; a arquitetura separa o que um servidor precisaria. O zip `Interprete_RPG_Documentacao_v0_1.zip` nunca chegou à biblioteca do projeto.
 
 ## Perguntas para o Gabriel
 

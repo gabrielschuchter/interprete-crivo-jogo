@@ -444,9 +444,7 @@ export class Game {
     progress?.(0.8);
     const t2b = performance.now();
     const progs0 = this.engine.renderer.info.programs?.length ?? 0;
-    // compila os shaders novos da região em paralelo (KHR_parallel_shader_compile), sem travar a tela de carga;
-    // o limite de 8 s evita ficar preso num driver que não avisa o fim
-    await Promise.race([this.engine.renderer.compileAsync(sc, this.engine.camera).catch(() => undefined), new Promise((r) => setTimeout(r, 8000))]);
+    await this.engine.precompile(sc);
     const t2c = performance.now();
     await this.nextPaint();
     // compila os materiais antes de revelar a cena

@@ -361,7 +361,7 @@ button, .btn { touch-action: manipulation; }
 #touch .t-btn .n:empty { display: none; }
 #touch .t-btn.empty { opacity: 0.45; }
 #touch .a-main { width: calc(var(--tb) * 1.32); height: calc(var(--tb) * 1.32); right: var(--r0); bottom: var(--b0); background: var(--action-primary); border-color: #e5a85f; }
-#touch .a-jump { right: calc(var(--r0) + var(--tb) * 2.5 + 16px); bottom: calc(var(--b0) + 4px); }
+#touch .a-jump { right: calc(var(--r0) + var(--tb) * 3.32 + 30px); bottom: calc(var(--b0) + 6px); }
 #touch .a-dodge { right: calc(var(--r0) + var(--tb) * 1.32 + 8px); bottom: calc(var(--b0) + 4px); }
 #touch .a-heavy { right: calc(var(--r0) + 4px); bottom: calc(var(--b0) + var(--tb) * 1.32 + 8px); }
 #touch .a-crivo { right: calc(var(--r0) + var(--tb) * 1.32 + 8px); bottom: calc(var(--b0) + var(--tb) + 14px); }

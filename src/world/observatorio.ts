@@ -54,11 +54,18 @@ export function buildObservatorio(ctx: RegionCtx): BuiltRegion {
     K.pinnacle(b, sx * 6.25, 1.15, -9.4, 0.7, 2.4, M.stoneDark);
     K.lampPost(b, sx * 5.2, 9.5, 3.4);
   }
-  // casa da escada (de onde se chega)
-  b.box(M.stone, 7, 6.5, 2.2, 0, 0, 15.9, 0, true);
-  K.archWall(b, 0, 14.75, 0, 7, 6.5, 0.5, 2.8, 2.6, M.stone, 0, false);
+  // casa da escada (de onde se chega): ocupa toda a largura do patamar e desce até a base da torre, para
+  // que atrás da porta e dos lados dela haja parede, e não o vazio que o Gabriel viu
+  b.box(M.stoneDark, 13.5, 30, 5.5, 0, -30, 17.8, 0);
+  b.box(M.stone, 13.5, 9, 5.5, 0, 0, 17.8, 0, true);
+  K.archWall(b, 0, 14.75, 0, 13.5, 9, 0.5, 2.8, 2.6, M.stone, 0, false);
   if (!b.place('large_castle_door', 0, 0, 14.7, Math.PI, { size: 2.9, fit: 'w', collide: false })) b.box(M.woodDark, 2.8, 5, 0.2, 0, 0, 14.9, 0);
-  K.gableRoof(b, 0, 6.5, 15.9, 0, 7.4, 2.6, 2.4);
+  K.gableRoof(b, 0, 9, 17.8, 0, 13.9, 5.9, 2.8);
+  for (const sx of [-1, 1]) {
+    K.gothicWindow(b, sx * 4.4, 4.6, 14.44, Math.PI, 1.3, 3.2, true);
+    K.pinnacle(b, sx * 6.75, 9, 15.05, 0.8, 3.2, M.stoneDark);
+  }
+  b.add(new THREE.BoxGeometry(14, 0.24, 0.7), M.carved, trs(0, 8.9, 14.75));
   K.wallLantern(b, 2.4, 3.2, 14.5, Math.PI);
   K.wallLantern(b, -2.4, 3.2, 14.5, Math.PI);
 
