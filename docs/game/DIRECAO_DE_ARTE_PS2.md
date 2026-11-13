@@ -1,6 +1,6 @@
 # Direção de arte e design system: PS2 gótico, dark academia, Interprete
 
-Versão 1.0, 12/11/2026. Documento de direção e especificação. Substitui a regra anterior de "low-poly proibido" e a seção de estética de `DECISOES_VISUAIS.md` onde houver conflito; `CLAUDE.md` e as regras de conteúdo do projeto continuam valendo. Os números de render e de interface têm uma única fonte, `design/ps2/ps2.tokens.json`, e o protótipo que os exercita liga com `?arte=ps2` na URL. A versão navegável deste documento é a página `direcao-de-arte.html` (na produção, `/direcao-de-arte.html`), construída a partir dos mesmos tokens.
+Versão 1.0, 12/11/2026. Documento de direção e especificação. Substitui a regra anterior de "low-poly proibido" e a seção de estética de `DECISOES_VISUAIS.md` onde houver conflito; `CLAUDE.md` e as regras de conteúdo do projeto continuam valendo. Os números de render e de interface têm uma única fonte, `design/ps2/ps2.tokens.json`, e o jogo usa uma imagem só, a PS2 tardia (ver `docs/game/AJUSTES.md`); as predefinições de estudo citadas abaixo saíram do jogo em 13/11/2026 e restam como registro e capturas. A versão navegável deste documento é a página `direcao-de-arte.html` (na produção, `/direcao-de-arte.html`), construída a partir dos mesmos tokens.
 
 ## 1. Decisão em um parágrafo
 
@@ -203,7 +203,7 @@ A pesquisa de técnica trouxe uma correção importante ao senso comum retro. O 
 
 ### Implementação do protótipo
 
-O regime fica em `src/core/ps2.ts`, com integração de poucas linhas em `src/core/engine.ts`, e só liga com `?arte=a|b|c|ps2` (ou com `localStorage` na chave `interprete-arte`). Sem o parâmetro, o jogo é idêntico ao anterior. O que o código faz:
+O regime fica em `src/core/ps2.ts`, com integração de poucas linhas em `src/core/engine.ts`. Na versão 1.0 deste documento ele ligava com `?arte=a|b|c|ps2`; desde 13/11/2026 está sempre ligado, com os números da PS2 tardia. O que o código faz:
 
 A **resolução interna** é uma razão de pixel (`alturaInterna` dividida pela altura da janela) aplicada ao renderizador e ao compositor, de modo que cena, bloom e tonalização rodam na resolução baixa. A ampliação para a tela segue a predefinição: suave (o navegador interpola, como uma TV) ou em pixel (`image-rendering: pixelated`, como um emulador em escala inteira). Para o padrão, escolhi suave, porque o briefing fala em "levemente borrado" e porque a escala 448 para 720 não é inteira, o que em modo pixel produz degraus de largura desigual que cintilam.
 
@@ -215,7 +215,7 @@ O mapeamento afim, não implementado, é possível sem extensão: o shader de v�
 
 ### Resultado das predefinições
 
-As capturas estão em `docs/game/capturas/ps2/`, geradas por `tools/ps2/capturar.mjs` em Chromium com renderização por software (SwiftShader). Elas servem para comparar linguagem de imagem, não desempenho, e nenhuma delas foi vista em placa de vídeo real.
+As capturas estão em `docs/game/capturas/ps2/`, geradas em Chromium com renderização por software (SwiftShader). Elas servem para comparar linguagem de imagem, não desempenho, e nenhuma delas foi vista em placa de vídeo real.
 
 Cinco leituras saem das capturas (Átrio nas cinco predefinições; Bosque, Observatório, menu e inventário na consolidada).
 
@@ -287,7 +287,7 @@ A direção foi fundamentada em onze imagens, no repositório, no documento-matr
 
 ## 15. Decisões que dependem do Gabriel
 
-Ligar `?arte=ps2` como padrão (hoje é opt-in para não alterar as capturas e os testes das outras frentes de trabalho). Oferecer em Ajustes uma opção "Aparência: Era PS2 ou Limpa", com intensidade ajustável do pixel e do dither, por acessibilidade e desempenho. Aprovar o motivo da lua de olho único no Observatório com o roteiro. Aprovar a escolha das quatro famílias tipográficas (as licenças já estão registradas). Autorizar a passagem de decimação e de redução de textura dos personagens, que cabe à frente "Refazer personagens, NPCs e mobs" e deve ser coordenada com ela para não decimar o que ainda está sendo refeito.
+Resolvido em 13/11/2026: a PS2 tardia é a única imagem, sem opção de aparência nem `?arte=`. Aprovar o motivo da lua de olho único no Observatório com o roteiro. Aprovar a escolha das quatro famílias tipográficas (as licenças já estão registradas). Autorizar a passagem de decimação e de redução de textura dos personagens, que cabe à frente "Refazer personagens, NPCs e mobs" e deve ser coordenada com ela para não decimar o que ainda está sendo refeito.
 
 ## 16. Próximos passos recomendados
 

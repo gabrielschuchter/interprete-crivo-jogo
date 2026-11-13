@@ -32,7 +32,7 @@ Experiência e níveis dão pontos de habilidade para três ramos do jogador (Ex
 
 ## Registro e acessibilidade
 
-O jogo grava ao trocar de região, ao descansar e em pontos-chave das missões. Ajustes inclui três níveis de qualidade, quatro volumes, sensibilidade, eixo invertido, campo de visão, escala de texto, alto contraste, redução de movimento, granulado, vinheta, remapeamento de todas as ações e a opção de esconder a interface.
+O jogo grava ao trocar de região, ao descansar e em pontos-chave das missões. Ajustes é mínimo (`docs/game/AJUSTES.md`): brilho, três volumes, dificuldade, sensibilidade, eixo invertido, tamanho dos botões de toque, tamanho do texto e da interface, alto contraste, redução de movimento e remapeamento de todas as ações. A imagem é uma só e a qualidade é automática.
 
 
 ## Armas, armaduras e focos (12/11/2026)

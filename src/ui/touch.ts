@@ -162,9 +162,9 @@ export class TouchControls {
     const inp = this.g.input;
     inp.touchMove.x = Math.cos(ang) * curved;
     inp.touchMove.y = Math.sin(ang) * curved;
-    // corrida: empurrar até a borda; histerese evita tremer entre andar e correr
-    if (mm >= (this.easyRun ? 0.6 : 0.94)) inp.touchRun = true;
-    else if (mm < (this.easyRun ? 0.45 : 0.8)) inp.touchRun = false;
+    // corrida: empurrar a 85% do curso, sem exigir a borda; histerese evita tremer entre andar e correr
+    if (mm >= 0.85) inp.touchRun = true;
+    else if (mm < 0.7) inp.touchRun = false;
     this.knob.style.transform = `translate(${Math.cos(ang) * l}px,${Math.sin(ang) * l}px)`;
   }
 
@@ -186,8 +186,6 @@ export class TouchControls {
     this.lit.clear();
     this.el.querySelectorAll('[data-b].on').forEach((b) => b.classList.remove('on'));
   }
-  /** corrida a partir de 60% do curso, para quem não alcança a borda com conforto */
-  easyRun = false;
   private lit = new Map<number, HTMLElement>();
   private holds = new Map<number, ActionName>();
 

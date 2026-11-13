@@ -1,19 +1,18 @@
 /**
  * Capturas na câmera real de jogo, uma por região, com a interface na tela.
- * Uso: node tools/perf/regioes.mjs <prefixo> [arte]   (arte: crua | tardia | off; vazio = padrão do jogo)
+ * Uso: node tools/perf/regioes.mjs <prefixo>
  * Exige o build no ar (npm run build && npm run preview) ou E2E_URL apontando para o servidor.
  */
 import { createRequire } from 'node:module';
 let chromium;
 try { ({ chromium } = createRequire(import.meta.url)('playwright')); } catch { ({ chromium } = createRequire('/')('playwright')); }
 const pre = process.argv[2] ?? 'regiao';
-const arte = process.argv[3] ? `&arte=${process.argv[3]}` : '';
 const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const vw = Number(process.env.VW ?? 1280), vh = Number(process.env.VH ?? 720);
 const p = await b.newPage({ viewport: { width: vw, height: vh } });
 const E = (fn, a) => p.evaluate(fn, a);
 const waitMode = async (m) => { for (;;) { if ((await E(() => window.__game?.mode).catch(() => null)) === m) return; await p.waitForTimeout(200); } };
-await p.goto((process.env.E2E_URL ?? 'http://127.0.0.1:4173/') + '?teste' + arte);
+await p.goto((process.env.E2E_URL ?? 'http://127.0.0.1:4173/') + '?teste');
 await waitMode('splash');
 await E(() => localStorage.clear());
 await p.keyboard.press('Enter');

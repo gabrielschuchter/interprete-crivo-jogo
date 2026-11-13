@@ -1,5 +1,5 @@
 /*
- * Interface na direção PS2 gótica. Só vale com <html data-arte="ps2"> (ativado por ?arte=).
+ * Interface na direção PS2 gótica, a única do jogo: vale com <html data-arte="ps2">, fixo em index.html.
  * Regras: cantos retos, moldura dupla (filete escuro por fora, fio de ouro por dentro),
  * painéis sólidos sem desfoque, transições em degraus, seleção por marcador e inversão.
  * Fonte dos valores: design/ps2/ps2.tokens.json. Detalhes e porquês em docs/game/DIRECAO_DE_ARTE_PS2.md.

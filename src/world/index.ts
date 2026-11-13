@@ -7,7 +7,7 @@ import { applyPs2Skin } from './ps2skin';
 
 export function buildRegion(id: RegionId, ctx: RegionCtx): BuiltRegion {
   const r = build(id, ctx);
-  if (ctx.ps2 !== false) applyPs2Skin(id, r.root);
+  applyPs2Skin(id, r.root);
   return r;
 }
 

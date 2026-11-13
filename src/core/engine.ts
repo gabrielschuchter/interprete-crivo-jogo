@@ -5,7 +5,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import type { LampSpec } from '../world/builder';
-import { Ps2, readPs2Preset, type Aparencia } from './ps2';
+import { Ps2, PS2_IMAGEM } from './ps2';
 
 export interface EnvPreset {
   skyTop: number;
@@ -35,6 +35,9 @@ export interface EnvPreset {
 
 export type Quality = 'baixa' | 'media' | 'alta';
 
+/** campo de visão vertical fixo, dentro da faixa de composição da direção de arte (50 a 58 graus) */
+const FOV = 58;
+
 const GradeShader = {
   uniforms: {
     tDiffuse: { value: null },
@@ -48,10 +51,11 @@ const GradeShader = {
     uDesat: { value: 0 },
     uHighContrast: { value: 0 },
     uLevels: { value: 31 },
+    uGamma: { value: 1 },
   },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
   fragmentShader: `
-    uniform sampler2D tDiffuse; uniform float uTime, uVignette, uGrain, uContrast, uFlash, uDesat, uHighContrast, uLevels;
+    uniform sampler2D tDiffuse; uniform float uTime, uVignette, uGrain, uContrast, uFlash, uDesat, uHighContrast, uLevels, uGamma;
     uniform vec3 uShadow, uLight; varying vec2 vUv;
     float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233))) * 43758.5453); }
     // matriz de Bayer 4x4: o pontilhado ordenado dos quadros de 16 bits da era PS2
@@ -64,6 +68,9 @@ const GradeShader = {
       c.rgb = (c.rgb - 0.18) * uContrast + 0.18;
       c.rgb = mix(c.rgb, vec3(l), uDesat);
       c.rgb = mix(c.rgb, c.rgb * 1.35 + 0.03, uHighContrast);
+      // brilho dos Ajustes: curva de gama sobre a cor já em espaço de tela; mexe nas sombras e nos meios-tons
+      // e quase nada no branco, então abrir o breu não lava as chamas nem a lua
+      c.rgb = pow(max(c.rgb, 0.0), vec3(1.0 / uGamma));
       vec2 d = vUv - 0.5;
       float v = smoothstep(0.85, 0.25, length(d * vec2(1.0, 0.82)));
       c.rgb *= mix(1.0, mix(0.42, 1.0, v), uVignette);
@@ -164,30 +171,28 @@ export class Engine {
   private rainMat: THREE.ShaderMaterial;
   env!: EnvPreset;
   quality: Quality = 'alta';
-  /** camada PS2 (padrão); null quando a Aparência é Limpa */
-  ps2: Ps2 | null = null;
+  /** imagem PS2 tardia, a única do jogo */
+  readonly ps2 = new Ps2(PS2_IMAGEM);
   time = 0;
   shake = 0;
   flash = 0;
   private fogAmount = 1;
-  settings = { vignette: true, grain: true, reduceMotion: false, highContrast: false, fov: 58 };
+  /** brilho = gama do passe de cor (1 = neutro) */
+  settings = { reduceMotion: false, highContrast: false, brilho: 1 };
 
-  /** Aparência com que a cena foi montada; trocar exige recarregar, porque a camada altera os materiais */
-  readonly aparencia: Aparencia;
-
-  constructor(canvas: HTMLCanvasElement, aparencia: Aparencia = 'tardia') {
-    this.aparencia = aparencia;
+  constructor(canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
     // em produção não pede o registro de erro de cada shader: a consulta força a espera da compilação no meio do quadro
     this.renderer.debug.checkShaderErrors = !import.meta.env.PROD;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.shadowMap.enabled = true;
-    // sombras de borda dura e mapa menor: mais perto do visual da época e mais barato
-    this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    // penumbra filtrada da PS2 tardia (luz baixa, poucos pontos quentes)
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-    this.scene.fog = new THREE.FogExp2(0x101418, 0.02);
+    // névoa linear colorida, como nos motores da época; a camada PS2 ajusta perto e longe por região
+    this.scene.fog = new THREE.Fog(0x101418, 6, 70);
     this.scene.add(this.hemi);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(1024, 1024);
@@ -255,22 +260,12 @@ export class Engine {
     this.grade = new ShaderPass(GradeShader);
     this.composer.addPass(new OutputPass());
     this.composer.addPass(this.grade);
-    const art = readPs2Preset(aparencia);
-    if (art) {
-      this.ps2 = new Ps2(art);
-      this.composer.addPass(this.ps2.pass);
-      this.scene.fog = new THREE.Fog(0x101418, 6, 70);
-      canvas.style.imageRendering = art.ampliacao === 'pixel' ? 'pixelated' : 'auto';
-      document.documentElement.dataset.arte = 'ps2';
-      // a camada PS2 já quantiza com dither: o do GradeShader sai para não pontilhar duas vezes
-      this.grade.uniforms.uLevels.value = 0;
-      // PS2 tardia: penumbra filtrada e curva de contraste um pouco mais funda (luz baixa, poucos pontos quentes)
-      if (art.sombraSuave) this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      if (art.contraste) this.grade.uniforms.uContrast.value = art.contraste;
-    } else {
-      // Aparência Limpa (ou ?arte=off): a interface também volta à versão sem moldura de época
-      document.documentElement.removeAttribute('data-arte');
-    }
+    this.composer.addPass(this.ps2.pass);
+    // ampliação suave do buffer baixo, como a saída de TV
+    canvas.style.imageRendering = 'auto';
+    // a camada PS2 já quantiza com dither: o do GradeShader sai para não pontilhar duas vezes
+    this.grade.uniforms.uLevels.value = 0;
+    this.grade.uniforms.uContrast.value = PS2_IMAGEM.contraste;
     this.resize();
     window.addEventListener('resize', () => this.resize());
   }
@@ -278,19 +273,18 @@ export class Engine {
   resize(): void {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    // resolução interna de console antigo: 540, 480 ou 400 linhas, ampliadas com filtro suave (direção PS2 e o
-    // maior ganho de desempenho). Com ?arte=, a camada opcional de src/core/ps2.ts decide a proporção.
-    const lines = this.quality === 'baixa' ? 400 : this.quality === 'media' ? 480 : 540;
-    const ratio = this.ps2 ? this.ps2.pixelRatioFor(h, this.quality) : Math.min(window.devicePixelRatio, lines / Math.max(1, h));
+    // resolução interna de console (576, 512 ou 448 linhas, conforme a qualidade), ampliada com filtro suave:
+    // a direção PS2 e o maior ganho de desempenho
+    const ratio = this.ps2.pixelRatioFor(h, this.quality);
     this.renderer.setPixelRatio(ratio);
     this.renderer.setSize(w, h, false);
-    this.ps2?.setSize(w, h, ratio);
+    this.ps2.setSize(w, h, ratio);
     this.renderer.domElement.style.width = '100%';
     this.renderer.domElement.style.height = '100%';
     this.composer.setPixelRatio(this.renderer.getPixelRatio());
     this.composer.setSize(w, h);
     this.camera.aspect = w / h;
-    this.camera.fov = this.settings.fov;
+    this.camera.fov = FOV;
     this.camera.updateProjectionMatrix();
   }
 
@@ -318,12 +312,11 @@ export class Engine {
     let mats: Set<THREE.Material>;
     // a camada PS2 troca o shader dos materiais novos (encaixe de vértices): aplicada antes, para o que se
     // compila aqui ser o mesmo programa que o primeiro quadro usa, e não uma versão que vai para o lixo
-    this.ps2?.sweep(scene, 0, true);
+    this.ps2.sweep(scene, 0, true);
     // o quadro real desenha dentro do alvo do compositor (sem tom nem espaço de cor de saída no shader);
     // compilar com a tela como alvo gerava programas diferentes e o primeiro quadro recompilava tudo
-    const direct = this.quality === 'baixa' && !this.ps2;
     const prevTarget = this.renderer.getRenderTarget();
-    if (!direct) this.renderer.setRenderTarget(this.composer.readBuffer);
+    this.renderer.setRenderTarget(this.composer.readBuffer);
     try {
       mats = this.renderer.compile(scene, this.camera) as unknown as Set<THREE.Material>;
     } catch {
@@ -391,18 +384,14 @@ export class Engine {
     u.uMoonOn.value = e.moon === false ? 0 : 1;
     u.uEye.value = e.moonEye ? 1 : 0;
     u.uMoon.value.set(...e.sunDir).normalize();
-    if (this.ps2) this.ps2.fog(this.scene, e.fog, e.fogDensity * this.fogAmount);
-    else {
-      (this.scene.fog as THREE.FogExp2).color.set(e.fog);
-      (this.scene.fog as THREE.FogExp2).density = e.fogDensity * this.fogAmount;
-    }
+    this.ps2.fog(this.scene, e.fog, e.fogDensity * this.fogAmount);
     this.hemi.color.set(e.hemiSky);
     this.hemi.groundColor.set(e.hemiGround);
     this.hemi.intensity = e.hemiIntensity;
     this.sun.color.set(e.sun);
     this.sun.intensity = e.sunIntensity;
     this.renderer.toneMappingExposure = e.exposure;
-    this.bloom.strength = this.ps2 ? Math.min(e.bloom, this.ps2.preset.bloom) : e.bloom;
+    this.bloom.strength = Math.min(e.bloom, this.ps2.preset.bloom);
     this.rainMat.uniforms.uAmount.value = e.rain;
     this.rain.visible = e.rain > 0.01;
     this.sky.visible = !e.interior;
@@ -422,8 +411,7 @@ export class Engine {
 
   setFogAmount(a: number): void {
     this.fogAmount = a;
-    if (this.env && this.ps2) this.ps2.fog(this.scene, this.env.fog, this.env.fogDensity * a);
-    else if (this.env) (this.scene.fog as THREE.FogExp2).density = this.env.fogDensity * a;
+    if (this.env) this.ps2.fog(this.scene, this.env.fog, this.env.fogDensity * a);
   }
 
   setLamps(lamps: LampSpec[]): void {
@@ -557,9 +545,10 @@ export class Engine {
     this.sun.target.position.copy(_snapped);
     const g = this.grade.uniforms;
     g.uTime.value = this.time;
-    g.uVignette.value = this.settings.vignette ? 1 : 0;
-    g.uGrain.value = this.settings.grain ? 1 : 0;
+    // grão e vinheta fazem parte da imagem; o grão é animado e sai com "Reduzir movimento"
+    g.uGrain.value = this.settings.reduceMotion ? 0 : 1;
     g.uHighContrast.value = this.settings.highContrast ? 1 : 0;
+    g.uGamma.value = this.settings.brilho;
     this.flash = Math.max(0, this.flash - dt * 2.5);
     g.uFlash.value = this.settings.reduceMotion ? 0 : this.flash;
     let roll = 0;
@@ -577,10 +566,9 @@ export class Engine {
       this.camera.rotateZ(roll);
       this.shake = Math.max(0, this.shake - dt * 2.2);
     } else this.shake = 0;
-    this.ps2?.sweep(this.scene, dt);
-    this.ps2?.follow(focus.y, dt);
-    if (this.quality === 'baixa' && !this.ps2) this.renderer.render(this.scene, this.camera);
-    else this.composer.render(dt);
+    this.ps2.sweep(this.scene, dt);
+    this.ps2.follow(focus.y, dt);
+    this.composer.render(dt);
     // o giro do tremor vale só para este quadro
     if (roll) this.camera.rotateZ(-roll);
   }

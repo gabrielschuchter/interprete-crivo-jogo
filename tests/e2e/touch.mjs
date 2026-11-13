@@ -101,6 +101,9 @@ async function session(W, H, full) {
   ok(s.run && s.v > walk + 0.8, `empurrar até a borda corre (v ${s.v.toFixed(2)})`);
   await send('touchMove', [[sx, sy - 78, 1]]);
   await gsleep(900);
+  ok((await st()).run, 'histerese: recuar um pouco da borda mantém a corrida');
+  await send('touchMove', [[sx, sy - 30, 1]]);
+  await gsleep(900);
   ok(!(await st()).run, 'histerese: voltar ao meio desliga a corrida');
   const y0 = (await st()).yaw;
   await send('touchStart', [[sx, sy - 78, 1], [W * 0.7, H * 0.4, 2]]);
