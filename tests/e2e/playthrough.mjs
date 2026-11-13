@@ -90,6 +90,7 @@ try {
   await E(() => __game.player.teleport(-5, 0, -11, 3.14));
   await fight('clareira');
   await E(() => T.use('bau_selo'));
+  if ((await step('ponte')) !== 4) console.log('   diagnóstico do baú', JSON.stringify(await E(() => { const g = __game; const p = g.player; return { step: g.state.quests.ponte, flags: g.state.flags, inv: g.state.inventory, mode: g.mode, act: p.fig.action, golpe: p.golpe?.id, carga: p.charging, vivos: g.enemies.filter((e) => e.alive).map((e) => e.group + ':' + e.state), log: T.log.slice(-4) }; })));
   ok((await step('ponte')) === 4, 'o baú da clareira entrega o Selo do Contexto');
   await E(() => T.use('mec_a', 0));
   ok(await E(() => __game.state.inventory.selo_contexto === 1), 'mecanismo errado devolve o selo, sem punição definitiva');

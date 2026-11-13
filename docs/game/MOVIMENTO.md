@@ -14,6 +14,8 @@ A locomoção mede a passada natural de cada clipe pelo pé de apoio (`measureGa
 
 A mão direita fecha no punho da espada e a esquerda na haste da tocha, com o punho girado para que a linha dos nós siga o eixo do objeto. Nas interações a arma vai para a bainha no quadril e a mão livre fecha no instante do contato com o objeto. O braço da tocha abre o suficiente para a chama não atravessar o corpo.
 
+Os golpes do protagonista com a espada (sequência de leves, firme com foco, desvio, esquiva perfeita, golpe em queda) são poses-chave da camada de esgrima, descritas em `docs/game/COMBATE.md`. `Rig.aim` com peso parcial não fazia nada até 13/11/2026 (ver o mesmo documento); poses de persona e de inimigo aplicadas com peso menor que 1 passaram a aparecer.
+
 ## Moradores
 
 Cada um tem postura de ofício (o arquivista lê, a acendedora ergue o lampião, a vigia segura a alabarda, o noviço reza), alterna a espera com uma ação própria de tempos em tempos, vira primeiro os olhos e a cabeça e só depois o corpo, fala com o gesto do seu estilo e mexe a boca só enquanto a interface escreve a fala. Quem escuta faz uma pose de escuta e assente no fim das frases. As sobrancelhas sobem na fala e na dúvida; o sorriso aparece no aceno.

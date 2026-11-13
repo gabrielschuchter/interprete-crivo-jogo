@@ -108,6 +108,9 @@ input[type='text']:focus { outline: none; border-color: var(--g-text); box-shado
 .meter b.lag { background: var(--g-paper); opacity: 0.55; transition: width 0.7s 0.25s ease-out; }
 .meter.vigor { height: 5px; width: 78%; }
 .meter.vigor b { background: var(--g-gold); }
+.foco { display: flex; gap: 7px; height: 9px; margin: 1px 0 6px 2px; }
+.foco i { width: 7px; height: 7px; transform: rotate(45deg); border: 1px solid var(--g-line); background: linear-gradient(to top, var(--g-gold) calc(var(--k, 0) * 100%), rgba(18,9,16,0.78) calc(var(--k, 0) * 100%)); opacity: 0.85; }
+.foco i.cheio { border-color: var(--g-gold); box-shadow: 0 0 5px rgba(201,162,90,0.55); opacity: 1; }
 .meter.xp { height: 2px; border: none; background: rgba(189,154,97,0.2); width: 78%; }
 .meter.xp b { background: var(--g-emerald); }
 #hud .hp-num { position: absolute; right: -52px; top: 26px; font: 400 12px/1 var(--font-mono); color: var(--g-dim); }

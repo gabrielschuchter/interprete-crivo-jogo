@@ -18,12 +18,14 @@ interface Btn {
   label: string;
   cls: string;
   repeat?: number;
+  /** segurar conta (carga do firme) */
+  hold?: boolean;
   glyph?: string;
 }
 
 const BUTTONS: Btn[] = [
   { id: 'ataque', action: 'ataque', label: 'Golpe', cls: 'a-main', repeat: 0.34 },
-  { id: 'golpe', action: 'golpe', label: 'Firme', cls: 'a-heavy' },
+  { id: 'golpe', action: 'golpe', label: 'Firme', cls: 'a-heavy', hold: true },
   { id: 'esquiva', action: 'esquiva', label: 'Esquiva', cls: 'a-dodge' },
   { id: 'pular', action: 'pular', label: 'Pulo', cls: 'a-jump' },
   { id: 'crivo', action: 'crivo', label: 'Pulso', cls: 'a-crivo', glyph: 'pulso' },
@@ -97,6 +99,11 @@ export class TouchControls {
       if (this.stick?.id === e.pointerId) this.releaseStick();
       if (this.look?.id === e.pointerId) this.look = null;
       this.held.delete(e.pointerId);
+      const ha = this.holds.get(e.pointerId);
+      if (ha) {
+        this.holds.delete(e.pointerId);
+        if (![...this.holds.values()].includes(ha)) this.g.input.touchHeld.delete(ha);
+      }
       // com captura de ponteiro o alvo do evento é o contêiner: o botão certo é o que este dedo apertou
       const bt = this.lit.get(e.pointerId) ?? (e.target as HTMLElement).closest?.('[data-b]');
       this.lit.delete(e.pointerId);
@@ -174,12 +181,15 @@ export class TouchControls {
     this.releaseStick();
     this.look = null;
     this.held.clear();
+    this.holds.clear();
+    this.g.input.touchHeld.clear();
     this.lit.clear();
     this.el.querySelectorAll('[data-b].on').forEach((b) => b.classList.remove('on'));
   }
   /** corrida a partir de 60% do curso, para quem não alcança a borda com conforto */
   easyRun = false;
   private lit = new Map<number, HTMLElement>();
+  private holds = new Map<number, ActionName>();
 
   private pressButton(e: PointerEvent, bt: HTMLElement): void {
     e.preventDefault();
@@ -191,6 +201,11 @@ export class TouchControls {
     if (id === 'caderno') return this.g.ui.openBook('inventario');
     const b = BUTTONS.find((x) => x.id === id)!;
     if (b.action) this.g.input.inject(b.action);
+    if (b.hold && b.action) {
+      this.el.setPointerCapture(e.pointerId);
+      this.holds.set(e.pointerId, b.action);
+      this.g.input.touchHeld.add(b.action);
+    }
     if (b.repeat) {
       this.el.setPointerCapture(e.pointerId);
       this.held.set(e.pointerId, { btn: b, t: b.repeat });

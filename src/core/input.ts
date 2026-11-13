@@ -87,6 +87,8 @@ export class Input {
   private padPrev: boolean[] = [];
   private padId = '';
   private padHeld = new Set<ActionName>();
+  /** botões de toque mantidos apertados (carga do golpe firme) */
+  touchHeld = new Set<ActionName>();
   private lockFailed = false;
   onAnyKey: (() => void) | null = null;
   /** Diz se há painel, menu ou conversa por cima do jogo. Com painel aberto, Tab, setas e espaço são do navegador. */
@@ -188,7 +190,7 @@ export class Input {
   }
 
   held(a: ActionName): boolean {
-    return this.keys[a].some((k) => this.down.has(k)) || this.padHeld.has(a);
+    return this.keys[a].some((k) => this.down.has(k)) || this.padHeld.has(a) || this.touchHeld.has(a);
   }
 
   /** verdadeiro uma vez por pressionamento */
