@@ -189,6 +189,24 @@ const CENAS = {
     });
     strip('conversa', fr, 8);
   },
+  // conversa real: o jogador fala com o morador mais próximo pelo próprio jogo; a câmera vai para trás do ombro
+  async dialogo() {
+    await clearEnemies();
+    const fr = await E(async () => {
+      const g = __game; const p = g.player;
+      const n = g.npcs.filter((x) => x.fig.external)[0] ?? g.npcs[0];
+      p.teleport(n.pos.x + Math.sin(n.yaw) * 2.2, n.pos.y, n.pos.z + Math.cos(n.yaw) * 2.2, n.yaw + Math.PI);
+      p.camYaw = n.yaw + 1.6; p.camPitch = 0.22;
+      await T.sim(1.0);
+      const a = await FILM(0.4, 4);
+      g.interact({ npc: n });
+      const b = await FILM(3.6, 6);
+      g.cancelScript();
+      const c = await FILM(1.2, 6);
+      return [...a, ...b, ...c];
+    });
+    strip('dialogo', fr, 8);
+  },
   // cada morador parado, na distância de jogo, um quadro por segundo
   async moradores() {
     await clearEnemies();
