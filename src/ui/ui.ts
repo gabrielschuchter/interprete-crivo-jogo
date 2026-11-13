@@ -2,6 +2,7 @@
  * Interface em DOM e CSS, sobre o canvas. Usa os tokens do design system.
  * A interface só lê o estado e chama operações do jogo; nenhuma regra mora aqui.
  */
+import { glyphSvg } from './ps2-glyphs';
 import type { Game } from '../game';
 import { ACTION_LABEL, keyLabel, padLabel, type ActionName } from '../core/input';
 import { CODEX, COAT_COLORS, CRIVO_SKILLS, ITEMS, PLAYER_SKILLS, PROFESSIONS, QUESTS, SHOP } from '../content/data';
@@ -577,7 +578,7 @@ export class UI {
   splash(on: boolean): void {
     this.show('splash', on);
     if (on)
-      this.$.splash.innerHTML = `<div class="title-block"><div class="label over">Uma aventura de método, dúvida e companhia</div><h1>Interprete<i>.</i></h1><div class="subtitle">O Crivo e a Névoa das Conclusões</div></div><div class="press">${this.touch.enabled ? 'Toque para começar' : 'Pressione qualquer tecla'}</div>`;
+      this.$.splash.innerHTML = `<div class="title-block"><div class="brasao">${glyphSvg('brasao', 72)}</div><div class="label over">Uma aventura de método, dúvida e companhia</div><h1>Interprete<i>.</i></h1><div class="subtitle">O Crivo e a Névoa das Conclusões</div></div><div class="press">${this.touch.enabled ? 'Toque para começar' : 'Pressione qualquer tecla'}</div>`;
   }
   menu(on: boolean): void {
     this.show('menu', on);
@@ -585,7 +586,7 @@ export class UI {
     const rec = this.g.recoverSave();
     const has = this.g.hasSave();
     const note = rec === 'recuperado' ? '<p class="warn" role="alert">O registro mais recente estava ilegível. O jogo voltou para a gravação anterior.</p>' : rec === 'ilegivel' ? '<p class="warn" role="alert">Há um registro gravado que não pôde ser lido. Ele foi guardado à parte e não será apagado enquanto você não começar um novo caminho.</p>' : '';
-    this.$.menu.innerHTML = `<div class="side"><h1>Interprete<i>.</i></h1><div class="subtitle">O Crivo e a Névoa das Conclusões</div>
+    this.$.menu.innerHTML = `<div class="side"><div class="brasao">${glyphSvg('brasao', 56)}</div><h1>Interprete<i>.</i></h1><div class="subtitle">O Crivo e a Névoa das Conclusões</div>
       ${has ? `<button class="btn" data-a="continue" data-focus>Continuar<small>${esc(this.g.saveSummary())}</small></button>` : ''}
       <button class="btn" data-a="new" ${has ? '' : 'data-focus'}>Novo caminho<small>${has ? 'Substitui o registro atual depois de confirmar' : 'Escolha um ofício e conheça o Crivo'}</small></button>
       <button class="btn" data-a="config">Configurações<small>Imagem, som, controles e acessibilidade</small></button>

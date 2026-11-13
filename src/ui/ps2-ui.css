@@ -182,3 +182,9 @@ html[data-arte] #marker i { transform: rotate(45deg); background: var(--brasa-3)
 html[data-arte] .chip,
 html[data-arte] .swatch { transition: none; }
 html[data-arte] ::selection { background: var(--vinho-4); color: var(--osso-6); }
+
+/* brasão e glifos */
+html[data-arte] .brasao { color: var(--ouro-4); margin-bottom: 14px; display: flex; justify-content: center; }
+html[data-arte] #menu .side .brasao { justify-content: flex-start; }
+html:not([data-arte]) .brasao { display: none; }
+.glifo { display: inline-block; vertical-align: middle; }
