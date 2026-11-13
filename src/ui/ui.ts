@@ -2,7 +2,7 @@
  * Interface em DOM e CSS, sobre o canvas. Usa os tokens do design system.
  * A interface só lê o estado e chama operações do jogo; nenhuma regra mora aqui.
  */
-import { glyphSvg } from './ps2-glyphs';
+import { glyphSvg, type Ps2Glyph } from './ps2-glyphs';
 import type { Game } from '../game';
 import { ACTION_LABEL, keyLabel, padLabel, type ActionName } from '../core/input';
 import { CODEX, COAT_COLORS, CRIVO_SKILLS, ITEMS, PLAYER_SKILLS, PROFESSIONS, QUESTS, SHOP } from '../content/data';
@@ -753,7 +753,7 @@ export class UI {
         const it = ITEMS[id];
         const price = this.g.priceOf(id);
         const owned = it.type !== 'consumivel' && countItem(s, id) > 0;
-        return `<button class="shop-row" data-id="${id}" ${owned || s.coins < price ? 'disabled' : ''}>${icon(it.glyph)}<span><b>${esc(it.name)}</b><small>${esc(it.effect)}</small></span><span class="p">${owned ? 'adquirido' : price + ' moedas'}</span></button>`;
+        return `<button class="shop-row" data-id="${id}" ${owned || s.coins < price ? 'disabled' : ''}>${icon(it.glyph)}<span><b>${esc(it.name)}</b><small>${esc(it.effect)}</small></span><span class="p">${owned ? 'adquirido' : glyphSvg('custo', 12) + ' ' + price + ' moedas'}</span></button>`;
       }).join('')}</div>
       <button class="btn" data-a="close" data-focus style="margin-top:12px">Fechar</button></div>`;
     p.querySelectorAll<HTMLElement>('button').forEach((b) =>
@@ -889,7 +889,7 @@ export class UI {
     const st = s.quests[sel];
     const notes = s.skills.includes('anotacoes');
     page.innerHTML = `<div class="label">Sem cronômetro, sem ordem obrigatória entre as paralelas</div><h2>Diário</h2><div class="cols"><div class="scroll">${ids
-      .map((id) => `<button class="quest ${s.quests[id].status === 'concluida' ? 'done' : ''}" data-id="${id}" aria-pressed="${id === sel}"><small>${QUESTS[id].kind === 'principal' ? 'Caminho principal' : 'Paralela'}${s.quests[id].status === 'concluida' ? ' · concluída' : ''}</small><b>${esc(QUESTS[id].title)}</b></button>`)
+      .map((id) => `<button class="quest ${s.quests[id].status === 'concluida' ? 'done' : ''}" data-id="${id}" aria-pressed="${id === sel}"><small>${glyphSvg(QUESTS[id].kind === 'principal' ? 'alvo' : 'pergunta', 12)} ${QUESTS[id].kind === 'principal' ? 'Caminho principal' : 'Paralela'}${s.quests[id].status === 'concluida' ? ' · concluída' : ''}</small><b>${esc(QUESTS[id].title)}</b></button>`)
       .join('')}</div><div class="detail scroll"><div><div class="label">${q.kind === 'principal' ? 'Caminho principal' : 'Missão paralela'}</div><h3>${esc(q.title)}</h3></div><p>${esc(st.status === 'concluida' ? q.done : q.summary)}</p>
       <ul class="steps">${q.steps
         .map((p, i) => {
@@ -912,13 +912,14 @@ export class UI {
   private pageCodex(page: HTMLElement): void {
     const s = this.g.state!;
     const groups = ['Mundo', 'Pessoas', 'Criaturas', 'Método', 'Mestres', 'Obras'] as const;
+    const groupGlyph: Record<(typeof groups)[number], Ps2Glyph> = { Mundo: 'descoberta', Pessoas: 'comparacao', Criaturas: 'incerteza', Método: 'crivo', Mestres: 'pergunta', Obras: 'evidencia' };
     const have = s.codex.filter((id) => CODEX[id]);
     const sel = this.sel.codex && have.includes(this.sel.codex) ? this.sel.codex : have[0];
     const e = CODEX[sel];
     page.innerHTML = `<div class="label">${have.length} de ${Object.keys(CODEX).length} verbetes · leitura opcional</div><h2>Códice</h2><div class="cols"><div class="scroll">${groups
       .map((gname) => {
         const list = have.filter((id) => CODEX[id].group === gname);
-        return list.length ? `<div class="label" style="margin:10px 12px 4px">${gname}</div>${list.map((id) => `<button class="quest" data-id="${id}" aria-pressed="${id === sel}"><b>${esc(CODEX[id].title)}</b></button>`).join('')}` : '';
+        return list.length ? `<div class="label" style="margin:10px 12px 4px">${glyphSvg(groupGlyph[gname], 14)} ${gname}</div>${list.map((id) => `<button class="quest" data-id="${id}" aria-pressed="${id === sel}"><b>${esc(CODEX[id].title)}</b></button>`).join('')}` : '';
       })
       .join('')}</div><div class="detail scroll codex-body"><div><div class="label">${e.group}</div><h3>${esc(e.title)}</h3></div>${e.body.map((p) => `<p>${esc(p)}</p>`).join('')}${e.note ? `<div class="note"><span class="label">Para quem quiser saber mais</span>${esc(e.note)}</div>` : ''}${e.refs?.length ? `<div class="note refs"><span class="label">Onde conferir</span><ul class="case-src">${e.refs.map((r) => `<li>${esc(r)}</li>`).join('')}</ul></div>` : ''}</div></div>`;
     page.querySelectorAll<HTMLElement>('button').forEach((x) =>
