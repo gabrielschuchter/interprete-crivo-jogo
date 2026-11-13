@@ -29,6 +29,8 @@ export interface EnvPreset {
   envIntensity: number;
   interior?: boolean;
   moon?: boolean;
+  /** lua de olho único (Observatório): disco com íris e pupila em fenda */
+  moonEye?: boolean;
 }
 
 export type Quality = 'baixa' | 'media' | 'alta';
@@ -82,10 +84,11 @@ const SkyShader = {
     uTime: { value: 0 },
     uMoon: { value: new THREE.Vector3(0.3, 0.5, -0.8) },
     uMoonOn: { value: 1 },
+    uEye: { value: 0 },
   },
   vertexShader: `varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); gl_Position.z = gl_Position.w; }`,
   fragmentShader: `
-    uniform vec3 uTop, uHorizon, uCloud, uMoon; uniform float uAmount, uTime, uMoonOn; varying vec3 vDir;
+    uniform vec3 uTop, uHorizon, uCloud, uMoon; uniform float uAmount, uTime, uMoonOn, uEye; varying vec3 vDir;
     float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
     float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
       return mix(mix(hash(i),hash(i+vec2(1,0)),f.x), mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x), f.y); }
@@ -102,7 +105,28 @@ const SkyShader = {
       float glow = pow(md, 24.0) * 0.55 + pow(md, 600.0) * 3.0;
       vec3 lit = uCloud * (0.55 + 0.9 * pow(md, 6.0) * uMoonOn);
       col = mix(col, lit * (0.5 + 0.7 * n2), c * smoothstep(-0.05, 0.25, d.y));
-      col += vec3(0.75,0.8,0.9) * glow * uMoonOn * (1.0 - c * 0.85);
+      col += vec3(0.75,0.8,0.9) * glow * uMoonOn * (1.0 - c * 0.85) * (1.0 - 0.8 * uEye);
+      if (uEye > 0.5) {
+        // lua de olho único: disco pálido, íris fria e pupila em fenda que acompanha o céu devagar
+        vec3 m = normalize(uMoon);
+        vec3 rt = normalize(cross(vec3(0.0,1.0,0.0), m));
+        vec3 up2 = cross(m, rt);
+        vec2 q = vec2(dot(d, rt), dot(d, up2)) / 0.13;
+        float on = step(0.0, md) * step(0.0, dot(d, m));
+        float r = length(q);
+        vec2 g = vec2(sin(uTime*0.07), cos(uTime*0.05)) * 0.06;
+        float disc = (1.0 - smoothstep(0.96, 1.0, r)) * on;
+        float iris = 1.0 - smoothstep(0.42, 0.46, length(q - g));
+        float ring = smoothstep(0.30, 0.42, length(q - g)) * iris;
+        float slit = 1.0 - smoothstep(0.045, 0.075, abs(q.x - g.x) * (1.0 + 2.2 * abs(q.y - g.y)));
+        slit *= 1.0 - smoothstep(0.30, 0.34, abs(q.y - g.y));
+        vec3 sclera = vec3(0.58, 0.63, 0.76);
+        vec3 eye = mix(sclera, vec3(0.35, 0.45, 0.70), iris);
+        eye = mix(eye, vec3(0.16, 0.20, 0.36), ring * 0.8);
+        eye = mix(eye, vec3(0.02, 0.02, 0.05), slit);
+        eye *= 0.55 + 0.45 * smoothstep(1.0, 0.2, r);
+        col = mix(col, eye, disc * (1.0 - c * 0.8));
+      }
       gl_FragColor = vec4(col, 1.0);
     }`,
 };
@@ -299,6 +323,7 @@ export class Engine {
     u.uCloud.value.set(e.cloud);
     u.uAmount.value = e.cloudAmount;
     u.uMoonOn.value = e.moon === false ? 0 : 1;
+    u.uEye.value = e.moonEye ? 1 : 0;
     u.uMoon.value.set(...e.sunDir).normalize();
     if (this.ps2) this.ps2.fog(this.scene, e.fog, e.fogDensity * this.fogAmount);
     else {
