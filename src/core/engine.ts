@@ -438,8 +438,8 @@ export class Engine {
       });
       const fx = Math.sin(q.yaw);
       const fz = Math.cos(q.yaw);
-      cam.position.set(q.head.x + fx * 0.95, q.head.y + 0.02, q.head.z + fz * 0.95);
-      cam.lookAt(q.head.x, q.head.y - 0.1, q.head.z);
+      cam.position.set(q.head.x + fx * 0.95, q.head.y + 0.06, q.head.z + fz * 0.95);
+      cam.lookAt(q.head.x, q.head.y - 0.02, q.head.z);
       cam.updateMatrixWorld();
       r.setRenderTarget(null);
       r.setScissorTest(true);

@@ -1056,7 +1056,7 @@ export class UI {
     c.strokeStyle = ink;
     c.lineWidth = 2;
     c.strokeRect(14, 14, w - 28, h - 28);
-    c.font = '500 22px "IBM Plex Mono", monospace';
+    c.font = '500 18px "IBM Plex Mono", monospace';
     c.textAlign = 'center';
     // glifos da direção PS2 no lugar dos losangos: passagem, gente a quem perguntar, ponto de interesse
     const redraw = () => this.drawMap(cv);
