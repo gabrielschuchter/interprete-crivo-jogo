@@ -1,6 +1,11 @@
 /**
  * Camada de aparência PS2 "Luz de estudo" (docs/game/DIRECAO_DE_ARTE_PS2.md). Ligada por padrão; Ajustes,
- * Aparência, "Limpa" desliga. ?arte=a|b|c compara as outras predefinições.
+ * Aparência, escolhe entre "PS2 tardia" (padrão, o fim da geração), "Era PS2" (a predefinição crua de 448 linhas) e
+ * "Limpa", que desliga. ?arte=a|b|c|ps2|tardia compara as predefinições.
+ *
+ * A PS2 tardia acrescenta, sempre por campos opcionais da predefinição (as outras ficam idênticas ao que eram):
+ * resolução interna conforme a Qualidade, mipmaps trilineares com anisotropia, anti-serrilhado leve no passe final,
+ * névoa rasteira em camada sobre a de distância, sombra PCF suave e mais contraste no passe de cor.
  *
  * Quatro peças, na ordem em que atuam: resolução interna baixa com ampliação sem
  * suavização, vértices presos a uma grade de tela, texturas sem filtro suave e
@@ -24,7 +29,18 @@ export interface Ps2Preset {
   bloom: number;
   textura: 'nearest' | 'linear';
   ampliacao: 'pixel' | 'suave';
+  alturaPorQualidade?: { baixa: number; media: number; alta: number };
+  niveisMip?: 'nearest' | 'trilinear';
+  anisotropia?: number;
+  suavizar?: number;
+  nevoaBaixa?: number;
+  nevoaAlturaM?: number;
+  sombraSuave?: boolean;
+  contraste?: number;
 }
+
+/** Valor de Aparência dos Ajustes. 'crua' é a Era PS2 de 448 linhas; 'tardia' é o padrão. */
+export type Aparencia = 'tardia' | 'crua' | 'limpa';
 
 const PRESETS = tokens.render.predefinicoes as Record<string, Ps2Preset>;
 
@@ -33,16 +49,17 @@ const PRESETS = tokens.render.predefinicoes as Record<string, Ps2Preset>;
  * (página de comparação), depois a opção Aparência dos Ajustes. A Era PS2 é o padrão do jogo; 'limpa' ou
  * 'off' desliga a camada.
  */
-export function readPs2Preset(aparencia: 'ps2' | 'limpa' = 'ps2'): Ps2Preset | null {
+export function readPs2Preset(aparencia: Aparencia = 'tardia'): Ps2Preset | null {
   let q = '';
   try {
     q = new URLSearchParams(location.search).get('arte') ?? localStorage.getItem('interprete-arte') ?? '';
   } catch {
     /* sem acesso ao armazenamento: vale a opção dos Ajustes */
   }
-  if (q === '') q = aparencia === 'limpa' ? 'off' : tokens.render.padrao;
+  if (q === '') q = aparencia === 'limpa' ? 'off' : aparencia === 'crua' ? 'ps2' : tokens.render.padrao;
   if (q === 'off' || q === 'limpa') return null;
   if (q === '1' || q === 'on') q = tokens.render.padrao;
+  if (q === 'crua') q = 'ps2';
   return PRESETS[q] ?? null;
 }
 
@@ -54,10 +71,11 @@ const Ps2Shader = {
     uDither: { value: 0.7 },
     uSat: { value: 0.72 },
     uCrush: { value: 0.03 },
+    uSoft: { value: 0 },
   },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
   fragmentShader: `
-    uniform sampler2D tDiffuse; uniform vec2 uRes; uniform float uLevels, uDither, uSat, uCrush; varying vec2 vUv;
+    uniform sampler2D tDiffuse; uniform vec2 uRes; uniform float uLevels, uDither, uSat, uCrush, uSoft; varying vec2 vUv;
     float bayer4(vec2 p){
       vec2 q = mod(p, 4.0);
       float x = q.x, y = q.y;
@@ -70,6 +88,19 @@ const Ps2Shader = {
     void main(){
       vec2 px = floor(vUv * uRes);
       vec3 c = texture2D(tDiffuse, (px + 0.5) / uRes).rgb;
+      if (uSoft > 0.0) {
+        // anti-serrilhado leve: só onde a luma muda de um vizinho para outro, a borda puxa para a média da cruz.
+        // Amacia a escada das silhuetas como o filtro de saída das TVs de tubo, sem borrar a textura plana
+        vec3 n = texture2D(tDiffuse, (px + vec2(0.5, 1.5)) / uRes).rgb;
+        vec3 s = texture2D(tDiffuse, (px + vec2(0.5, -0.5)) / uRes).rgb;
+        vec3 e = texture2D(tDiffuse, (px + vec2(1.5, 0.5)) / uRes).rgb;
+        vec3 w = texture2D(tDiffuse, (px + vec2(-0.5, 0.5)) / uRes).rgb;
+        vec3 k = vec3(0.299, 0.587, 0.114);
+        float ln = dot(n, k), ls = dot(s, k), le = dot(e, k), lw = dot(w, k), lc = dot(c, k);
+        float span = max(max(max(ln, ls), max(le, lw)), lc) - min(min(min(ln, ls), min(le, lw)), lc);
+        float edge = smoothstep(0.03, 0.16, span);
+        c = mix(c, (n + s + e + w + c * 2.0) / 6.0, edge * uSoft);
+      }
       float l = dot(c, vec3(0.299, 0.587, 0.114));
       c = mix(vec3(l), c, uSat);
       c = max(c - uCrush, 0.0) / (1.0 - uCrush);
@@ -104,17 +135,42 @@ export class Ps2 {
 
   constructor(readonly preset: Ps2Preset) {
     hookAdd();
+    this.mist.value = preset.nevoaBaixa ?? 0;
+    this.mistH.value = preset.nevoaAlturaM ?? 1.8;
     this.pass = new ShaderPass(Ps2Shader);
     const u = this.pass.uniforms;
     u.uLevels.value = preset.niveis;
     u.uDither.value = preset.dither;
     u.uSat.value = preset.saturacao;
     u.uCrush.value = preset.crush;
+    u.uSoft.value = preset.suavizar ?? 0;
+  }
+
+  /**
+   * Altura interna do buffer. Com alturaPorQualidade (PS2 tardia), a Qualidade dos Ajustes escolhe as linhas;
+   * nunca passa da altura real da tela, para não desenhar pixels que o navegador vai descartar.
+   */
+  linhas(cssHeight: number, quality: 'baixa' | 'media' | 'alta' = 'alta'): number {
+    const alvo = this.preset.alturaPorQualidade?.[quality] ?? this.preset.alturaInterna;
+    return Math.min(alvo, Math.max(1, cssHeight) * Math.min(2, window.devicePixelRatio || 1));
   }
 
   /** Ajusta o buffer de desenho para a altura interna do preset e devolve a razão de pixels. */
-  pixelRatioFor(cssHeight: number): number {
-    return this.preset.alturaInterna / Math.max(1, cssHeight);
+  pixelRatioFor(cssHeight: number, quality: 'baixa' | 'media' | 'alta' = 'alta'): number {
+    return this.linhas(cssHeight, quality) / Math.max(1, cssHeight);
+  }
+
+  /** Névoa rasteira (PS2 tardia): força, altura em que some e o chão de referência, que acompanha o jogador. */
+  private mist = { value: 0 };
+  private mistH = { value: 1.8 };
+  private mistBase = { value: 0 };
+  private mistReady = false;
+  /** O chão da névoa segue os pés do jogador devagar, para o pulo não levantar a camada junto. */
+  follow(y: number, dt: number): void {
+    if (!this.mistReady) {
+      this.mistBase.value = y;
+      this.mistReady = true;
+    } else this.mistBase.value += (y - this.mistBase.value) * Math.min(1, dt * 1.5);
   }
 
   setSize(cssW: number, cssH: number, ratio: number): void {
@@ -168,8 +224,9 @@ export class Ps2 {
       if (!t || this.texDone.has(t)) continue;
       this.texDone.add(t);
       t.magFilter = this.preset.textura === 'nearest' ? THREE.NearestFilter : THREE.LinearFilter;
-      t.minFilter = THREE.LinearMipmapNearestFilter;
-      t.anisotropy = 1;
+      // trilinear: a troca de mipmap vira um degradê, sem a faixa que corria no piso à frente da câmera
+      t.minFilter = this.preset.niveisMip === 'trilinear' ? THREE.LinearMipmapLinearFilter : THREE.LinearMipmapNearestFilter;
+      t.anisotropy = this.preset.anisotropia ?? 1;
       t.needsUpdate = true;
     }
     // sem mapa de normais nem de rugosidade: o visual da era não os tinha, e eles custam sombra fina que não pertence.
@@ -185,18 +242,44 @@ export class Ps2 {
       std.metalness = Math.min(std.metalness ?? 0, 0.2);
     }
     m.needsUpdate = true;
-    if (this.preset.snap > 0) {
+    const snap = this.preset.snap > 0;
+    const mist = this.mist.value > 0;
+    if (snap || mist) {
       const prev = m.onBeforeCompile;
       const prevKey = m.customProgramCacheKey?.bind(m);
       const uni = this.snapRes;
+      const { mist: uMist, mistH, mistBase } = this;
       m.onBeforeCompile = (shader, renderer) => {
         prev?.call(m, shader, renderer);
-        shader.uniforms.uPs2Res = uni;
-        shader.vertexShader = shader.vertexShader
-          .replace('#include <common>', `#include <common>\nuniform vec2 uPs2Res;\nvec4 ps2Snap(vec4 p){ if (p.w < 0.5 || p.w > 30.0) return p; vec3 n = p.xyz / p.w; if (max(abs(n.x), abs(n.y)) > 1.25) return p; n.xy = floor(n.xy * uPs2Res + 0.5) / uPs2Res; return vec4(n * p.w, p.w); }`)
-          .replace('#include <project_vertex>', `#include <project_vertex>\n gl_Position = ps2Snap(gl_Position);`);
+        let vs = shader.vertexShader;
+        let fs = shader.fragmentShader;
+        if (snap) {
+          shader.uniforms.uPs2Res = uni;
+          vs = vs
+            .replace('#include <common>', `#include <common>\nuniform vec2 uPs2Res;\nvec4 ps2Snap(vec4 p){ if (p.w < 0.5 || p.w > 30.0) return p; vec3 n = p.xyz / p.w; if (max(abs(n.x), abs(n.y)) > 1.25) return p; n.xy = floor(n.xy * uPs2Res + 0.5) / uPs2Res; return vec4(n * p.w, p.w); }`)
+            .replace('#include <project_vertex>', `#include <project_vertex>\n gl_Position = ps2Snap(gl_Position);`);
+        }
+        if (mist && fs.includes('#include <fog_fragment>') && vs.includes('#include <project_vertex>')) {
+          // névoa rasteira: uma segunda camada, presa ao chão e um pouco mais clara que a cor da névoa (vapor que pega a
+          // luz baixa), aplicada antes da névoa linear de distância. Não começa
+          // colada à câmera, para não velar os pés do personagem, e cresce até ~15 m
+          shader.uniforms.uPs2Mist = uMist;
+          shader.uniforms.uPs2MistH = mistH;
+          shader.uniforms.uPs2Base = mistBase;
+          vs = vs
+            .replace('#include <common>', `#include <common>\nvarying float vPs2Y;`)
+            .replace('#include <project_vertex>', `#include <project_vertex>\n{ vec4 ps2W = vec4(transformed, 1.0);\n#ifdef USE_INSTANCING\n ps2W = instanceMatrix * ps2W;\n#endif\n vPs2Y = (modelMatrix * ps2W).y; }`);
+          fs = fs
+            .replace('#include <common>', `#include <common>\nvarying float vPs2Y; uniform float uPs2Mist, uPs2MistH, uPs2Base;`)
+            .replace(
+              '#include <fog_fragment>',
+              `#ifdef USE_FOG\n#ifdef FOG_EXP2\n#include <fog_fragment>\n#else\n float ps2Far = smoothstep(fogNear, fogFar, vFogDepth);\n float ps2Low = uPs2Mist * (1.0 - smoothstep(-0.4, uPs2MistH, vPs2Y - uPs2Base)) * smoothstep(1.2, 15.0, vFogDepth);\n vec3 ps2MistCol = min(fogColor * 1.7 + 0.02, vec3(1.0));\n gl_FragColor.rgb = mix(gl_FragColor.rgb, ps2MistCol, ps2Low * (1.0 - ps2Far));\n gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, ps2Far);\n#endif\n#endif`,
+            );
+        }
+        shader.vertexShader = vs;
+        shader.fragmentShader = fs;
       };
-      m.customProgramCacheKey = () => (prevKey ? prevKey() : '') + '|ps2snap' + this.preset.snap;
+      m.customProgramCacheKey = () => (prevKey ? prevKey() : '') + '|ps2snap' + this.preset.snap + (mist ? 'mist' : '');
       m.needsUpdate = true;
     }
   }

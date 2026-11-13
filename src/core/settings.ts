@@ -1,10 +1,11 @@
 import type { Quality } from './engine';
+import type { Aparencia } from './ps2';
 import { DEFAULT_KEYS, type ActionName } from './input';
 
 export interface Settings {
   quality: Quality;
-  /** Era PS2 (padrão, direção Luz de estudo) ou Limpa (sem a camada de época); vale ao recarregar */
-  aparencia: 'ps2' | 'limpa';
+  /** PS2 tardia (padrão), Era PS2 crua ou Limpa (sem a camada de época); vale ao recarregar */
+  aparencia: Aparencia;
   volGeral: number;
   volMusica: number;
   volEfeitos: number;
@@ -44,7 +45,7 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   quality: 'alta',
-  aparencia: 'ps2',
+  aparencia: 'tardia',
   volGeral: 0.8,
   volMusica: 0.6,
   volEfeitos: 0.85,
@@ -88,7 +89,9 @@ export function sanitizeSettings(raw: unknown): Settings {
   };
   if (QUALITIES.includes(d.quality as string)) s.quality = d.quality as Quality;
   if (d.difficulty === 'historia' || d.difficulty === 'padrao') s.difficulty = d.difficulty;
-  if (d.aparencia === 'ps2' || d.aparencia === 'limpa') s.aparencia = d.aparencia;
+  // 'ps2' era o padrão antigo, gravado por quem nunca escolheu nada: passa ao padrão novo, a PS2 tardia
+  if (d.aparencia === 'tardia' || d.aparencia === 'crua' || d.aparencia === 'limpa') s.aparencia = d.aparencia;
+  else if (d.aparencia === 'ps2') s.aparencia = 'tardia';
   num('volGeral', 0, 1); num('volMusica', 0, 1); num('volEfeitos', 0, 1); num('volAmbiente', 0, 1);
   num('sens', 0.3, 2.5); num('sensY', 0.4, 2); num('camDist', 3.2, 6.5); num('hudScale', 0.8, 1.4); num('textScale', 0.9, 1.6); num('fov', 48, 75); num('touchScale', 0.8, 1.4);
   num('padDeadzone', 0.05, 0.45); num('noticeTime', 0.5, 4);

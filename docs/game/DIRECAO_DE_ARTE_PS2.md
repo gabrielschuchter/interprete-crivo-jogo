@@ -227,6 +227,28 @@ A terceira é a que mais muda o plano. No Bosque e no Observatório, o piso de p
 
 A quarta é sobre o Observatório: a lua de olho único e a arquitetura distante em silhueta já funcionam como no desenho da referência 6 e 9, e a cena ganha com a resolução baixa porque as formas distantes viram massas. A quinta é sobre a interface: menu, inventário e HUD mudaram de caráter com poucas regras (Cinzel, fraktur no logotipo, tachas e moldura dupla, seleção por inversão, barras em degraus), e o logotipo com a brasa no lugar do ponto é o elemento de identidade mais forte do conjunto. Defeitos vistos: o fundo do inventário em casas vazias ficou quase preto e a casa sob o cursor destaca demais; o Crivo e os rostos continuam com luz estourada; e o contraste do texto de dica sobre a cena depende do painel sólido, que funcionou.
 
+### PS2 tardia, o padrão desde 13/11/2026
+
+O pedido do Gabriel foi uma imagem de PS2 "sutilmente melhor, tipo God of War e Resident Evil 4". Esses jogos são o teto da geração, não outro console: continuam saindo em 480 linhas entrelaçadas, com texturas pequenas, névoa curta e poucas luzes, e o que os separa do PS2 de 2001 é disciplina de produção. Usam a resolução cheia do quadro em vez de meio quadro, mipmaps e filtro trilinear bem configurados, cor de 24 ou 32 bits no buffer final (o pontilhado some quase todo), saída de vídeo com filtro que amacia as bordas, névoa e partículas em camadas, e luz montada como cinema, com poucos pontos quentes e sombras de penumbra pintadas ou projetadas. Nada disso é realismo AAA, e a predefinição nova copia exatamente essa lista.
+
+A predefinição `tardia` (em `design/ps2/ps2.tokens.json`) virou o padrão do jogo. A antiga `ps2` continua existindo como "Era PS2 crua" e não mudou em nada: todos os campos novos são opcionais e só a tardia os usa. Em Ajustes, Imagem, Aparência há três opções, PS2 tardia, Era PS2 crua e Limpa, e a troca recarrega o jogo. Quem tinha o valor antigo `ps2` gravado (o padrão anterior, que ninguém escolheu ativamente) passa para a tardia; quem tinha escolhido Limpa continua na Limpa.
+
+| Traço | Era PS2 crua | PS2 tardia |
+| --- | --- | --- |
+| Linhas internas | 448 fixas | 448, 512 ou 576 conforme a Qualidade (baixa, média, alta), nunca acima da altura real da tela |
+| Cor e pontilhado | 32 níveis por canal, dither 0,7 | 64 níveis, dither 0,45: a cruzeta continua nos degradês de céu e névoa, mas some das superfícies |
+| Grade de vértices | meio pixel | um quarto de pixel |
+| Filtro de textura | bilinear, mipmap sem mistura | trilinear com anisotropia 4: o piso ao longe para de formar faixas à frente da câmera |
+| Bordas | serrilhado puro | anti-serrilhado leve no passe final, só onde a luma muda entre vizinhos (o filtro da saída de vídeo, não um FXAA moderno) |
+| Névoa | linear de distância | a mesma, mais uma camada rasteira presa ao chão, um pouco mais clara que a cor da névoa, que começa a 1,2 m da câmera e some a 1,8 m de altura |
+| Sombra do sol | PCF de borda dura | PCF suave, mesmo mapa de 1024 px |
+| Contraste e brilho | contraste 1,08, bloom até 0,4 | contraste 1,14, bloom até 0,55 |
+| Saturação | 0,72 | 0,8 |
+
+A névoa rasteira acompanha os pés do jogador com atraso (`Ps2.follow`), para que um pulo não levante a camada junto, e entra na mesma injeção de shader da grade de vértices, sob a mesma chave de programa. Por isso o número de programas não muda. Medido com `node tools/perf/metricas.mjs` antes e depois: 15,5 MB e 90 pedidos até a abertura, 84 programas, 228 texturas, 684 chamadas e 1,37 milhão de triângulos no Pátio, os mesmos números nos dois builds. O custo novo fica na placa, não na carga: até 65% mais pixels em Qualidade alta, quatro leituras a mais por pixel no passe final, o filtro trilinear e a penumbra filtrada. Em Qualidade baixa, que é o padrão da primeira execução em aparelho de toque, a resolução é a mesma da crua e a sombra fica desligada como antes.
+
+O que a tardia não faz ainda, e que fecharia a distância para os jogos de referência: personagens principais com mais polígonos e texturas próprias de 512 px no rosto e nas mãos (trabalho da forja em `tools/chars/`, não do pós-processamento), luz assada em vertex color nos cenários e uma câmera de enquadramento cinematográfico nas cenas de diálogo além da que já existe. As capturas de comparação, uma por região na câmera real de jogo a 1280 por 720, estão na biblioteca do projeto em `ps2-tardia/` e são geradas por `node tools/perf/regioes.mjs <prefixo> [crua|tardia|off]`.
+
 ### Como reaproveitar os modelos existentes
 
 Os doze personagens em glTF (MakeHuman CC0, esqueleto cmu_mb, 1,2 a 1,8 MB cada) e os props do Poly Haven (centenas de milhares de triângulos nos originais, reduzidos no pipeline atual) já têm o que mais importa para a identidade: proporção humana correta e animação por captura. O que o regime PS2 pede deles é redução, não refação. O caminho em quatro passos, todos em `tools/pipeline/` por serem offline: decimação preservando silhueta e contorno (alvo de 3.000 a 6.000 triângulos para o protagonista; o rosto mantém densidade, as costas e a sola não), troca da textura difusa por uma de 256 px com paleta de 32 a 64 cores (`degradar-textura.py`), remoção das texturas de normal, rugosidade e metalicidade e conversão da iluminação fina em vertex color assado, e reaplicação do manto e do cabelo como planos recortados com alfa de um bit. A identidade que isso preserva é a de proporção e de gesto; a que se perde é a de microdetalhe, o que é deliberado. Os dois defeitos já conhecidos nos personagens (fenda do manto, cabelo de Heloísa) devem ser resolvidos nessa passagem, e não antes, para não gastar trabalho em geometria que será decimada.
