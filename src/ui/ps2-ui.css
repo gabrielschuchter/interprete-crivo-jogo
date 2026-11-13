@@ -200,3 +200,14 @@ html[data-arte] .moldura-papel {
 html[data-arte] .moldura-pedra { border-image: url('/ui/ps2/moldura-pedra.svg') 16 / 16px stretch; }
 html[data-arte] .moldura-bronze { border-image: url('/ui/ps2/moldura-bronze.svg') 16 / 16px stretch; }
 html[data-arte] .moldura-papel { border-image: url('/ui/ps2/moldura-papel.svg') 16 fill / 16px stretch; }
+
+/* molduras aplicadas por padrão: cartões de pausa, confirmação, derrota, epílogo e loja em pedra; diálogo em bronze */
+html[data-arte] #ui .card,
+html[data-arte] #dialogue {
+  border: 16px solid transparent;
+  background-clip: padding-box;
+  box-shadow: none;
+  image-rendering: pixelated;
+}
+html[data-arte] #ui .card { border-image: url('/ui/ps2/moldura-pedra.svg') 16 / 16px stretch; }
+html[data-arte] #dialogue { border-image: url('/ui/ps2/moldura-bronze.svg') 16 / 16px stretch; }
