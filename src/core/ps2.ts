@@ -79,15 +79,31 @@ const Ps2Shader = {
     }`,
 };
 
+/** Conta cada `add` em qualquer Object3D: sinal barato de que a cena ganhou objetos desde a última varredura. */
+let addVersion = 0;
+let hooked = false;
+function hookAdd(): void {
+  if (hooked) return;
+  hooked = true;
+  const add = THREE.Object3D.prototype.add;
+  THREE.Object3D.prototype.add = function (this: THREE.Object3D, ...objs: THREE.Object3D[]) {
+    addVersion++;
+    return add.apply(this, objs);
+  };
+}
+
 export class Ps2 {
   readonly pass: ShaderPass;
   /** compartilhado por todos os materiais que prendem vértices */
   private snapRes = { value: new THREE.Vector2(320, 224) };
   private done = new WeakSet<THREE.Material>();
+  private texDone = new WeakSet<THREE.Texture>();
   private lastCount = -1;
   private sweepClock = 0;
+  private seenVersion = -1;
 
   constructor(readonly preset: Ps2Preset) {
+    hookAdd();
     this.pass = new ShaderPass(Ps2Shader);
     const u = this.pass.uniforms;
     u.uLevels.value = preset.niveis;
@@ -122,9 +138,13 @@ export class Ps2 {
   }
 
   /** Varre a cena de tempos em tempos e aplica snap e filtro de textura aos materiais novos. */
-  sweep(scene: THREE.Scene, dt: number, force = false): void {
+  sweep(scene: THREE.Object3D, dt: number, force = false): void {
     this.sweepClock += dt;
-    if (!force && this.sweepClock < 0.5) return;
+    // algo entrou na cena (jogador, inimigo, corpo glTF que acabou de chegar): varre já, antes do quadro, para o
+    // objeto novo compilar uma vez só com o shader da era, e não primeiro o comum e depois o PS2
+    const added = addVersion !== this.seenVersion;
+    if (!force && !added && this.sweepClock < 0.5) return;
+    this.seenVersion = addVersion;
     this.sweepClock = 0;
     let count = 0;
     scene.traverse((o) => {
@@ -143,16 +163,28 @@ export class Ps2 {
     const std = m as THREE.MeshStandardMaterial;
     for (const k of ['map', 'emissiveMap', 'alphaMap', 'lightMap', 'aoMap'] as const) {
       const t = std[k] as THREE.Texture | null | undefined;
-      if (!t) continue;
+      // cada textura é ajustada uma vez: materiais clonados por figura compartilham a textura, e marcar
+      // needsUpdate de novo a cada clone fazia a mesma imagem subir para a placa outra vez a cada personagem
+      if (!t || this.texDone.has(t)) continue;
+      this.texDone.add(t);
       t.magFilter = this.preset.textura === 'nearest' ? THREE.NearestFilter : THREE.LinearFilter;
       t.minFilter = THREE.LinearMipmapNearestFilter;
       t.anisotropy = 1;
       t.needsUpdate = true;
     }
-    // sem mapa de normais nem de rugosidade: o visual da era não os tinha, e eles custam sombra fina que não pertence
-    if (std.normalMap) std.normalScale?.set(0, 0);
-    if (std.roughnessMap) std.roughness = Math.max(std.roughness ?? 1, 0.85);
-    if (std.metalnessMap) std.metalness = Math.min(std.metalness ?? 0, 0.2);
+    // sem mapa de normais nem de rugosidade: o visual da era não os tinha, e eles custam sombra fina que não pertence.
+    // Os mapas saem do material (antes só zerava a escala): cada combinação de mapas é um programa de shader a
+    // mais para compilar na carga, e cada mapa é uma textura a mais para subir para a placa de vídeo
+    if (std.normalMap) std.normalMap = null;
+    if (std.roughnessMap) {
+      std.roughnessMap = null;
+      std.roughness = Math.max(std.roughness ?? 1, 0.85);
+    }
+    if (std.metalnessMap) {
+      std.metalnessMap = null;
+      std.metalness = Math.min(std.metalness ?? 0, 0.2);
+    }
+    m.needsUpdate = true;
     if (this.preset.snap > 0) {
       const prev = m.onBeforeCompile;
       const prevKey = m.customProgramCacheKey?.bind(m);
@@ -161,7 +193,7 @@ export class Ps2 {
         prev?.call(m, shader, renderer);
         shader.uniforms.uPs2Res = uni;
         shader.vertexShader = shader.vertexShader
-          .replace('#include <common>', `#include <common>\nuniform vec2 uPs2Res;\nvec4 ps2Snap(vec4 p){ vec3 n = p.xyz / p.w; n.xy = floor(n.xy * uPs2Res + 0.5) / uPs2Res; return vec4(n * p.w, p.w); }`)
+          .replace('#include <common>', `#include <common>\nuniform vec2 uPs2Res;\nvec4 ps2Snap(vec4 p){ if (p.w < 0.5 || p.w > 30.0) return p; vec3 n = p.xyz / p.w; if (max(abs(n.x), abs(n.y)) > 1.25) return p; n.xy = floor(n.xy * uPs2Res + 0.5) / uPs2Res; return vec4(n * p.w, p.w); }`)
           .replace('#include <project_vertex>', `#include <project_vertex>\n gl_Position = ps2Snap(gl_Position);`);
       };
       m.customProgramCacheKey = () => (prevKey ? prevKey() : '') + '|ps2snap' + this.preset.snap;

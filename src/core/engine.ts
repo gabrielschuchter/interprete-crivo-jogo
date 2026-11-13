@@ -133,6 +133,17 @@ const SkyShader = {
 
 const MAX_LAMPS = 6;
 
+const _lx = new THREE.Vector3();
+const _ly = new THREE.Vector3();
+const _lz = new THREE.Vector3();
+const _up = new THREE.Vector3(0, 1, 0);
+const _snapped = new THREE.Vector3();
+
+interface LinkableProgram {
+  isReady(): boolean;
+  getUniforms(): unknown;
+}
+
 export class Engine {
   renderer: THREE.WebGLRenderer;
   scene = new THREE.Scene();
@@ -167,6 +178,8 @@ export class Engine {
   constructor(canvas: HTMLCanvasElement, aparencia: 'ps2' | 'limpa' = 'ps2') {
     this.aparencia = aparencia;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+    // em produção não pede o registro de erro de cada shader: a consulta força a espera da compilação no meio do quadro
+    this.renderer.debug.checkShaderErrors = !import.meta.env.PROD;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.shadowMap.enabled = true;
     // sombras de borda dura e mapa menor: mais perto do visual da época e mais barato
@@ -298,21 +311,71 @@ export class Engine {
    * tela de carga. Não usa renderer.compileAsync: se um material for descartado durante a espera, ele lança erro
    * dentro de um setTimeout próprio e a promessa nunca resolve. Aqui o material sem programa sai da lista.
    */
-  async precompile(scene: THREE.Object3D, maxMs = 15000): Promise<void> {
+  async precompile(scene: THREE.Object3D, link = true, maxMs = 15000): Promise<void> {
     let mats: Set<THREE.Material>;
+    // a camada PS2 troca o shader dos materiais novos (encaixe de vértices): aplicada antes, para o que se
+    // compila aqui ser o mesmo programa que o primeiro quadro usa, e não uma versão que vai para o lixo
+    this.ps2?.sweep(scene, 0, true);
+    // o quadro real desenha dentro do alvo do compositor (sem tom nem espaço de cor de saída no shader);
+    // compilar com a tela como alvo gerava programas diferentes e o primeiro quadro recompilava tudo
+    const direct = this.quality === 'baixa' && !this.ps2;
+    const prevTarget = this.renderer.getRenderTarget();
+    if (!direct) this.renderer.setRenderTarget(this.composer.readBuffer);
     try {
       mats = this.renderer.compile(scene, this.camera) as unknown as Set<THREE.Material>;
     } catch {
       return;
+    } finally {
+      this.renderer.setRenderTarget(prevTarget);
+    }
+    // texturas sobem para a placa aqui, na tela de carga: antes subiam no primeiro quadro em que cada objeto
+    // aparecia (no Pátio, 135 texturas e vários segundos de travada ao começar a andar)
+    const seen = new Set<THREE.Texture>();
+    for (const m of mats) {
+      for (const v of Object.values(m)) {
+        const t = v as THREE.Texture | null;
+        if (t && t.isTexture && !seen.has(t) && !(t as THREE.Texture & { isRenderTargetTexture?: boolean }).isRenderTargetTexture && t.image) {
+          seen.add(t);
+          this.renderer.initTexture(t);
+        }
+      }
     }
     const t0 = performance.now();
     while (mats.size && performance.now() - t0 < maxMs) {
       for (const m of mats) {
-        const prog = (this.renderer.properties.get(m) as { currentProgram?: { isReady(): boolean } }).currentProgram;
-        if (!prog || prog.isReady()) mats.delete(m);
+        const prog = (this.renderer.properties.get(m) as { currentProgram?: LinkableProgram }).currentProgram;
+        if (!prog || prog.isReady()) {
+          mats.delete(m);
+          if (prog) this.toLink.add(prog);
+        }
       }
       if (mats.size) await new Promise((r) => setTimeout(r, 16));
     }
+    if (link) this.linkPending(Infinity);
+  }
+
+  /**
+   * Programas já pedidos ao driver mas ainda não usados. Sem a extensão de compilação paralela (Firefox,
+   * SwiftShader e parte dos celulares) o driver só termina o shader no primeiro uso, e esse primeiro uso caía
+   * no meio do jogo: no Novo jogo, dezenas de segundos parados no primeiro quadro.
+   */
+  private toLink = new Set<LinkableProgram>();
+  get pendingLinks(): number {
+    return this.toLink.size;
+  }
+  /** Termina programas pendentes até gastar `budgetMs`. Chamado por quadro no menu e de uma vez nas cargas. */
+  linkPending(budgetMs: number): number {
+    const t0 = performance.now();
+    for (const p of this.toLink) {
+      if (performance.now() - t0 > budgetMs) break;
+      this.toLink.delete(p);
+      try {
+        p.getUniforms();
+      } catch {
+        /* programa descartado entre a compilação e agora */
+      }
+    }
+    return this.toLink.size;
   }
 
   applyEnv(e: EnvPreset): void {
@@ -474,8 +537,21 @@ export class Engine {
     this.updateLamps(focus, dt);
     // a luz direcional acompanha o foco para manter a sombra nítida perto do jogador
     const d = this.env.sunDir;
-    this.sun.position.set(focus.x + d[0] * 60, focus.y + d[1] * 60, focus.z + d[2] * 60);
-    this.sun.target.position.copy(focus);
+    // o centro da sombra anda em passos de um texel do mapa, no plano da luz: sem isso a borda das sombras
+    // escorrega e cintila no chão a cada passo do jogador
+    _lz.set(d[0], d[1], d[2]).normalize();
+    _lx.crossVectors(_up, _lz);
+    if (_lx.lengthSq() < 1e-6) _lx.set(1, 0, 0);
+    _lx.normalize();
+    _ly.crossVectors(_lz, _lx);
+    const sc = this.sun.shadow.camera;
+    const texel = (sc.right - sc.left) / Math.max(1, this.sun.shadow.mapSize.x);
+    const fx = Math.round(focus.dot(_lx) / texel) * texel;
+    const fy = Math.round(focus.dot(_ly) / texel) * texel;
+    const fz = focus.dot(_lz);
+    _snapped.set(0, 0, 0).addScaledVector(_lx, fx).addScaledVector(_ly, fy).addScaledVector(_lz, fz);
+    this.sun.position.copy(_snapped).addScaledVector(_lz, 60);
+    this.sun.target.position.copy(_snapped);
     const g = this.grade.uniforms;
     g.uTime.value = this.time;
     g.uVignette.value = this.settings.vignette ? 1 : 0;

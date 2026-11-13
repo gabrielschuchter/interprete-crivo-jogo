@@ -34,6 +34,8 @@ Vitest cobre domínio, conteúdo e o caso simulado (27 testes). `tests/e2e/playt
 
 Medido apenas em renderização por software (SwiftShader), a 1280×720: de 10 a 17 quadros por segundo. Isso não diz nada sobre uma placa de vídeo real, e não houve teste em hardware. Há três níveis de qualidade em Ajustes que alteram sombras, densidade de vegetação, resolução interna e pós-processamento. A medição em máquinas reais é a primeira pendência.
 
+Carga e tremor do chão (13/11/2026): causas, correções e números medidos em `docs/game/DESEMPENHO.md`. Regras que ficaram: props de cenário obedecem ao orçamento PS2 de `tools/pipeline/ps2_lod.mjs`; a camada PS2 só prende à grade vértices na tela e a menos de 30 m da câmera; `Engine.precompile` aplica a camada PS2, compila no alvo do compositor e sobe as texturas antes de revelar a cena; quem entra na cena depois da região passa por `Game.warmScene`.
+
 ## Assets externos (lote 1, 12/11/2026)
 
 Os assets de alta resolução entram por um pipeline sem passo manual, em `tools/pipeline/`. Blender 5.3 roda como módulo Python (`pip install bpy`) e abre os pacotes Blend 4K do Poly Haven, aplica modificadores, reduz a contagem de triângulos só onde ela não aparece e exporta glTF; `gltf-transform optimize --compress meshopt` comprime a geometria e as texturas vão para WebP. O jacarandá foi de 585 MB para 4,4 MB e o forte modular para 6,8 MB. O kit do forte perdeu a cor na exportação (no Blender ela vem de uma mistura por máscara), e `fixMaterials` em `src/core/assets.ts` religa a textura difusa do kit em tempo de execução.

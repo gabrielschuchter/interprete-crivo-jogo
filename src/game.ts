@@ -9,7 +9,7 @@ import { AudioSys, type AmbienceLoop, type Surface } from './core/audio';
 import { DEFAULT_SETTINGS, loadSettings, storeSettings, type Settings } from './core/settings';
 import { UI, type BookTab } from './ui/ui';
 import { Player } from './entities/player';
-import { loadExternalModel, preloadModels, type Action } from './entities/figure';
+import { loadExternalModel, preloadModels, playerModelKey, HAIRS, type Action } from './entities/figure';
 import { DEFAULT_PAD } from './core/input';
 import { loadGltf, preloadProps, PROPS_FIRST } from './core/assets';
 import { Crivo } from './entities/crivo';
@@ -190,28 +190,53 @@ export class Game {
   }
 
   // ---------- inicialização ----------
+  private booting = false;
   async boot(): Promise<void> {
+    this.booting = true;
     this.ui.loading(true, 0.1);
     await this.nextPaint();
-    const flags = new Set<string>(D.deserialize(this.adapter.load())?.flags ?? []);
+    const saved = D.deserialize(this.adapter.load());
+    const flags = new Set<string>(saved?.flags ?? []);
+    // antes do menu, só o corpo que a criação mostra primeiro (feminino, coque) e o do jogo salvo;
+    // os outros seis protagonistas descem depois que o menu aparece
+    const firstBodies = [...new Set(['player_fem_coque', ...(saved ? [playerModelKey(saved.look)] : [])])];
     // props, personagens e texturas de alta resolução vêm antes da primeira região
     // antes do menu vem só o que o Pátio usa; o resto dos props desce em segundo plano,
     // e uma troca de região espera por ele se o jogador chegar antes
     await Promise.all([
       preloadProps((f) => this.ui.loading(true, 0.1 + f * 0.6), PROPS_FIRST),
-      preloadModels(),
+      preloadModels(firstBodies),
       this.audio.preload(),
     ]);
-    this.restProps = preloadProps();
     await this.loadRegion('atrio', flags, (p) => this.ui.loading(true, 0.7 + p * 0.3));
+    // o boneco da criação (corpo padrão) e o Crivo compilam aqui, atrás da barra: a tela de criação abria com
+    // vinte e tantos shaders novos de uma vez
+    this.previewAvatar({ skin: 1, hair: 1 + HAIRS.length, coat: 0, body: 'fem' }, 'nutricao');
+    await this.warmScene();
+    this.clearPreview();
+    this.booting = false;
     this.ui.loading(false);
     this.mode = 'splash';
     this.ui.splash(true);
     this.audio.setMood('menu');
     requestAnimationFrame((t) => this.frame(t));
+    // o resto dos props e os outros protagonistas descem com o menu já na tela, sem disputar a banda da abertura
+    this.restProps = preloadProps();
+    void this.restProps.then(() => preloadModels());
   }
 
   private restProps: Promise<void> = Promise.resolve();
+  /**
+   * Jogador, Crivo, moradores e inimigos entram na cena depois da região: compila os shaders deles e sobe as
+   * texturas ainda com a tela escura, para a travada não cair nos primeiros passos.
+   */
+  private async warmScene(): Promise<void> {
+    // os corpos glTF já estão em cache; a troca do boneco provisório pelo modelo acontece em microtarefas
+    await new Promise((r) => setTimeout(r, 0));
+    const t0 = performance.now();
+    await this.engine.precompile(this.engine.scene, !this.booting);
+    this.loadTimes.warm = Math.round(performance.now() - t0);
+  }
   private nextPaint(): Promise<void> {
     return new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
   }
@@ -354,10 +379,13 @@ export class Game {
     this.tracked = null;
     this.mode = 'transition';
     await this.ui.fade(true);
+    // o corpo escolhido pode ainda estar descendo: o jogo começa com ele, não com o boneco provisório
+    await loadExternalModel(playerModelKey(look));
     this.ui.closeAll();
     this.clearPreview();
     await this.loadRegion('atrio', new Set());
     this.spawnPlayer('inicio');
+    await this.warmScene();
     this.save();
     this.enterPlay();
     await this.ui.fade(false);
@@ -378,6 +406,7 @@ export class Game {
     const id = (['atrio', 'bosque', 'arquivo', 'observatorio'].includes(s.region) ? s.region : 'atrio') as RegionId;
     await this.loadRegion(id, new Set(s.flags));
     this.spawnPlayer(null);
+    await this.warmScene();
     this.enterPlay();
     await this.ui.fade(false);
     this.busy = false;
@@ -464,7 +493,8 @@ export class Game {
     progress?.(0.8);
     const t2b = performance.now();
     const progs0 = this.engine.renderer.info.programs?.length ?? 0;
-    await this.engine.precompile(sc);
+    // na abertura o menu aparece antes: o que a câmera do menu não vê termina de compilar nos quadros do menu
+    await this.engine.precompile(sc, !this.booting);
     const t2c = performance.now();
     await this.nextPaint();
     // compila os materiais antes de revelar a cena
@@ -545,6 +575,7 @@ export class Game {
     this.ui.prompt(null);
     await this.loadRegion(to, new Set(this.state!.flags));
     this.spawnPlayer(spawn);
+    await this.warmScene();
     this.save();
     this.enterPlay();
     await this.ui.fade(false);
@@ -1237,6 +1268,7 @@ export class Game {
     if (id !== this.region.id) await this.loadRegion(id, new Set(s.flags));
     else this.despawn();
     this.spawnPlayer(null);
+    await this.warmScene();
     this.enterPlay();
     await this.ui.fade(false);
     this.busy = false;
@@ -1405,6 +1437,8 @@ export class Game {
       this.fps = this.fpsN / this.fpsAcc;
       this.fpsAcc = this.fpsN = 0;
     }
+    // menu parado: termina, um a um, os shaders que a abertura deixou pendentes (ver Engine.linkPending)
+    if (this.mode === 'splash' || this.mode === 'menu' || this.mode === 'create') this.engine.linkPending(12);
     try {
       this.tick(Math.min(0.05, raw));
     } catch (err) {
