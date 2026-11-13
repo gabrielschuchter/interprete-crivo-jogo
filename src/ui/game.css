@@ -161,6 +161,11 @@ input[type='text']:focus { outline: none; border-color: var(--g-text); box-shado
 #dialogue .choices .btn { padding: 9px 14px; font-size: calc(15px * var(--ui-scale)); display: flex; gap: 10px; }
 #dialogue .choices .btn .n { font: 500 12px/1.5 var(--font-mono); color: var(--g-gold); }
 #dialogue .choices .btn .tag { margin-left: auto; font: 400 10px/1.8 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--g-gold); }
+#dialogue .retrato { display: none; }
+#dialogue.com-retrato { padding-left: 128px; }
+#dialogue.com-retrato .retrato { display: block; position: absolute; left: 22px; top: 20px; width: 88px; height: 88px; border: 1px solid var(--g-line); background: #1a0c10; }
+#dialogue .retrato canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+@media (max-width: 560px) { #dialogue.com-retrato { padding-left: 26px; padding-top: 86px; } #dialogue.com-retrato .retrato { width: 56px; height: 56px; top: 16px; } }
 #dialogue .dx { position: absolute; right: 14px; top: 10px; background: none; border: 1px solid var(--g-line); color: var(--g-dim); font: 400 11px/1 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase; padding: 6px 10px; cursor: pointer; min-height: 32px; }
 #dialogue .dx:hover, #dialogue .dx:focus-visible { color: var(--g-gold); border-color: var(--g-gold); }
 #dialogue .next { position: absolute; right: 18px; bottom: 12px; color: var(--g-dim); font: 400 11px/1 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase; }
@@ -507,3 +512,6 @@ body.big .settings, body.big .keys { grid-template-columns: minmax(0, 1fr); }
 
 #hud .pending { position: absolute; left: 28px; bottom: 64px; font: 500 11px/1 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--g-gold); border: 1px solid var(--g-gold); padding: 6px 10px; background: rgba(10, 6, 8, 0.6); }
 body.touch #hud .pending { left: calc(14px + env(safe-area-inset-left, 0px)); bottom: auto; top: calc(104px + env(safe-area-inset-top, 0px)); }
+
+/* escala própria da interface em jogo (Ajustes > Jogo); cada bloco cresce a partir do próprio canto */
+#hud .status, #hud .objective, #hud .quick, #hud .coins, #hud .pending { zoom: var(--hud-scale, 1); }

@@ -119,6 +119,9 @@ export class Game {
   private abilityCd = 0;
   private viewShifted = false;
   private abrigoCd = 0;
+  /** puxão lateral acumulado para trocar de alvo travado, em px que decaem em 0,25 s */
+  private lockFlick = 0;
+  private lockPadPrev = 0;
   lupaT = 0;
   private tracked: string | null = null;
   private secret: { pos: THREE.Vector3; t: number } | null = null;
@@ -261,6 +264,7 @@ export class Game {
     document.body.classList.toggle('big', s.textScale >= 1.3);
     document.documentElement.style.setProperty('--ui-scale', String(s.textScale));
     document.documentElement.style.setProperty('--touch-scale', String(s.touchScale ?? 1));
+    document.documentElement.style.setProperty('--hud-scale', String(s.hudScale ?? 1));
     for (const a of Object.keys(DEFAULT_KEYS) as ActionName[]) this.input.keys[a] = s.keys[a] ?? [...DEFAULT_KEYS[a]];
     this.input.pad = { ...(s.pad ?? DEFAULT_PAD) };
     this.input.padDeadzone = s.padDeadzone;
@@ -758,6 +762,7 @@ export class Game {
   async say(who: string, text: string): Promise<void> {
     if (this.cancelled) return;
     const def = NPCS[who];
+    this.ui.portrait(who ? this.portraitOf(who) : null);
     // quem fala gesticula e mexe a boca; os outros na cena escutam e acenam no fim da frase
     for (const n of this.npcs) n.speaking = n.def.id === who;
     try {
@@ -769,6 +774,26 @@ export class Game {
       }
       this.player?.fig.nod();
     }
+  }
+  /** busto do NPC que fala, tirado da própria figura 3D na primeira fala e guardado para as próximas */
+  portraits = new Map<string, HTMLCanvasElement | 'pendente'>();
+  private portraitOf(who: string): HTMLCanvasElement | null {
+    const got = this.portraits.get(who);
+    if (got instanceof HTMLCanvasElement) return got;
+    const n = this.npcs.find((x) => x.def.id === who);
+    if (!n || got === 'pendente') return null;
+    const f = n.fig;
+    const head = new THREE.Vector3();
+    const bone = f.headBone;
+    f.root.updateMatrixWorld(true);
+    if (bone) bone.getWorldPosition(head);
+    else head.set(n.pos.x, n.pos.y + f.height * 0.9, n.pos.z);
+    this.portraits.set(who, 'pendente');
+    this.engine.requestPortrait(f.root, head, f.root.rotation.y, (c) => {
+      this.portraits.set(who, c);
+      if (this.mode === 'dialogue' && this.ui.speaker === (NPCS[who]?.name ?? who)) this.ui.portrait(c);
+    });
+    return null;
   }
   async choose(options: Array<{ text: string; tag?: string }>, pre?: number): Promise<number> {
     if (this.cancelled) throw SCRIPT_CANCEL;
@@ -1517,6 +1542,28 @@ export class Game {
     this.padNavPrev.y = nav.y;
   }
   /** há parede ou móvel alto entre os dois pontos? amostragem a cada 0,5 m */
+  /** Inimigo vivo mais próximo em ângulo à direita (dir = 1) ou à esquerda (dir = -1) do alvo atual, visto do jogador. */
+  private neighborTarget(cur: { pos: THREE.Vector3 }, dir: 1 | -1): Enemy | null {
+    const p = this.player;
+    if (!p) return null;
+    const base = Math.atan2(cur.pos.x - p.pos.x, cur.pos.z - p.pos.z);
+    let best: Enemy | null = null;
+    let bestA = Infinity;
+    for (const e of this.enemies) {
+      if (e === cur || !e.alive || e.pos.distanceTo(p.pos) > 16) continue;
+      let d = Math.atan2(e.pos.x - p.pos.x, e.pos.z - p.pos.z) - base;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      // vista de trás do jogador, a direita da tela é ângulo negativo em torno de +Y
+      const a = -d * dir;
+      if (a > 0.02 && a < bestA) {
+        bestA = a;
+        best = e;
+      }
+    }
+    return best;
+  }
+
   private blocked(a: THREE.Vector3, b: THREE.Vector3): boolean {
     const d = Math.hypot(b.x - a.x, b.z - a.z);
     const n = Math.ceil(d / 0.5);
@@ -1555,6 +1602,8 @@ export class Game {
     this.focus.set(0, 0, 4);
   }
 
+  private interactBuffer = 0;
+  private interactHeld = 0;
   private updateWorld(dt: number, controls: boolean): void {
     const s = this.state!;
     const p = this.player!;
@@ -1592,6 +1641,26 @@ export class Game {
         this.audio.sfx(c ? 'ui' : 'uiNegar');
       }
     }
+    // com a mira travada, um puxão lateral da câmera (mouse, toque, analógico ou Z/C) passa para o vizinho
+    if (controls && p.lockTarget) {
+      this.lockFlick = this.lockFlick * Math.exp(-dt / 0.25) + inp.mouseDX + inp.touchLookX * 1.6;
+      const padX = inp.padLook.x;
+      let dir: 0 | 1 | -1 = 0;
+      if (inp.took('camDir') || this.lockFlick > 140 || (padX > 0.75 && this.lockPadPrev <= 0.75)) dir = 1;
+      else if (inp.took('camEsq') || this.lockFlick < -140 || (padX < -0.75 && this.lockPadPrev >= -0.75)) dir = -1;
+      this.lockPadPrev = padX;
+      if (dir) {
+        this.lockFlick = 0;
+        const next = this.neighborTarget(p.lockTarget, dir);
+        if (next) {
+          p.lockTarget = next;
+          this.audio.sfx('ui');
+        }
+      }
+    } else {
+      this.lockFlick = 0;
+      this.lockPadPrev = 0;
+    }
     if (p.lockTarget && (!p.lockTarget.alive || p.lockTarget.pos.distanceTo(p.pos) > 20)) {
       // a trava se desfaz sozinha: avisa, para a câmera solta não parecer defeito
       if (p.lockTarget.alive) {
@@ -1603,6 +1672,8 @@ export class Game {
 
     p.sensitivity = this.settings.sens;
     p.invertY = this.settings.invertY;
+    p.sensitivityY = this.settings.sensY;
+    p.camDist = this.settings.camDist;
     const lantern = D.isEquipped(s, 'lanterna_transparencia');
     // 9 estourava o rosto visto de frente (auditoria, item 3); a lanterna segue sendo o ganho de alcance
     // a tocha tremula; a Lanterna da Transparência pende do cinto e soma uma luz fria e estável
@@ -1668,7 +1739,7 @@ export class Game {
       this.combatSeen = true;
       if (!s.flags.includes('tutorial_combate')) {
         D.setFlag(s, 'tutorial_combate');
-        this.ui.hint(this.ui.isTouch ? 'Golpe, Firme, Esquiva, Pulso e Mira ficam nos botões à direita. Esquive no instante em que o aviso vermelho aparece.' : `${this.ui.key('ataque')} golpe leve · ${this.ui.key('golpe')} golpe firme · ${this.ui.key('esquiva')} esquiva · ${this.ui.key('crivo')} pulso do Crivo · ${this.ui.key('travar')} trava a mira`, 'Encontro', 10);
+        this.ui.hint(this.ui.isTouch ? 'Golpe, Firme, Esquiva, Pulso e Mira ficam nos botões à direita. Com a mira travada, arraste o olhar para o lado para trocar de alvo. Esquive no instante em que o aviso vermelho aparece.' : `${this.ui.key('ataque')} golpe leve · ${this.ui.key('golpe')} golpe firme · ${this.ui.key('esquiva')} esquiva · ${this.ui.key('crivo')} pulso do Crivo · ${this.ui.key('travar')} trava a mira (${this.ui.key('camEsq')} e ${this.ui.key('camDir')} trocam de alvo)`, 'Encontro', 10);
       }
     }
     this.inCombat = fighting;
@@ -1751,8 +1822,24 @@ export class Game {
       // a cabeça vira para o que se pode usar ou para quem se pode ouvir
       const np = near?.npc?.pos ?? near?.prop?.pos;
       p.lookHint = np ? this.lookHint.set(np.x, np.y + (near?.npc ? near.npc.fig.height * 0.9 : 0.6), np.z) : null;
-      if (near && !p.fig.busy && inp.took('interagir')) this.interact(near);
-    } else this.ui.prompt(null);
+      // o toque em Interagir fica guardado por um instante: apertar no fim de um golpe ou de um tranco não se perde
+      if (inp.took('interagir')) {
+        this.interactBuffer = 0.35;
+        this.interactHeld = 0;
+      }
+      // o prazo só corre com o personagem livre: um golpe longo não come o toque
+      if (this.interactBuffer > 0) {
+        if (p.fig.busy) this.interactHeld += dt;
+        else if (near) {
+          this.interactBuffer = 0;
+          this.interact(near);
+        } else this.interactBuffer -= dt;
+        if (this.interactHeld > 1.5) this.interactBuffer = 0;
+      } else this.interactHeld = 0;
+    } else {
+      this.ui.prompt(null);
+      this.interactBuffer = 0;
+    }
 
     // marcador de objetivo
     const tgt = this.secret?.pos ?? this.targetPos();

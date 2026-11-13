@@ -79,6 +79,10 @@ try {
 
   console.log('Pátio e Bosque');
   await E(async () => { await T.talk('heloisa'); await T.talk('iris'); });
+  // no SwiftShader o laço de quadros anda devagar: um quadro forçado tira o retrato pedido na conversa
+  await E(() => __game.engine.render(0.016, __game.focus));
+  ok(await E(() => { const c = __game.portraits.get('heloisa'); return c instanceof HTMLCanvasElement && c.width === 48; }), 'a primeira fala de Heloísa gera o retrato de busto a partir da figura 3D');
+  ok(await E(() => { const c = __game.portraits.get('heloisa'); const d = c.getContext('2d').getImageData(0, 0, 48, 48).data; let v = 0; for (let i = 0; i < d.length; i += 4) v += d[i] + d[i + 1] + d[i + 2]; return v / (48 * 48 * 3) > 18; }), 'o retrato não sai preto');
   ok((await step('ponte')) === 1, 'Heloísa e Íris abrem a missão da ponte');
   await travel('bosque', 'de_atrio');
   await E(() => __game.player.teleport(-27, 0, 2, 1.57));
@@ -94,12 +98,22 @@ try {
   ok(await E(() => __game.region.platforms.some((x) => x.tag === 'ponte')), 'o mecanismo do passo estende a ponte');
   await E(() => __game.player.teleport(41, 0, 0, 1.57));
   await fight('margem');
-  // quem sai da narração com Esc logo na primeira fala não pode deixar a missão presa no marco
-  await E(async () => {
-    const g = __game; const say = g.say;
+  ok(await E(() => !__game.enemies.some((e) => e.alive && e.group === 'margem')), 'margem limpa antes do marco');
+  // Interagir apertado no meio de um golpe fica guardado, e quem sai da narração com Esc logo na primeira
+  // fala não deixa a missão presa no marco
+  const busy = await E(async () => {
+    const g = __game; const say = g.say; const x = g.prop('marco');
     g.say = async function (w, t) { g.say = say; this.cancelScript(); return say.call(this, w, t); };
-    try { await T.use('marco', 0, -1.2, 0); } finally { g.say = say; }
+    try {
+      g.player.teleport(x.pos.x - 1.2, x.pos.y, x.pos.z, Math.PI / 2);
+      await T.sim(1.7);
+      g.input.inject('ataque'); await T.sim(0.1);
+      const b = g.player.fig.busy;
+      g.input.inject('interagir'); await T.sim(1.2); await T.settle();
+      return b;
+    } finally { g.say = say; }
   });
+  ok(busy, 'o golpe estava em curso quando Interagir foi apertado');
   ok((await E(() => __game.state.flags.includes('ponte_aberta'))) && (await step('ponte')) === 6, 'o marco aceso fecha a travessia mesmo com a narração encerrada no Esc');
   ok((await E(() => __game.mode)) === 'play', 'sair da narração do marco devolve o controle');
   await E(async () => { await T.use('caixa_dalva'); await T.use('pagina_4'); });
@@ -200,6 +214,8 @@ try {
 
   console.log('Observatório e final');
   await travel('observatorio', 'de_atrio');
+  await E(() => T.use('lua_obs'));
+  ok(await E(() => __game.state.collected.includes('visto:lua_obs')), 'a lua de olho único pode ser examinada no Observatório');
   await E(async () => { await T.use('pagina_6'); await T.use('braseiro_terraco', 0, 0, 1.3); await T.sim(1); });
   ok((await step('veredito')) === 3 && (await E(() => !__game.state.inventory.oleo_lamparina)), 'um braseiro aceso gasta o único frasco');
   await E(() => __game.player.teleport(0, 0, -12, 3.14));
@@ -209,7 +225,8 @@ try {
   await travel('atrio', 'de_observatorio');
   await E(() => T.talk('heloisa'));
   ok((await mode()) === 'ending', 'tela final exibida');
-  await p.click('#ending button');
+  // no SwiftShader a cena do Pátio no fim da campanha roda a menos de um quadro por segundo, e o clique espera dois quadros estáveis
+  await p.click('#ending button', { timeout: 120000 });
   await E(async () => { await T.settle(); await T.talk('anselmo'); });
   if ((await step('paginas')) !== 'ok') console.log('diag', JSON.stringify(await E(() => { const g = __game; const n = g.npcs.find((x) => x.def.id === 'anselmo'); return { mode: g.mode, region: g.region.id, npc: n && [n.pos.x, n.pos.z, n.fig.action], pl: [g.player.pos.x, g.player.pos.z], near: g.nearest()?.label, errs: g.errors, scripting: g.scripting, busy: g.busy, frozen: g.player.frozen }; })));
   ok((await step('paginas')) === 'ok', 'as seis páginas entregues a Anselmo');

@@ -29,7 +29,7 @@ const want = process.argv.slice(2);
 const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const p = await b.newPage({ viewport: { width: 480, height: 300 } });
 p.on('pageerror', (e) => console.log('  erro de página:', e.message));
-p.on('console', (m) => m.type() === 'error' && console.log('  console:', m.text().slice(0, 200)));
+p.on('console', (m) => m.type() === 'error' && console.log('  console:', m.text().slice(0, 300)));
 const E = (fn, a) => p.evaluate(fn, a);
 const waitMode = async (m, ms = 240000) => {
   const t0 = Date.now();
@@ -199,9 +199,15 @@ const CENAS = {
       p.camYaw = n.yaw + 1.6; p.camPitch = 0.22;
       await T.sim(1.0);
       const a = await FILM(0.4, 4);
-      g.interact({ npc: n });
+      // no modo de teste a fala corre instantânea; uma cena que espera mantém a conversa aberta durante o filme
+      let solta;
+      p.faceTo = Math.atan2(n.pos.x - p.pos.x, n.pos.z - p.pos.z);
+      g.runScript(() => new Promise((r) => { solta = r; n.speaking = true; }), n);
       const b = await FILM(3.6, 6);
-      g.cancelScript();
+
+      n.speaking = false;
+      solta();
+      await new Promise((r) => setTimeout(r, 0));
       const c = await FILM(1.2, 6);
       return [...a, ...b, ...c];
     });
