@@ -509,7 +509,7 @@ export class Player {
     this.frameK += ((this.frame ? 1 : 0) - this.frameK) * (1 - Math.exp(-2.4 * dt));
     const fk = this.frameK;
     if (this.frame && fk > 0.01) {
-      const want = Math.atan2(this.pos.x - this.frame.x, this.pos.z - this.frame.z) + 0.42;
+      const want = Math.atan2(this.pos.x - this.frame.x, this.pos.z - this.frame.z) + 0.6;
       let d = want - this.camYaw;
       while (d > Math.PI) d -= Math.PI * 2;
       while (d < -Math.PI) d += Math.PI * 2;
@@ -528,7 +528,7 @@ export class Player {
     const right = new THREE.Vector3(Math.cos(this.camYaw), 0, -Math.sin(this.camYaw));
     pivot.addScaledVector(right, 0.0);
     // colisão: encurta o braço da câmera até o primeiro ponto livre
-    const arm = this.camDist * (1 - 0.3 * fk) * (1 - 0.24 * fws);
+    const arm = this.camDist * (1 - 0.38 * fk) * (1 - 0.24 * fws);
     let dist = arm;
     const steps = 14;
     for (let i = 1; i <= steps; i++) {
