@@ -30,4 +30,4 @@ Moldura de pedra: fundo breu-3 com grão, filete de 2 px em breu-1 por fora, fio
 
 ## O que ainda não está feito
 
-As molduras de papel e de bronze existem como regra, mas só a de pedra está implementada em CSS para todas as telas; o papel vale no dossiê e o bronze, no inventário. Os glifos existem e o brasão aparece na abertura e no menu; o uso dos demais glifos no mapa, no códice e nos itens depende da thread de conteúdo. Retratos de busto no diálogo dependem de arte nova.
+As molduras de pedra, bronze e papel existem como SVG 9-slice em `public/ui/ps2/` e como classes `moldura-pedra`, `moldura-bronze` e `moldura-papel` em `ps2-ui.css`; o uso nos painéis existentes ainda é feito pelas regras de caixa (box-shadow), e a troca por border-image depende da thread principal. Os glifos existem e o brasão aparece na abertura e no menu; o uso dos demais glifos no mapa, no códice e nos itens depende da thread de conteúdo. Retratos de busto no diálogo dependem de arte nova.
