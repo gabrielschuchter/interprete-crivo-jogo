@@ -1,6 +1,6 @@
 # Pendências e perguntas em aberto
 
-Atualizado em 12/11/2026, depois da auditoria externa de 176 registros. A resposta item a item está em `AUDITORIA_2026-11-12.md`; aqui fica só o que continua aberto, agrupado por quem pode fechar.
+Atualizado em 13/11/2026 (revisão de pendências contra a main depois do PR #20). A primeira versão é de 12/11/2026, depois da auditoria externa de 176 registros. A resposta item a item está em `AUDITORIA_2026-11-12.md`; aqui fica só o que continua aberto, agrupado por quem pode fechar.
 
 Estado de base, para não partir de premissa antiga: o jogo está publicado em https://interprete-crivo-jogo.vercel.app, com deploy automático a cada push na `main` (não foi conferido, nesta data, que o deploy corresponde ao último commit). Controles de toque existem (`src/ui/touch.ts`) e têm bateria própria. Cenário, personagens e áudio usam assets externos convertidos, com reserva procedural.
 
@@ -38,11 +38,11 @@ Firefox e Safari.
 
 ## Trabalho de arte e animação ainda não feito
 
-Expressão facial: os doze personagens não têm morph targets, e o pipeline remove as shape keys (itens 112, 113, 124). Clipes próprios para pensar, assentir, comemorar, reverenciar e para o golpe firme (49, 114 a 117); hoje esses gestos reusam clipes vizinhos, e o painel de Diagnóstico lista os que caírem em reserva. Capa e laço do Crivo com volume (130, 131, 136), olho com córnea (134), posturas por humor (135). Enquadramento de câmera nas conversas (6). Piso do Pátio (9), roupa do protagonista (10), HDRI de interior e de crepúsculo, com a decisão sobre a HDRI que está no repositório e não é usada (137 a 139), vidro e transparência por asset (140, 141), sombra de contato na qualidade baixa (144), chuva sob coberturas e respingos (145, 146), geometria do observatório (153), névoa da ravina (154).
+Feito em 13/11: expressão facial (seis morphs nos 28 humanos, PR #16, ligados à fala e à escuta no PR #20) e enquadramento de câmera nas conversas (PR #20). Segue aberto: Clipes próprios para pensar, assentir, comemorar, reverenciar e para o golpe firme (49, 114 a 117); hoje esses gestos reusam clipes vizinhos, e o painel de Diagnóstico lista os que caírem em reserva. Capa e laço do Crivo com volume (130, 131, 136), olho com córnea (134), posturas por humor (135). Piso do Pátio (9), roupa do protagonista (10), HDRI de interior e de crepúsculo, com a decisão sobre a HDRI que está no repositório e não é usada (137 a 139), vidro e transparência por asset (140, 141), sombra de contato na qualidade baixa (144), chuva sob coberturas e respingos (145, 146), geometria do observatório (153), névoa da ravina (154).
 
 ## Trabalho de design e acessibilidade ainda não feito
 
-Trocar de alvo travado (36). Dificuldade por componente (72). Paleta para daltonismo e avisos de ataque que não dependam de cor (73, 77). Sensibilidade por eixo (75). Escala própria da HUD (60). Distância e ombro da câmera, colisão contínua de câmera (55, 56). Consulta sob demanda do estado de combate para leitor de tela (43). Enigmas: calibragem da ponte, erro repetido, braseiro e névoa, explicações menos imediatas (97 a 101). Nó cooperativo visível na árvore (102). Mais opções na criação (103). Matriz das 39 superfícies P0 do atlas (108). Perfis de reverberação, mais superfícies de passo, som posicional, voz do Crivo (163 a 167, 170).
+Feito em 13/11: trocar de alvo travado com puxão lateral do mouse, do toque ou do analógico, ou Z e C (36); sensibilidade vertical própria (75); escala própria da interface em jogo (60); distância da câmera (55). Segue aberto: dificuldade por componente (72), paleta para daltonismo e avisos de ataque que não dependam de cor (73, 77), colisão contínua de câmera (56). Consulta sob demanda do estado de combate para leitor de tela (43). Enigmas: calibragem da ponte, erro repetido, braseiro e névoa, explicações menos imediatas (97 a 101). Nó cooperativo visível na árvore (102). Mais opções na criação (103). Matriz das 39 superfícies P0 do atlas (108). Perfis de reverberação, mais superfícies de passo, som posicional, voz do Crivo (163 a 167, 170).
 
 ## Técnicas, sem bloqueio
 

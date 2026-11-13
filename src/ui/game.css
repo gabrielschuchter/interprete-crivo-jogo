@@ -507,3 +507,6 @@ body.big .settings, body.big .keys { grid-template-columns: minmax(0, 1fr); }
 
 #hud .pending { position: absolute; left: 28px; bottom: 64px; font: 500 11px/1 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--g-gold); border: 1px solid var(--g-gold); padding: 6px 10px; background: rgba(10, 6, 8, 0.6); }
 body.touch #hud .pending { left: calc(14px + env(safe-area-inset-left, 0px)); bottom: auto; top: calc(104px + env(safe-area-inset-top, 0px)); }
+
+/* escala própria da interface em jogo (Ajustes > Jogo); cada bloco cresce a partir do próprio canto */
+#hud .status, #hud .objective, #hud .quick, #hud .coins, #hud .pending { zoom: var(--hud-scale, 1); }
