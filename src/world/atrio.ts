@@ -296,6 +296,11 @@ export function buildAtrio(ctx: RegionCtx): BuiltRegion {
     { id: 'lia', x: -10.6, z: 6.5, yaw: Math.PI / 2 },
     { id: 'noemia', x: 10.6, z: -6.5, yaw: -Math.PI / 2 },
     { id: 'tome', x: -13.0, z: 12.6, yaw: 0.8 },
+    // moradores do elenco PS2
+    { id: 'custodia', x: -4.5, z: 30.5, yaw: 0.4 },
+    { id: 'amelia', x: 7.5, z: 30.5, yaw: -0.6 },
+    { id: 'dito', x: -5.5, z: 14.5, yaw: 2.6 },
+    { id: 'vera', x: 13.0, z: 13.5, yaw: -2.4 },
   ];
   r.props = [
     { id: 'portal_bosque', kind: 'portal', x: 30.5, z: 0, label: 'Seguir para o Bosque da Confusão', radius: 3.4, data: { to: 'bosque', spawn: 'de_atrio' } },

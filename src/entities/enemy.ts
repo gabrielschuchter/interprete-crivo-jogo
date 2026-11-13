@@ -3,18 +3,19 @@ import { smokeSprite, glowSprite } from '../world/textures';
 import { BRAND } from '../world/palette';
 import type { Collider } from '../world/builder';
 import { resolveCircle } from '../world/region';
-import { getGltf, instanceSkinned } from '../core/assets';
+import { getGltf, instanceSkinned, loadGltf } from '../core/assets';
 
 /** Corpo de captura de movimento dos espectros maiores (MakeHuman + CMU, ver REGISTRO_DE_ASSETS). */
 const BODY_PATH = 'models/personagens/vulto.glb';
 const _hv = new THREE.Vector3();
+const _up = new THREE.Vector3(0, 1, 0);
 
 /**
  * Criaturas da Névoa. Linguagem fantástica: não representam pessoas, escolas
  * metodológicas nem resultados científicos (documento-matriz, seção 6).
  * Todo ataque tem aviso legível (olhos vermelhos + anel no chão) antes do golpe.
  */
-export type EnemyKind = 'fiapo' | 'vulto' | 'eco' | 'veredito';
+export type EnemyKind = 'fiapo' | 'vulto' | 'eco' | 'veredito' | 'erudito' | 'errante' | 'suplicante' | 'duelista' | 'carcereiro' | 'matriarca';
 
 interface Cfg {
   name: string;
@@ -34,14 +35,45 @@ interface Cfg {
   tint: number;
   eye: number;
   poise: number; // golpes leves necessários para interromper
+  /** corpo glTF próprio (elenco PS2 em public/models/personagens/ps2); sem ele, o corpo encapuzado escurecido */
+  model?: string;
+  /** altura do corpo em metros (padrão 1,9 x escala) */
+  alt?: number;
+  /** olhos acesos sobrepostos ao rosto (falso quando o modelo já traz os seus ou mostra o rosto) */
+  eyes?: boolean;
+  /** mini-chefe: barra de chefe, segunda fase a 50% de vida e um padrão próprio */
+  mini?: boolean;
+  /** padrão próprio: combo (estocadas em cadeia), invoca (anel e reforços), coro (leque de sopros) */
+  special?: 'combo' | 'invoca' | 'coro';
 }
+
+const PS2 = 'models/personagens/ps2/';
 
 export const ENEMY_CFG: Record<EnemyKind, Cfg> = {
   fiapo: { name: 'Fiapo da Névoa', hp: 46, speed: 2.7, scale: 1, sight: 12, meleeRange: 2.1, windup: 0.62, lunge: 2.8, dmg: 12, recover: 1.0, xp: 14, coins: [2, 5], tint: 0x5f7f78, eye: 0x7fffd0, poise: 1 },
   vulto: { name: 'Vulto', hp: 96, speed: 2.1, scale: 1.35, sight: 16, meleeRange: 2.3, windup: 0.8, lunge: 2.2, dmg: 16, recover: 1.2, xp: 32, coins: [6, 10], ranged: true, tint: 0x4a5f7a, eye: 0x9fd0ff, poise: 3 },
   eco: { name: 'O Eco', hp: 340, speed: 2.9, scale: 1.9, sight: 30, meleeRange: 2.9, windup: 0.7, lunge: 3.4, dmg: 18, recover: 1.0, xp: 130, coins: [30, 40], boss: true, tint: 0x7a6a4a, eye: 0xffd28a, poise: 99 },
   veredito: { name: 'O Veredito', hp: 760, speed: 2.4, scale: 2.7, sight: 60, meleeRange: 3.9, windup: 0.85, lunge: 3.0, dmg: 20, recover: 1.1, xp: 320, coins: [60, 60], boss: true, ranged: true, tint: 0x4a3a5a, eye: 0xff5a6a, poise: 99 },
+  // elenco PS2 (bíblia de personagens): quatro comuns, quatro mini-chefes e o chefe final
+  erudito: { name: 'Erudito Oco', hp: 70, speed: 2.4, scale: 1, sight: 13, meleeRange: 2.0, windup: 0.55, lunge: 2.6, dmg: 13, recover: 0.9, xp: 22, coins: [3, 7], tint: 0x6a6e78, eye: 0xd8e0ff, poise: 2, model: 'mob_01_erudito', alt: 1.82, eyes: false },
+  errante: { name: 'Errante do Gelo', hp: 120, speed: 1.7, scale: 1.1, sight: 12, meleeRange: 2.4, windup: 0.95, lunge: 2.0, dmg: 20, recover: 1.4, xp: 30, coins: [5, 9], tint: 0x9fb4c8, eye: 0xcfe8ff, poise: 4, model: 'mob_03_errante', alt: 2.0, eyes: false },
+  suplicante: { name: 'Suplicante Encapuzado', hp: 60, speed: 3.1, scale: 0.95, sight: 15, meleeRange: 1.9, windup: 0.42, lunge: 3.4, dmg: 11, recover: 0.8, xp: 24, coins: [3, 8], tint: 0x5a1a24, eye: 0xff5a5a, poise: 1, model: 'mob_04_suplicante', alt: 1.78 },
+  duelista: { name: 'Duelista das Cinzas', hp: 300, speed: 3.2, scale: 1.15, sight: 20, meleeRange: 2.6, windup: 0.5, lunge: 4.2, dmg: 15, recover: 0.75, xp: 110, coins: [25, 35], boss: true, mini: true, special: 'combo', tint: 0x8a8278, eye: 0xffe0b0, poise: 99, model: 'mini_02_duelista', alt: 2.05, eyes: false },
+  carcereiro: { name: 'Carcereiro dos Trilhos', hp: 420, speed: 1.9, scale: 1.35, sight: 18, meleeRange: 3.0, windup: 1.0, lunge: 2.4, dmg: 23, recover: 1.3, xp: 120, coins: [28, 38], boss: true, mini: true, special: 'invoca', tint: 0x7a5ab0, eye: 0xc8a0ff, poise: 99, model: 'mini_03_carcereiro', alt: 2.4, eyes: false },
+  matriarca: { name: 'Matriarca do Coro Velado', hp: 280, speed: 1.6, scale: 1.25, sight: 22, meleeRange: 2.4, windup: 0.8, lunge: 1.8, dmg: 14, recover: 1.0, xp: 115, coins: [26, 36], boss: true, mini: true, ranged: true, special: 'coro', tint: 0xa88a48, eye: 0xffd28a, poise: 99, model: 'mini_04_matriarca', alt: 2.2, eyes: false },
 };
+// corpos do elenco nos tipos que já existiam: o Vulto vira o Espectro da Lanterna, o Eco veste o Carrasco da
+// Torre dos Sinos (o anel do Eco é a badalada do martelo) e o Veredito é o Grande Intérprete
+Object.assign(ENEMY_CFG.vulto, { model: 'mob_02_espectro', alt: 2.25, eyes: false });
+Object.assign(ENEMY_CFG.eco, { model: 'mini_01_carrasco', alt: 3.3, eyes: false });
+Object.assign(ENEMY_CFG.veredito, { model: 'boss_01_grande_interprete', alt: 4.6, eyes: false });
+
+/** caminho do corpo glTF de um tipo de inimigo (null: espectro procedural) */
+export function enemyModelPath(kind: EnemyKind): string | null {
+  if (kind === 'fiapo') return null;
+  const m = ENEMY_CFG[kind].model;
+  return m ? `${PS2}${m}.glb` : BODY_PATH;
+}
 
 export type EnemyState = 'idle' | 'chase' | 'windup' | 'strike' | 'recover' | 'stunned' | 'cast' | 'ring' | 'recite' | 'dying' | 'dead';
 
@@ -105,6 +137,9 @@ export class Enemy {
   private tablets: THREE.Mesh[] = [];
   /** barra de chefe / avisos na interface */
   reciteProgress = 0;
+  /** fase do mini-chefe (1 ou 2) */
+  phase = 1;
+  private combo = 0;
   onDeath: (() => void) | null = null;
   /** corpo escaneado e animado; null = espectro procedural */
   private body: {
@@ -117,6 +152,7 @@ export class Enemy {
     head: THREE.Object3D | null;
     eyes: THREE.Mesh[];
     lastState: EnemyState | null;
+    own: boolean;
   } | null = null;
 
   constructor(
@@ -342,9 +378,18 @@ export class Enemy {
 
   /** Troca o espectro de primitivas por um corpo humano encapuzado, escurecido e com olhos acesos. */
   private useBody(eyeM: THREE.Material): void {
-    const g = getGltf(BODY_PATH);
-    if (!g || !g.animations.length) return;
+    const path = enemyModelPath(this.kind) ?? BODY_PATH;
+    const g = getGltf(path);
+    if (!g) {
+      // a região pré-carrega os corpos; se um chegar depois (invocação, teste), entra quando terminar de baixar
+      void loadGltf(path).then((x) => {
+        if (x && this.alive && !this.body) this.useBody(eyeM);
+      });
+      return;
+    }
+    if (!g.animations.length) return;
     const c = this.cfg;
+    const own = !!c.model;
     const root = instanceSkinned(g);
     const mats: THREE.MeshStandardMaterial[] = [];
     const tint = new THREE.Color(c.tint);
@@ -356,7 +401,19 @@ export class Enemy {
       const src = me.material as THREE.MeshStandardMaterial;
       const m = src.clone();
       const n = (src.name || me.name).toLowerCase();
-      if (/body|skin|eye|teeth|tongue|brow|lash/.test(n)) {
+      if (own) {
+        // elenco PS2: materiais e paleta do próprio modelo; o jogo só acende o brilho de dano e de aviso
+        m.emissive = new THREE.Color(0);
+        m.emissiveIntensity = 0;
+        if (/brilho/.test(n)) {
+          m.emissive = src.emissive.clone();
+          m.emissiveIntensity = src.emissiveIntensity;
+          me.userData.glow = true;
+        }
+        me.material = m;
+        if (!me.userData.glow) mats.push(m);
+        return;
+      } else if (/body|skin|eye|teeth|tongue|brow|lash/.test(n)) {
         // sob o capuz não há rosto: só escuro
         m.map = null;
         m.color.set(0x050407);
@@ -371,7 +428,9 @@ export class Enemy {
       mats.push(m);
     });
     const box = new THREE.Box3().setFromObject(root);
-    root.scale.setScalar((1.9 * c.scale) / Math.max(0.1, box.max.y - box.min.y));
+    // altura declarada pelo modelo (ps2_altura) em vez da caixa: haste, coroa e auréola não encolhem o corpo
+    const h = Number(g.scene.userData.ps2_altura) || box.max.y - box.min.y;
+    root.scale.setScalar((c.alt ?? 1.9 * c.scale) / Math.max(0.1, h));
     this.root.add(root);
     this.rig.visible = false;
     let head: THREE.Object3D | null = null;
@@ -379,7 +438,7 @@ export class Enemy {
       if (!head && /^head$/i.test(o.name)) head = o;
     });
     const eyes: THREE.Mesh[] = [];
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < (c.eyes === false ? 0 : 2); i++) {
       const e = new THREE.Mesh(new THREE.SphereGeometry(0.028 * c.scale, 12, 10), eyeM);
       e.scale.set(1.5, 0.62, 0.8);
       this.root.add(e);
@@ -387,7 +446,7 @@ export class Enemy {
       this.eyes.push(e);
     }
     const clips = new Map(g.animations.map((a) => [a.name, a] as const));
-    this.body = { root, mixer: new THREE.AnimationMixer(root), clips, cur: '', act: null, mats, head, eyes, lastState: null };
+    this.body = { root, mixer: new THREE.AnimationMixer(root), clips, cur: '', act: null, mats, head, eyes, lastState: null, own };
   }
 
   private playClip(name: string, opts: { once?: boolean; speed?: number; fade?: number } = {}): void {
@@ -471,7 +530,7 @@ export class Enemy {
     const em = this.flash > 0 ? 0xffffff : eyeHot ? BRAND.classicCrimson : c.tint;
     for (const m of b.mats) {
       m.emissive.set(em);
-      m.emissiveIntensity = this.flash > 0 ? 1.2 : eyeHot ? 0.25 : 0.1;
+      m.emissiveIntensity = b.own ? (this.flash > 0 ? 0.9 : eyeHot ? 0.14 : 0) : this.flash > 0 ? 1.2 : eyeHot ? 0.25 : 0.1;
     }
     // olhos presos ao osso da cabeça, à frente do rosto
     if (b.head) {
@@ -481,7 +540,7 @@ export class Enemy {
       _hv.setFromMatrixPosition(b.head.matrixWorld);
       this.root.worldToLocal(_hv);
       const sc = c.scale;
-      for (let i = 0; i < 2; i++) b.eyes[i].position.set(_hv.x + (i ? 1 : -1) * 0.045 * sc, _hv.y + 0.07 * sc, _hv.z + 0.11 * sc);
+      for (let i = 0; i < b.eyes.length; i++) b.eyes[i].position.set(_hv.x + (i ? 1 : -1) * 0.045 * sc, _hv.y + 0.07 * sc, _hv.z + 0.11 * sc);
     }
   }
 
@@ -620,13 +679,26 @@ export class Enemy {
           c.sfx('chefe');
           break;
         }
-        if (cfg.boss && this.ringCd <= 0 && dist < 9 && (this.kind === 'eco' || hpF < 0.7)) {
+        if (cfg.mini && this.phase === 1 && hpF <= 0.5) {
+          // segunda fase: mais rápido, antecipação mais curta, golpe mais pesado e o padrão próprio se intensifica
+          this.phase = 2;
+          this.cfg = { ...cfg, speed: cfg.speed * 1.25, windup: cfg.windup * 0.8, recover: cfg.recover * 0.7, dmg: Math.round(cfg.dmg * 1.15) };
+          this.flash = 0.4;
+          c.shake(0.6);
+          c.sfx('chefe');
+          if (cfg.special === 'invoca') {
+            for (const sgn of [-1, 1]) c.summon('fiapo', this.pos.x + sgn * 2.4 * Math.cos(this.yaw), this.pos.z - sgn * 2.4 * Math.sin(this.yaw), this.group);
+          }
+          this.ringCd = 0;
+          break;
+        }
+        if (cfg.boss && this.ringCd <= 0 && dist < 9 && (this.kind === 'eco' || hpF < 0.7) && (!cfg.mini || cfg.special === 'invoca' || this.phase === 2)) {
           this.set('ring');
-          this.ringCd = this.kind === 'eco' ? 9 : 8;
+          this.ringCd = this.kind === 'eco' ? 9 : cfg.mini ? (this.phase === 2 ? 7 : 10) : 8;
           c.sfx('fiapoAviso');
           break;
         }
-        if (cfg.boss) {
+        if (cfg.boss && !cfg.mini) {
           const stage = hpF < 0.33 ? 2 : hpF < 0.66 ? 1 : 0;
           if (stage > this.summoned) {
             this.summoned = stage;
@@ -636,7 +708,7 @@ export class Enemy {
         }
         if (cfg.ranged && this.castCd <= 0 && dist > 4.5) {
           this.set('cast');
-          this.castCd = this.kind === 'veredito' ? 7 : 3.6;
+          this.castCd = this.kind === 'veredito' ? 7 : cfg.special === 'coro' ? (this.phase === 2 ? 4.2 : 5.5) : 3.6;
           c.sfx('fiapoAviso');
           break;
         }
@@ -646,9 +718,11 @@ export class Enemy {
           c.sfx('fiapoAviso');
           break;
         }
-        const keep = cfg.ranged && !cfg.boss ? 6.5 : cfg.meleeRange * 0.75;
+        // a matriarca canta de longe, como os comuns de sopro
+        const keeper = cfg.ranged && (!cfg.boss || cfg.mini);
+        const keep = keeper ? 6.5 : cfg.meleeRange * 0.75;
         if (dist > keep) move(dir.x * cfg.speed, dir.z * cfg.speed);
-        else if (cfg.ranged && !cfg.boss && dist < 4) move(-dir.x * cfg.speed * 0.7, -dir.z * cfg.speed * 0.7);
+        else if (keeper && dist < 4) move(-dir.x * cfg.speed * 0.7, -dir.z * cfg.speed * 0.7);
         else {
           // ronda lateral: dá ritmo e evita empilhamento
           const sgn = Math.sin(this.wander + this.bobPhase) > 0 ? 1 : -1;
@@ -684,6 +758,16 @@ export class Enemy {
           c.hitPlayer(cfg.dmg, this.pos, 'golpe');
         }
         if (this.t >= dur) {
+          // duelista: estocadas em cadeia (duas na primeira fase, três na segunda), cada uma com aviso curto
+          if (cfg.special === 'combo' && this.combo < this.phase) {
+            this.combo++;
+            this.set('windup');
+            this.t = cfg.windup * 0.45;
+            this.strikeDir.copy(dir);
+            c.sfx('fiapoAviso');
+            break;
+          }
+          this.combo = 0;
           this.set('recover');
           this.attackCd = 0.6;
         }
@@ -699,17 +783,20 @@ export class Enemy {
         const wind = this.kind === 'veredito' ? 0.75 : 0.95;
         eyeHot = 1;
         swell = 1 + Math.sin(this.t * 20) * 0.03;
-        const shots = this.kind === 'veredito' ? 3 : 1;
+        const coro = cfg.special === 'coro';
+        const shots = this.kind === 'veredito' ? 3 : coro ? (this.phase === 2 ? 5 : 3) : 1;
         for (let i = 0; i < shots; i++) {
-          const at = wind + i * 0.36;
+          const at = wind + i * (coro ? 0.12 : 0.36);
           if (this.t >= at && this.t - dt < at) {
             const from = this.pos.clone().setY(this.pos.y + 1.4 * s);
             const aim = new THREE.Vector3().subVectors(c.playerPos.clone().setY(c.playerPos.y + 1.0), from).normalize();
+            // coro: leque de sopros, o do meio mira o jogador
+            if (coro) aim.applyAxisAngle(_up, (i - (shots - 1) / 2) * 0.2);
             c.shoot(from, aim, cfg.dmg * (this.kind === 'veredito' ? 0.55 : 0.8), this.kind === 'veredito' ? 8 : 7.5);
             c.sfx('fiapo');
           }
         }
-        if (this.t >= wind + shots * 0.36 + 0.3) this.set('chase');
+        if (this.t >= wind + shots * (coro ? 0.12 : 0.36) + 0.3) this.set('chase');
         break;
       }
       case 'ring': {

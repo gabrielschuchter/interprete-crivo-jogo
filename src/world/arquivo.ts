@@ -237,14 +237,19 @@ export function buildArquivo(ctx: RegionCtx): BuiltRegion {
   b.finalize();
 
   r.spawns = { de_atrio: { x: 0, z: 16.4, yaw: Math.PI } };
+  r.npcs = [
+    { id: 'bartolomeu', x: 6.5, z: 13.5, yaw: -2.6 },
+    { id: 'aurelio', x: -7.5, z: 12.5, yaw: 2.4 },
+  ];
   r.enemies = [
     { kind: 'vulto', x: -11.4, z: 1, group: 'estantes' },
     { kind: 'vulto', x: 11.4, z: -7, group: 'estantes' },
     { kind: 'fiapo', x: 0, z: -12.5, group: 'estantes' },
     { kind: 'eco', x: 0, z: -31, group: 'eco', ifFlag: 'originais_aberta' },
-    { kind: 'vulto', x: -6, z: -4, group: 'foco', ifFlag: 'epilogo' },
-    { kind: 'vulto', x: 6, z: -4, group: 'foco', ifFlag: 'epilogo' },
-    { kind: 'fiapo', x: 0, z: -8, group: 'foco', ifFlag: 'epilogo' },
+    // foco do Arquivo: o Carcereiro dos Trilhos e dois Errantes do Gelo
+    { kind: 'carcereiro', x: 0, z: -7, group: 'foco', ifFlag: 'epilogo' },
+    { kind: 'errante', x: -6, z: -4, group: 'foco', ifFlag: 'epilogo' },
+    { kind: 'errante', x: 6, z: -4, group: 'foco', ifFlag: 'epilogo' },
     { kind: 'fiapo', x: -3, z: 1.5, group: 'foco', ifFlag: 'epilogo' },
     { kind: 'fiapo', x: 3, z: 1.5, group: 'foco', ifFlag: 'epilogo' },
   ];

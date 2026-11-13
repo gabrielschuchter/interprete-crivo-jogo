@@ -1,0 +1,5278 @@
+{
+ "elenco": {
+  "player_masc_curto": {
+   "id": "PC_M_01",
+   "nome": "Viajante (base masculina)",
+   "corpo": {
+    "macro": {
+     "gender": 1.0,
+     "age": 0.45,
+     "height": 0.6,
+     "weight": 0.5,
+     "muscle": 0.6,
+     "proportions": 0.6,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "young_caucasian_male",
+    "sobrancelha": "eyebrow002"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.016,
+     "collar": 0.05,
+     "cell": "casaco"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.02,
+     "t1": 0.98,
+     "cuff": 0.022,
+     "cell": "manga"
+    },
+    {
+     "tipo": "saia",
+     "z_top": "waist",
+     "z_hem": "knee-0.2",
+     "off": 0.026,
+     "flare": 0.12,
+     "open_front": 0.42,
+     "open_from": 1.0,
+     "back_slit": 0.18,
+     "cell": "aba",
+     "follow": 0.9
+    },
+    {
+     "tipo": "calca",
+     "off": 0.012,
+     "z_bot": "knee-0.1",
+     "cell": "calca"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee-0.06",
+     "cell": "bota"
+    },
+    {
+     "tipo": "cinto",
+     "z": "waist",
+     "off": 0.03,
+     "cell": "couro"
+    },
+    {
+     "tipo": "cachecol",
+     "thick": 0.034,
+     "tail": 0.3,
+     "side": -1,
+     "cell": "cachecol"
+    },
+    {
+     "tipo": "luva",
+     "cell": "luva"
+    },
+    {
+     "tipo": "bolsa",
+     "side": 1,
+     "strap_from": -1,
+     "cell": "couro"
+    },
+    {
+     "tipo": "cabelo",
+     "style": "bagunca",
+     "cell": "cabelo",
+     "volume": 0.014,
+     "length": 0.22,
+     "locks": 0
+    }
+   ],
+   "celulas": {
+    "casaco": {
+     "col": "3a2e2a",
+     "kind": "la",
+     "trim": "2a2020",
+     "trim_w": 0.05,
+     "folds": 0.3
+    },
+    "manga": {
+     "col": "3a2e2a",
+     "kind": "la",
+     "folds": 0.2,
+     "trim": "2a2020",
+     "trim_w": 0.08
+    },
+    "aba": {
+     "col": "3a2e2a",
+     "kind": "la",
+     "folds": 0.6,
+     "grime": 0.6,
+     "trim": "2a1e1e",
+     "trim_w": 0.04
+    },
+    "calca": {
+     "col": "26222a",
+     "kind": "la",
+     "folds": 0.3,
+     "grime": 0.5
+    },
+    "bota": {
+     "col": "2a1e16",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.6,
+     "seams": false
+    },
+    "couro": {
+     "col": "3a281c",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.2,
+     "seams": false
+    },
+    "cachecol": {
+     "col": "5e1a26",
+     "kind": "la",
+     "folds": 0.4,
+     "grime": 0.2
+    },
+    "luva": {
+     "col": "2e2018",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.3,
+     "seams": false
+    },
+    "capuz": {
+     "col": "2e2626",
+     "kind": "la",
+     "folds": 0.3,
+     "grime": 0.1
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "9a8a74"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "tocha": true,
+   "cabelo_material": true,
+   "sobrancelha_cor": "241812"
+  },
+  "player_fem_curto": {
+   "id": "PC_F_01",
+   "nome": "Viajante (base feminina)",
+   "corpo": {
+    "macro": {
+     "gender": 0.0,
+     "age": 0.42,
+     "height": 0.55,
+     "weight": 0.45,
+     "muscle": 0.55,
+     "proportions": 0.65,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "young_caucasian_female",
+    "sobrancelha": "eyebrow001"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.014,
+     "collar": 0.05,
+     "cell": "corpete"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.016,
+     "t1": 0.98,
+     "cuff": 0.018,
+     "cell": "manga"
+    },
+    {
+     "tipo": "capa",
+     "z_bot": "elbow+0.02",
+     "off": 0.03,
+     "flare": 0.07,
+     "cell": "capa"
+    },
+    {
+     "tipo": "saia",
+     "id": "saia",
+     "z_top": "waist",
+     "z_hem": "knee-0.3",
+     "off": 0.024,
+     "flare": 0.13,
+     "open_front": 0.5,
+     "open_from": 0.75,
+     "cell": "saia",
+     "follow": 0.9
+    },
+    {
+     "tipo": "calca",
+     "off": 0.012,
+     "z_bot": "knee-0.1",
+     "cell": "calca"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee-0.02",
+     "cell": "bota"
+    },
+    {
+     "tipo": "cinto",
+     "z": "waist",
+     "off": 0.028,
+     "cell": "couro"
+    },
+    {
+     "tipo": "luva",
+     "cell": "luva"
+    },
+    {
+     "tipo": "bolsa",
+     "side": 1,
+     "strap_from": -1,
+     "cell": "couro"
+    },
+    {
+     "tipo": "cabelo",
+     "style": "curto",
+     "cell": "cabelo",
+     "volume": 0.012,
+     "length": 0.32,
+     "locks": 0
+    }
+   ],
+   "celulas": {
+    "corpete": {
+     "col": "2e2228",
+     "kind": "brocado",
+     "trim": "6a1c2a",
+     "trim_w": 0.05,
+     "folds": 0.2
+    },
+    "manga": {
+     "col": "2e2228",
+     "kind": "la",
+     "folds": 0.2,
+     "trim": "2a1e22",
+     "trim_w": 0.08
+    },
+    "capa": {
+     "col": "3a2c30",
+     "kind": "la",
+     "trim": "6e5a3a",
+     "trim_w": 0.07,
+     "motif_kind": "arco",
+     "folds": 0.35
+    },
+    "saia": {
+     "col": "4a1c2a",
+     "kind": "brocado",
+     "folds": 0.6,
+     "grime": 0.5,
+     "trim": "6e5a3a",
+     "trim_w": 0.06,
+     "motif_kind": "cruz"
+    },
+    "calca": {
+     "col": "221e24",
+     "kind": "la",
+     "folds": 0.3,
+     "grime": 0.5
+    },
+    "bota": {
+     "col": "2a1e16",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.6,
+     "seams": false
+    },
+    "couro": {
+     "col": "3a281c",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.2,
+     "seams": false
+    },
+    "luva": {
+     "col": "2e2018",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.3,
+     "seams": false
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "9a8a74"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "tocha": true,
+   "cabelo_material": true,
+   "sobrancelha_cor": "241812"
+  },
+  "player_masc_coque": {
+   "id": "PC_M_01",
+   "nome": "Viajante (base masculina)",
+   "corpo": {
+    "macro": {
+     "gender": 1.0,
+     "age": 0.45,
+     "height": 0.6,
+     "weight": 0.5,
+     "muscle": 0.6,
+     "proportions": 0.6,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "young_caucasian_male",
+    "sobrancelha": "eyebrow002"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.016,
+     "collar": 0.05,
+     "cell": "casaco"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.02,
+     "t1": 0.98,
+     "cuff": 0.022,
+     "cell": "manga"
+    },
+    {
+     "tipo": "saia",
+     "z_top": "waist",
+     "z_hem": "knee-0.2",
+     "off": 0.026,
+     "flare": 0.12,
+     "open_front": 0.42,
+     "open_from": 1.0,
+     "back_slit": 0.18,
+     "cell": "aba",
+     "follow": 0.9
+    },
+    {
+     "tipo": "calca",
+     "off": 0.012,
+     "z_bot": "knee-0.1",
+     "cell": "calca"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee-0.06",
+     "cell": "bota"
+    },
+    {
+     "tipo": "cinto",
+     "z": "waist",
+     "off": 0.03,
+     "cell": "couro"
+    },
+    {
+     "tipo": "cachecol",
+     "thick": 0.034,
+     "tail": 0.3,
+     "side": -1,
+     "cell": "cachecol"
+    },
+    {
+     "tipo": "luva",
+     "cell": "luva"
+    },
+    {
+     "tipo": "bolsa",
+     "side": 1,
+     "strap_from": -1,
+     "cell": "couro"
+    },
+    {
+     "tipo": "cabelo",
+     "style": "coque",
+     "cell": "cabelo",
+     "volume": 0.014,
+     "length": 0.22,
+     "locks": 2
+    }
+   ],
+   "celulas": {
+    "casaco": {
+     "col": "3a2e2a",
+     "kind": "la",
+     "trim": "2a2020",
+     "trim_w": 0.05,
+     "folds": 0.3
+    },
+    "manga": {
+     "col": "3a2e2a",
+     "kind": "la",
+     "folds": 0.2,
+     "trim": "2a2020",
+     "trim_w": 0.08
+    },
+    "aba": {
+     "col": "3a2e2a",
+     "kind": "la",
+     "folds": 0.6,
+     "grime": 0.6,
+     "trim": "2a1e1e",
+     "trim_w": 0.04
+    },
+    "calca": {
+     "col": "26222a",
+     "kind": "la",
+     "folds": 0.3,
+     "grime": 0.5
+    },
+    "bota": {
+     "col": "2a1e16",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.6,
+     "seams": false
+    },
+    "couro": {
+     "col": "3a281c",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.2,
+     "seams": false
+    },
+    "cachecol": {
+     "col": "5e1a26",
+     "kind": "la",
+     "folds": 0.4,
+     "grime": 0.2
+    },
+    "luva": {
+     "col": "2e2018",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.3,
+     "seams": false
+    },
+    "capuz": {
+     "col": "2e2626",
+     "kind": "la",
+     "folds": 0.3,
+     "grime": 0.1
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "9a8a74"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "tocha": true,
+   "cabelo_material": true,
+   "sobrancelha_cor": "241812"
+  },
+  "player_fem_coque": {
+   "id": "PC_F_01",
+   "nome": "Viajante (base feminina)",
+   "corpo": {
+    "macro": {
+     "gender": 0.0,
+     "age": 0.42,
+     "height": 0.55,
+     "weight": 0.45,
+     "muscle": 0.55,
+     "proportions": 0.65,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "young_caucasian_female",
+    "sobrancelha": "eyebrow001"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.014,
+     "collar": 0.05,
+     "cell": "corpete"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.016,
+     "t1": 0.98,
+     "cuff": 0.018,
+     "cell": "manga"
+    },
+    {
+     "tipo": "capa",
+     "z_bot": "elbow+0.02",
+     "off": 0.03,
+     "flare": 0.07,
+     "cell": "capa"
+    },
+    {
+     "tipo": "saia",
+     "id": "saia",
+     "z_top": "waist",
+     "z_hem": "knee-0.3",
+     "off": 0.024,
+     "flare": 0.13,
+     "open_front": 0.5,
+     "open_from": 0.75,
+     "cell": "saia",
+     "follow": 0.9
+    },
+    {
+     "tipo": "calca",
+     "off": 0.012,
+     "z_bot": "knee-0.1",
+     "cell": "calca"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee-0.02",
+     "cell": "bota"
+    },
+    {
+     "tipo": "cinto",
+     "z": "waist",
+     "off": 0.028,
+     "cell": "couro"
+    },
+    {
+     "tipo": "luva",
+     "cell": "luva"
+    },
+    {
+     "tipo": "bolsa",
+     "side": 1,
+     "strap_from": -1,
+     "cell": "couro"
+    },
+    {
+     "tipo": "cabelo",
+     "style": "coque",
+     "cell": "cabelo",
+     "volume": 0.012,
+     "length": 0.32,
+     "locks": 2
+    }
+   ],
+   "celulas": {
+    "corpete": {
+     "col": "2e2228",
+     "kind": "brocado",
+     "trim": "6a1c2a",
+     "trim_w": 0.05,
+     "folds": 0.2
+    },
+    "manga": {
+     "col": "2e2228",
+     "kind": "la",
+     "folds": 0.2,
+     "trim": "2a1e22",
+     "trim_w": 0.08
+    },
+    "capa": {
+     "col": "3a2c30",
+     "kind": "la",
+     "trim": "6e5a3a",
+     "trim_w": 0.07,
+     "motif_kind": "arco",
+     "folds": 0.35
+    },
+    "saia": {
+     "col": "4a1c2a",
+     "kind": "brocado",
+     "folds": 0.6,
+     "grime": 0.5,
+     "trim": "6e5a3a",
+     "trim_w": 0.06,
+     "motif_kind": "cruz"
+    },
+    "calca": {
+     "col": "221e24",
+     "kind": "la",
+     "folds": 0.3,
+     "grime": 0.5
+    },
+    "bota": {
+     "col": "2a1e16",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.6,
+     "seams": false
+    },
+    "couro": {
+     "col": "3a281c",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.2,
+     "seams": false
+    },
+    "luva": {
+     "col": "2e2018",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.3,
+     "seams": false
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "9a8a74"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "tocha": true,
+   "cabelo_material": true,
+   "sobrancelha_cor": "241812"
+  },
+  "player_masc_longo": {
+   "id": "PC_M_01",
+   "nome": "Viajante (base masculina)",
+   "corpo": {
+    "macro": {
+     "gender": 1.0,
+     "age": 0.45,
+     "height": 0.6,
+     "weight": 0.5,
+     "muscle": 0.6,
+     "proportions": 0.6,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "young_caucasian_male",
+    "sobrancelha": "eyebrow002"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.016,
+     "collar": 0.05,
+     "cell": "casaco"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.02,
+     "t1": 0.98,
+     "cuff": 0.022,
+     "cell": "manga"
+    },
+    {
+     "tipo": "saia",
+     "z_top": "waist",
+     "z_hem": "knee-0.2",
+     "off": 0.026,
+     "flare": 0.12,
+     "open_front": 0.42,
+     "open_from": 1.0,
+     "back_slit": 0.18,
+     "cell": "aba",
+     "follow": 0.9
+    },
+    {
+     "tipo": "calca",
+     "off": 0.012,
+     "z_bot": "knee-0.1",
+     "cell": "calca"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee-0.06",
+     "cell": "bota"
+    },
+    {
+     "tipo": "cinto",
+     "z": "waist",
+     "off": 0.03,
+     "cell": "couro"
+    },
+    {
+     "tipo": "cachecol",
+     "thick": 0.034,
+     "tail": 0.3,
+     "side": -1,
+     "cell": "cachecol"
+    },
+    {
+     "tipo": "luva",
+     "cell": "luva"
+    },
+    {
+     "tipo": "bolsa",
+     "side": 1,
+     "strap_from": -1,
+     "cell": "couro"
+    },
+    {
+     "tipo": "cabelo",
+     "style": "longo",
+     "cell": "cabelo",
+     "volume": 0.014,
+     "length": 0.22,
+     "locks": 0
+    }
+   ],
+   "celulas": {
+    "casaco": {
+     "col": "3a2e2a",
+     "kind": "la",
+     "trim": "2a2020",
+     "trim_w": 0.05,
+     "folds": 0.3
+    },
+    "manga": {
+     "col": "3a2e2a",
+     "kind": "la",
+     "folds": 0.2,
+     "trim": "2a2020",
+     "trim_w": 0.08
+    },
+    "aba": {
+     "col": "3a2e2a",
+     "kind": "la",
+     "folds": 0.6,
+     "grime": 0.6,
+     "trim": "2a1e1e",
+     "trim_w": 0.04
+    },
+    "calca": {
+     "col": "26222a",
+     "kind": "la",
+     "folds": 0.3,
+     "grime": 0.5
+    },
+    "bota": {
+     "col": "2a1e16",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.6,
+     "seams": false
+    },
+    "couro": {
+     "col": "3a281c",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.2,
+     "seams": false
+    },
+    "cachecol": {
+     "col": "5e1a26",
+     "kind": "la",
+     "folds": 0.4,
+     "grime": 0.2
+    },
+    "luva": {
+     "col": "2e2018",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.3,
+     "seams": false
+    },
+    "capuz": {
+     "col": "2e2626",
+     "kind": "la",
+     "folds": 0.3,
+     "grime": 0.1
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "9a8a74"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "tocha": true,
+   "cabelo_material": true,
+   "sobrancelha_cor": "241812"
+  },
+  "player_fem_longo": {
+   "id": "PC_F_01",
+   "nome": "Viajante (base feminina)",
+   "corpo": {
+    "macro": {
+     "gender": 0.0,
+     "age": 0.42,
+     "height": 0.55,
+     "weight": 0.45,
+     "muscle": 0.55,
+     "proportions": 0.65,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "young_caucasian_female",
+    "sobrancelha": "eyebrow001"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.014,
+     "collar": 0.05,
+     "cell": "corpete"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.016,
+     "t1": 0.98,
+     "cuff": 0.018,
+     "cell": "manga"
+    },
+    {
+     "tipo": "capa",
+     "z_bot": "elbow+0.02",
+     "off": 0.03,
+     "flare": 0.07,
+     "cell": "capa"
+    },
+    {
+     "tipo": "saia",
+     "id": "saia",
+     "z_top": "waist",
+     "z_hem": "knee-0.3",
+     "off": 0.024,
+     "flare": 0.13,
+     "open_front": 0.5,
+     "open_from": 0.75,
+     "cell": "saia",
+     "follow": 0.9
+    },
+    {
+     "tipo": "calca",
+     "off": 0.012,
+     "z_bot": "knee-0.1",
+     "cell": "calca"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee-0.02",
+     "cell": "bota"
+    },
+    {
+     "tipo": "cinto",
+     "z": "waist",
+     "off": 0.028,
+     "cell": "couro"
+    },
+    {
+     "tipo": "luva",
+     "cell": "luva"
+    },
+    {
+     "tipo": "bolsa",
+     "side": 1,
+     "strap_from": -1,
+     "cell": "couro"
+    },
+    {
+     "tipo": "cabelo",
+     "style": "longo",
+     "cell": "cabelo",
+     "volume": 0.012,
+     "length": 0.32,
+     "locks": 2
+    }
+   ],
+   "celulas": {
+    "corpete": {
+     "col": "2e2228",
+     "kind": "brocado",
+     "trim": "6a1c2a",
+     "trim_w": 0.05,
+     "folds": 0.2
+    },
+    "manga": {
+     "col": "2e2228",
+     "kind": "la",
+     "folds": 0.2,
+     "trim": "2a1e22",
+     "trim_w": 0.08
+    },
+    "capa": {
+     "col": "3a2c30",
+     "kind": "la",
+     "trim": "6e5a3a",
+     "trim_w": 0.07,
+     "motif_kind": "arco",
+     "folds": 0.35
+    },
+    "saia": {
+     "col": "4a1c2a",
+     "kind": "brocado",
+     "folds": 0.6,
+     "grime": 0.5,
+     "trim": "6e5a3a",
+     "trim_w": 0.06,
+     "motif_kind": "cruz"
+    },
+    "calca": {
+     "col": "221e24",
+     "kind": "la",
+     "folds": 0.3,
+     "grime": 0.5
+    },
+    "bota": {
+     "col": "2a1e16",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.6,
+     "seams": false
+    },
+    "couro": {
+     "col": "3a281c",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.2,
+     "seams": false
+    },
+    "luva": {
+     "col": "2e2018",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.3,
+     "seams": false
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "9a8a74"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "tocha": true,
+   "cabelo_material": true,
+   "sobrancelha_cor": "241812"
+  },
+  "player_masc_capuz": {
+   "id": "PC_M_01",
+   "nome": "Viajante (base masculina)",
+   "corpo": {
+    "macro": {
+     "gender": 1.0,
+     "age": 0.45,
+     "height": 0.6,
+     "weight": 0.5,
+     "muscle": 0.6,
+     "proportions": 0.6,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "young_caucasian_male",
+    "sobrancelha": "eyebrow002"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.016,
+     "collar": 0.05,
+     "cell": "casaco"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.02,
+     "t1": 0.98,
+     "cuff": 0.022,
+     "cell": "manga"
+    },
+    {
+     "tipo": "saia",
+     "z_top": "waist",
+     "z_hem": "knee-0.2",
+     "off": 0.026,
+     "flare": 0.12,
+     "open_front": 0.42,
+     "open_from": 1.0,
+     "back_slit": 0.18,
+     "cell": "aba",
+     "follow": 0.9
+    },
+    {
+     "tipo": "calca",
+     "off": 0.012,
+     "z_bot": "knee-0.1",
+     "cell": "calca"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee-0.06",
+     "cell": "bota"
+    },
+    {
+     "tipo": "cinto",
+     "z": "waist",
+     "off": 0.03,
+     "cell": "couro"
+    },
+    {
+     "tipo": "cachecol",
+     "thick": 0.034,
+     "tail": 0.3,
+     "side": -1,
+     "cell": "cachecol"
+    },
+    {
+     "tipo": "luva",
+     "cell": "luva"
+    },
+    {
+     "tipo": "bolsa",
+     "side": 1,
+     "strap_from": -1,
+     "cell": "couro"
+    },
+    {
+     "tipo": "capuz",
+     "off": 0.04,
+     "cell": "capuz"
+    }
+   ],
+   "celulas": {
+    "casaco": {
+     "col": "3a2e2a",
+     "kind": "la",
+     "trim": "2a2020",
+     "trim_w": 0.05,
+     "folds": 0.3
+    },
+    "manga": {
+     "col": "3a2e2a",
+     "kind": "la",
+     "folds": 0.2,
+     "trim": "2a2020",
+     "trim_w": 0.08
+    },
+    "aba": {
+     "col": "3a2e2a",
+     "kind": "la",
+     "folds": 0.6,
+     "grime": 0.6,
+     "trim": "2a1e1e",
+     "trim_w": 0.04
+    },
+    "calca": {
+     "col": "26222a",
+     "kind": "la",
+     "folds": 0.3,
+     "grime": 0.5
+    },
+    "bota": {
+     "col": "2a1e16",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.6,
+     "seams": false
+    },
+    "couro": {
+     "col": "3a281c",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.2,
+     "seams": false
+    },
+    "cachecol": {
+     "col": "5e1a26",
+     "kind": "la",
+     "folds": 0.4,
+     "grime": 0.2
+    },
+    "luva": {
+     "col": "2e2018",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.3,
+     "seams": false
+    },
+    "capuz": {
+     "col": "2e2626",
+     "kind": "la",
+     "folds": 0.3,
+     "grime": 0.1
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "9a8a74"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "tocha": true,
+   "cabelo_material": true,
+   "sobrancelha_cor": "241812"
+  },
+  "player_fem_capuz": {
+   "id": "PC_F_01",
+   "nome": "Viajante (base feminina)",
+   "corpo": {
+    "macro": {
+     "gender": 0.0,
+     "age": 0.42,
+     "height": 0.55,
+     "weight": 0.45,
+     "muscle": 0.55,
+     "proportions": 0.65,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "young_caucasian_female",
+    "sobrancelha": "eyebrow001"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.014,
+     "collar": 0.05,
+     "cell": "corpete"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.016,
+     "t1": 0.98,
+     "cuff": 0.018,
+     "cell": "manga"
+    },
+    {
+     "tipo": "capa",
+     "z_bot": "elbow+0.02",
+     "off": 0.03,
+     "flare": 0.07,
+     "cell": "capa"
+    },
+    {
+     "tipo": "saia",
+     "id": "saia",
+     "z_top": "waist",
+     "z_hem": "knee-0.3",
+     "off": 0.024,
+     "flare": 0.13,
+     "open_front": 0.5,
+     "open_from": 0.75,
+     "cell": "saia",
+     "follow": 0.9
+    },
+    {
+     "tipo": "calca",
+     "off": 0.012,
+     "z_bot": "knee-0.1",
+     "cell": "calca"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee-0.02",
+     "cell": "bota"
+    },
+    {
+     "tipo": "cinto",
+     "z": "waist",
+     "off": 0.028,
+     "cell": "couro"
+    },
+    {
+     "tipo": "luva",
+     "cell": "luva"
+    },
+    {
+     "tipo": "bolsa",
+     "side": 1,
+     "strap_from": -1,
+     "cell": "couro"
+    },
+    {
+     "tipo": "capuz",
+     "off": 0.04,
+     "cell": "capa"
+    }
+   ],
+   "celulas": {
+    "corpete": {
+     "col": "2e2228",
+     "kind": "brocado",
+     "trim": "6a1c2a",
+     "trim_w": 0.05,
+     "folds": 0.2
+    },
+    "manga": {
+     "col": "2e2228",
+     "kind": "la",
+     "folds": 0.2,
+     "trim": "2a1e22",
+     "trim_w": 0.08
+    },
+    "capa": {
+     "col": "3a2c30",
+     "kind": "la",
+     "trim": "6e5a3a",
+     "trim_w": 0.07,
+     "motif_kind": "arco",
+     "folds": 0.35
+    },
+    "saia": {
+     "col": "4a1c2a",
+     "kind": "brocado",
+     "folds": 0.6,
+     "grime": 0.5,
+     "trim": "6e5a3a",
+     "trim_w": 0.06,
+     "motif_kind": "cruz"
+    },
+    "calca": {
+     "col": "221e24",
+     "kind": "la",
+     "folds": 0.3,
+     "grime": 0.5
+    },
+    "bota": {
+     "col": "2a1e16",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.6,
+     "seams": false
+    },
+    "couro": {
+     "col": "3a281c",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.2,
+     "seams": false
+    },
+    "luva": {
+     "col": "2e2018",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.3,
+     "seams": false
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "9a8a74"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "tocha": true,
+   "cabelo_material": true,
+   "sobrancelha_cor": "241812"
+  },
+  "npc_01_arquivista": {
+   "id": "NPC_01",
+   "nome": "Monge Arquivista",
+   "corpo": {
+    "macro": {
+     "gender": 1.0,
+     "age": 0.62,
+     "height": 0.75,
+     "weight": 0.35,
+     "muscle": 0.4,
+     "proportions": 0.4,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "middleage_caucasian_male",
+    "sobrancelha": "eyebrow002"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.016,
+     "collar": 0.03,
+     "cell": "veste"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.022,
+     "cuff": 0.05,
+     "cell": "manga"
+    },
+    {
+     "tipo": "saia",
+     "z_top": "waist",
+     "z_hem": 0.05,
+     "off": 0.024,
+     "flare": 0.12,
+     "cell": "batina"
+    },
+    {
+     "tipo": "capa",
+     "z_bot": "chest-0.04",
+     "off": 0.035,
+     "flare": 0.06,
+     "cell": "murca"
+    },
+    {
+     "tipo": "cinto",
+     "z": "waist",
+     "off": 0.034,
+     "cell": "couro"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee-0.15",
+     "cell": "bota"
+    },
+    {
+     "tipo": "oculos"
+    },
+    {
+     "tipo": "livro",
+     "side": "R"
+    },
+    {
+     "tipo": "chaves",
+     "side": 1
+    },
+    {
+     "tipo": "bolsinha",
+     "a": -1.3,
+     "z": "hip-0.02"
+    },
+    {
+     "tipo": "cabelo",
+     "style": "curto",
+     "cell": "cabelo",
+     "volume": 0.01,
+     "hl_front": 72
+    }
+   ],
+   "celulas": {
+    "veste": {
+     "col": "2a1e22",
+     "kind": "la",
+     "folds": 0.3
+    },
+    "manga": {
+     "col": "2a1e22",
+     "kind": "la",
+     "folds": 0.3,
+     "trim": "6e5a3a",
+     "trim_w": 0.08,
+     "motif_kind": "losango"
+    },
+    "batina": {
+     "col": "2a1e22",
+     "kind": "la",
+     "folds": 0.7,
+     "grime": 0.5,
+     "trim": "6e5a3a",
+     "trim_w": 0.07,
+     "motif_kind": "arco"
+    },
+    "murca": {
+     "col": "3e1a22",
+     "kind": "veludo",
+     "folds": 0.2,
+     "trim": "6e5a3a",
+     "trim_w": 0.1,
+     "motif_kind": "losango"
+    },
+    "couro": {
+     "col": "3a281c",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.2,
+     "seams": false
+    },
+    "bota": {
+     "col": "2a1e16",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.6,
+     "seams": false
+    },
+    "metal": {
+     "pintura": "metal",
+     "col": "8a6a3a",
+     "rust": 0.35
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "2a2420"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "clipes": [
+    "idle",
+    "walk",
+    "run",
+    "talk",
+    "point",
+    "listen",
+    "wave",
+    "shrug",
+    "interact",
+    "hit",
+    "die"
+   ],
+   "sobrancelha_cor": "2a2420"
+  },
+  "npc_02_acendedora": {
+   "id": "NPC_02",
+   "nome": "Acendedora de Lampiões",
+   "corpo": {
+    "macro": {
+     "gender": 0.0,
+     "age": 0.55,
+     "height": 0.5,
+     "weight": 0.5,
+     "muscle": 0.6,
+     "proportions": 0.6,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "middleage_caucasian_female"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.014,
+     "collar": 0.035,
+     "cell": "tronco"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.016,
+     "t1": 0.72,
+     "cuff": 0.02,
+     "cell": "manga"
+    },
+    {
+     "tipo": "saia",
+     "id": "saia",
+     "z_top": "waist",
+     "z_hem": 0.06,
+     "off": 0.02,
+     "flare": 0.16,
+     "cell": "saia"
+    },
+    {
+     "tipo": "avental",
+     "ref": "saia",
+     "z_top": "waist",
+     "z_hem": "knee-0.12",
+     "width": 0.95,
+     "bib": true,
+     "cell": "avental"
+    },
+    {
+     "tipo": "cinto",
+     "z": "waist",
+     "off": 0.032,
+     "cell": "couro"
+    },
+    {
+     "tipo": "cachecol",
+     "thick": 0.03,
+     "tail": 0.22,
+     "side": 1,
+     "cell": "cachecol"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee-0.08",
+     "cell": "bota"
+    },
+    {
+     "tipo": "luva",
+     "cell": "luva"
+    },
+    {
+     "tipo": "lampiao",
+     "side": "L",
+     "scale": 1.1
+    },
+    {
+     "tipo": "ferramenta",
+     "a": -1.25,
+     "z": "hip+0.02",
+     "kind": "alicate",
+     "name": "alicate"
+    },
+    {
+     "tipo": "ferramenta",
+     "a": -0.95,
+     "z": "hip+0.02",
+     "kind": "chave",
+     "name": "chave_inglesa"
+    },
+    {
+     "tipo": "bolsinha",
+     "a": 1.45,
+     "z": "hip+0.04"
+    },
+    {
+     "tipo": "cabelo",
+     "style": "coque",
+     "cell": "cabelo",
+     "volume": 0.01,
+     "seed": 11,
+     "locks": 2
+    }
+   ],
+   "celulas": {
+    "tronco": {
+     "col": "4a3a2c",
+     "kind": "la",
+     "trim": "5a1c24",
+     "trim_w": 0.08,
+     "folds": 0.3
+    },
+    "manga": {
+     "col": "4a3a2c",
+     "kind": "la",
+     "trim": "3a2c22",
+     "trim_w": 0.12,
+     "folds": 0.2
+    },
+    "saia": {
+     "col": "2c2428",
+     "kind": "la",
+     "trim": "4a1820",
+     "trim_w": 0.05,
+     "folds": 0.7,
+     "grime": 0.8,
+     "patches": 2
+    },
+    "avental": {
+     "col": "5a4430",
+     "kind": "couro",
+     "folds": 0.25,
+     "grime": 0.7,
+     "patches": 3,
+     "trim": "3a2a1e",
+     "trim_w": 0.04
+    },
+    "couro": {
+     "col": "3a281c",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.2,
+     "seams": false
+    },
+    "cachecol": {
+     "col": "5e1a26",
+     "kind": "la",
+     "folds": 0.4,
+     "grime": 0.2,
+     "stripes": [
+      "3e1018",
+      0.18,
+      3
+     ]
+    },
+    "bota": {
+     "col": "2a1e16",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.6,
+     "seams": false
+    },
+    "luva": {
+     "col": "2e2018",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.3,
+     "seams": false
+    },
+    "metal": {
+     "pintura": "metal",
+     "col": "8a6a3a",
+     "rust": 0.35
+    },
+    "brilho": {
+     "pintura": "brilho",
+     "col": "ffb35a"
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "3a2a20"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "clipes": [
+    "idle",
+    "walk",
+    "run",
+    "talk",
+    "point",
+    "listen",
+    "wave",
+    "shrug",
+    "interact",
+    "hit",
+    "die"
+   ],
+   "lampiao_braco": true,
+   "sobrancelha_cor": "2e2018",
+   "pele_tinta": "e0ccbc"
+  },
+  "npc_03_vigia": {
+   "id": "NPC_03",
+   "nome": "Vigia da Catedral",
+   "corpo": {
+    "macro": {
+     "gender": 1.0,
+     "age": 0.82,
+     "height": 0.62,
+     "weight": 0.68,
+     "muscle": 0.7,
+     "proportions": 0.4,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "old_caucasian_male",
+    "sobrancelha": "eyebrow002"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.02,
+     "collar": 0.03,
+     "cell": "sobretudo"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.024,
+     "cuff": 0.03,
+     "cell": "manga"
+    },
+    {
+     "tipo": "saia",
+     "z_top": "waist",
+     "z_hem": "knee-0.25",
+     "off": 0.03,
+     "flare": 0.1,
+     "open_front": 0.3,
+     "cell": "aba",
+     "follow": 0.9
+    },
+    {
+     "tipo": "capa",
+     "z_bot": "chest-0.02",
+     "off": 0.04,
+     "flare": 0.06,
+     "cell": "murca"
+    },
+    {
+     "tipo": "calca",
+     "off": 0.014,
+     "z_bot": "knee-0.1",
+     "cell": "calca"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee-0.04",
+     "cell": "bota"
+    },
+    {
+     "tipo": "cinto",
+     "z": "waist",
+     "off": 0.04,
+     "cell": "couro"
+    },
+    {
+     "tipo": "cachecol",
+     "thick": 0.036,
+     "tail": 0.18,
+     "side": 1,
+     "cell": "cachecol"
+    },
+    {
+     "tipo": "luva",
+     "cell": "luva"
+    },
+    {
+     "tipo": "haste",
+     "side": "R",
+     "length": 2.05,
+     "head": "alabarda"
+    },
+    {
+     "tipo": "lampiao",
+     "side": "L",
+     "scale": 1.0
+    },
+    {
+     "tipo": "barba",
+     "full": true,
+     "off": 0.01,
+     "cell": "barba"
+    },
+    {
+     "tipo": "cabelo",
+     "style": "curto",
+     "volume": 0.006,
+     "cell": "cabelo",
+     "hl_front": 70
+    }
+   ],
+   "celulas": {
+    "sobretudo": {
+     "col": "2a2a2e",
+     "kind": "la",
+     "folds": 0.3,
+     "emboss": [
+      "8a6a3a",
+      0.5,
+      0.45,
+      0.22,
+      "cruz"
+     ]
+    },
+    "manga": {
+     "col": "2a2a2e",
+     "kind": "la",
+     "folds": 0.2
+    },
+    "aba": {
+     "col": "2a2a2e",
+     "kind": "la",
+     "folds": 0.6,
+     "grime": 0.6,
+     "trim": "6e5a3a",
+     "trim_w": 0.06,
+     "motif_kind": "losango"
+    },
+    "murca": {
+     "col": "33302e",
+     "kind": "la",
+     "folds": 0.2,
+     "trim": "5a1c24",
+     "trim_w": 0.06
+    },
+    "calca": {
+     "col": "221e20",
+     "kind": "la",
+     "folds": 0.3,
+     "grime": 0.5
+    },
+    "bota": {
+     "col": "2a1e16",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.6,
+     "seams": false
+    },
+    "couro": {
+     "col": "3a281c",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.2,
+     "seams": false
+    },
+    "cachecol": {
+     "col": "5a1a24",
+     "kind": "la",
+     "folds": 0.4
+    },
+    "luva": {
+     "col": "2e2018",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.3,
+     "seams": false
+    },
+    "barba": {
+     "pintura": "barba",
+     "col": "a8a096"
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "7a746c"
+    },
+    "metal": {
+     "pintura": "metal",
+     "col": "8a6a3a",
+     "rust": 0.35
+    },
+    "brilho": {
+     "pintura": "brilho",
+     "col": "ffb35a"
+    },
+    "madeira": {
+     "pintura": "madeira",
+     "col": "3a2a1c"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "clipes": [
+    "idle",
+    "walk",
+    "run",
+    "talk",
+    "point",
+    "listen",
+    "wave",
+    "shrug",
+    "interact",
+    "hit",
+    "die"
+   ],
+   "lampiao_braco": true,
+   "sobrancelha_cor": "6a645c"
+  },
+  "npc_04_estalajadeira": {
+   "id": "NPC_04",
+   "nome": "Viúva da Estalagem",
+   "corpo": {
+    "macro": {
+     "gender": 0.0,
+     "age": 0.7,
+     "height": 0.52,
+     "weight": 0.6,
+     "muscle": 0.5,
+     "proportions": 0.5,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "middleage_caucasian_female"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.014,
+     "collar": 0.04,
+     "cell": "corpete"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.018,
+     "t1": 0.85,
+     "cuff": 0.03,
+     "puff": 0.012,
+     "cell": "manga"
+    },
+    {
+     "tipo": "saia",
+     "id": "saia",
+     "z_top": "waist",
+     "z_hem": 0.06,
+     "off": 0.026,
+     "flare": 0.2,
+     "cell": "saia"
+    },
+    {
+     "tipo": "avental",
+     "ref": "saia",
+     "z_top": "waist",
+     "z_hem": "knee-0.25",
+     "width": 0.85,
+     "cell": "avental"
+    },
+    {
+     "tipo": "capa",
+     "z_bot": "chest-0.06",
+     "off": 0.034,
+     "flare": 0.1,
+     "ragged": 0.02,
+     "cell": "xale"
+    },
+    {
+     "tipo": "cinto",
+     "z": "waist",
+     "off": 0.034,
+     "cell": "faixa"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee-0.1",
+     "cell": "bota"
+    },
+    {
+     "tipo": "chaves",
+     "side": 1
+    },
+    {
+     "tipo": "livro",
+     "side": "R",
+     "size": [
+      0.15,
+      0.04,
+      0.2
+     ]
+    },
+    {
+     "tipo": "cabelo",
+     "style": "coque",
+     "cell": "cabelo",
+     "volume": 0.01,
+     "locks": 1,
+     "seed": 5
+    }
+   ],
+   "celulas": {
+    "corpete": {
+     "col": "2a2024",
+     "kind": "la",
+     "folds": 0.2
+    },
+    "manga": {
+     "col": "2a2024",
+     "kind": "la",
+     "folds": 0.2,
+     "trim": "c8b890",
+     "trim_w": 0.1
+    },
+    "saia": {
+     "col": "3a1820",
+     "kind": "brocado",
+     "folds": 0.7,
+     "grime": 0.5,
+     "trim": "221a1e",
+     "trim_w": 0.06
+    },
+    "avental": {
+     "col": "b8a888",
+     "kind": "linho",
+     "folds": 0.4,
+     "grime": 0.6,
+     "patches": 1
+    },
+    "xale": {
+     "col": "5a1a28",
+     "kind": "brocado",
+     "folds": 0.3,
+     "trim": "8a6a3a",
+     "trim_w": 0.12,
+     "motif_kind": "arco"
+    },
+    "faixa": {
+     "col": "a8987c",
+     "kind": "linho",
+     "folds": 0
+    },
+    "bota": {
+     "col": "2a1e16",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.6,
+     "seams": false
+    },
+    "metal": {
+     "pintura": "metal",
+     "col": "8a6a3a",
+     "rust": 0.35
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "4a3e34"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "clipes": [
+    "idle",
+    "walk",
+    "run",
+    "talk",
+    "point",
+    "listen",
+    "wave",
+    "shrug",
+    "interact",
+    "hit",
+    "die"
+   ]
+  },
+  "npc_05_enfermeira": {
+   "id": "NPC_05",
+   "nome": "Enfermeira da Neve",
+   "corpo": {
+    "macro": {
+     "gender": 0.0,
+     "age": 0.48,
+     "height": 0.55,
+     "weight": 0.48,
+     "muscle": 0.5,
+     "proportions": 0.6,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "young_caucasian_female"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.018,
+     "collar": 0.03,
+     "cell": "casaco"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.022,
+     "cuff": 0.03,
+     "cell": "manga"
+    },
+    {
+     "tipo": "saia",
+     "z_top": "waist",
+     "z_hem": "knee-0.32",
+     "off": 0.026,
+     "flare": 0.15,
+     "cell": "aba"
+    },
+    {
+     "tipo": "capa",
+     "z_bot": "chest-0.02",
+     "off": 0.035,
+     "flare": 0.06,
+     "cell": "capa"
+    },
+    {
+     "tipo": "cachecol",
+     "thick": 0.045,
+     "tail": 0.2,
+     "side": 1,
+     "cell": "cachecol"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee",
+     "cell": "bota"
+    },
+    {
+     "tipo": "bolsa",
+     "side": -1,
+     "strap_from": 1,
+     "cell": "couro",
+     "size": [
+      0.16,
+      0.07,
+      0.13
+     ]
+    },
+    {
+     "tipo": "luva",
+     "cell": "luva"
+    },
+    {
+     "tipo": "cabelo",
+     "style": "trancas",
+     "cell": "cabelo",
+     "volume": 0.01,
+     "length": 0.3,
+     "locks": 2
+    }
+   ],
+   "celulas": {
+    "casaco": {
+     "col": "2e2626",
+     "kind": "la",
+     "folds": 0.3
+    },
+    "manga": {
+     "col": "2e2626",
+     "kind": "la",
+     "folds": 0.25,
+     "emboss": [
+      "8a2a2a",
+      0.25,
+      0.85,
+      0.2,
+      "cruz"
+     ]
+    },
+    "aba": {
+     "col": "2e2626",
+     "kind": "la",
+     "folds": 0.6,
+     "grime": 0.8,
+     "grime_col": "d8dce4"
+    },
+    "capa": {
+     "col": "3a3030",
+     "kind": "la",
+     "folds": 0.2
+    },
+    "cachecol": {
+     "col": "5a1e28",
+     "kind": "la",
+     "folds": 0.5,
+     "stripes": [
+      "3a1018",
+      0.2,
+      4
+     ]
+    },
+    "bota": {
+     "col": "2a1e16",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.8,
+     "grime_col": "e0e4ec",
+     "seams": false
+    },
+    "couro": {
+     "col": "4a3020",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.3,
+     "seams": false,
+     "emboss": [
+      "c8b890",
+      0.5,
+      0.55,
+      0.45,
+      "cruz"
+     ]
+    },
+    "luva": {
+     "col": "2e2018",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.3,
+     "seams": false
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "3a2a20"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "clipes": [
+    "idle",
+    "walk",
+    "run",
+    "talk",
+    "point",
+    "listen",
+    "wave",
+    "shrug",
+    "interact",
+    "hit",
+    "die"
+   ]
+  },
+  "npc_06_novico": {
+   "id": "NPC_06",
+   "nome": "Noviço do Coro",
+   "corpo": {
+    "macro": {
+     "gender": 0.6,
+     "age": 0.3,
+     "height": 0.38,
+     "weight": 0.4,
+     "muscle": 0.4,
+     "proportions": 0.5,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "young_caucasian_male",
+    "sobrancelha": "eyebrow001"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.014,
+     "collar": 0.025,
+     "cell": "veste"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.026,
+     "cuff": 0.06,
+     "cell": "sobrepeliz"
+    },
+    {
+     "tipo": "saia",
+     "z_top": "waist",
+     "z_hem": 0.08,
+     "off": 0.02,
+     "flare": 0.08,
+     "cell": "veste_saia"
+    },
+    {
+     "tipo": "saia",
+     "z_top": "chest-0.05",
+     "z_hem": "knee-0.08",
+     "off": 0.035,
+     "flare": 0.14,
+     "cell": "sobrepeliz2",
+     "name": "sobrepeliz"
+    },
+    {
+     "tipo": "capa",
+     "z_bot": "chest",
+     "off": 0.04,
+     "flare": 0.05,
+     "cell": "sobrepeliz"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee-0.12",
+     "cell": "bota"
+    },
+    {
+     "tipo": "livro",
+     "side": "L",
+     "size": [
+      0.13,
+      0.03,
+      0.18
+     ]
+    },
+    {
+     "tipo": "cabelo",
+     "style": "curto",
+     "cell": "cabelo",
+     "volume": 0.012,
+     "hl_front": 68
+    }
+   ],
+   "celulas": {
+    "veste": {
+     "col": "1e1a20",
+     "kind": "la",
+     "folds": 0.2
+    },
+    "veste_saia": {
+     "col": "1e1a20",
+     "kind": "la",
+     "folds": 0.5,
+     "grime": 0.4
+    },
+    "sobrepeliz": {
+     "col": "c0b49a",
+     "kind": "linho",
+     "folds": 0.4,
+     "trim": "8a6a3a",
+     "trim_w": 0.07,
+     "motif_kind": "arco"
+    },
+    "sobrepeliz2": {
+     "col": "c0b49a",
+     "kind": "linho",
+     "folds": 0.6,
+     "grime": 0.3,
+     "trim": "8a6a3a",
+     "trim_w": 0.08,
+     "motif_kind": "arco"
+    },
+    "bota": {
+     "col": "2a1e16",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.6,
+     "seams": false
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "b8a888"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "clipes": [
+    "idle",
+    "walk",
+    "run",
+    "talk",
+    "point",
+    "listen",
+    "wave",
+    "shrug",
+    "interact",
+    "hit",
+    "die"
+   ],
+   "sobrancelha_cor": "8a7a5a"
+  },
+  "npc_07_herbalista": {
+   "id": "NPC_07",
+   "nome": "Herbalista dos Cogumelos",
+   "corpo": {
+    "macro": {
+     "gender": 0.0,
+     "age": 0.45,
+     "height": 0.52,
+     "weight": 0.45,
+     "muscle": 0.5,
+     "proportions": 0.6,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "young_caucasian_female"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.014,
+     "collar": 0.02,
+     "cell": "corpete"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.02,
+     "cuff": 0.05,
+     "cell": "manga"
+    },
+    {
+     "tipo": "saia",
+     "z_top": "waist",
+     "z_hem": 0.06,
+     "off": 0.024,
+     "flare": 0.18,
+     "ragged": 0.03,
+     "cell": "saia"
+    },
+    {
+     "tipo": "capa",
+     "z_bot": "waist",
+     "off": 0.035,
+     "flare": 0.12,
+     "ragged": 0.04,
+     "cell": "capa"
+    },
+    {
+     "tipo": "chapeu",
+     "brim": 0.2,
+     "crown_h": 0.11,
+     "tip_bend": 0.0,
+     "droop": 0.06
+    },
+    {
+     "tipo": "cogumelos",
+     "where": "chapeu",
+     "n": 6
+    },
+    {
+     "tipo": "bolsa",
+     "side": 1,
+     "strap_from": -1,
+     "cell": "couro",
+     "size": [
+      0.16,
+      0.07,
+      0.13
+     ]
+    },
+    {
+     "tipo": "bolsinha",
+     "a": -1.3,
+     "z": "hip"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee-0.1",
+     "cell": "bota"
+    },
+    {
+     "tipo": "cabelo",
+     "style": "longo",
+     "cell": "cabelo",
+     "volume": 0.012,
+     "length": 0.38,
+     "locks": 2
+    }
+   ],
+   "celulas": {
+    "corpete": {
+     "col": "2a2230",
+     "kind": "la",
+     "folds": 0.2
+    },
+    "manga": {
+     "col": "2a2230",
+     "kind": "la",
+     "folds": 0.3,
+     "trim": "4a3a5a",
+     "trim_w": 0.1
+    },
+    "saia": {
+     "col": "2a2436",
+     "kind": "la",
+     "folds": 0.7,
+     "grime": 0.6,
+     "trim": "6a5a8a",
+     "trim_w": 0.07,
+     "motif_kind": "fungo"
+    },
+    "capa": {
+     "col": "3a3044",
+     "kind": "la",
+     "folds": 0.4,
+     "trim": "6a5a8a",
+     "trim_w": 0.06,
+     "motif_kind": "fungo"
+    },
+    "chapeu": {
+     "col": "2e2838",
+     "kind": "la",
+     "folds": 0.2,
+     "grime": 0.3
+    },
+    "couro": {
+     "col": "3a281c",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.2,
+     "seams": false
+    },
+    "bota": {
+     "col": "2a1e16",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.6,
+     "seams": false
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "5a3a28"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "clipes": [
+    "idle",
+    "walk",
+    "run",
+    "talk",
+    "point",
+    "listen",
+    "wave",
+    "shrug",
+    "interact",
+    "hit",
+    "die"
+   ]
+  },
+  "npc_08_cartografo": {
+   "id": "NPC_08",
+   "nome": "Cartógrafo Ferroviário",
+   "corpo": {
+    "macro": {
+     "gender": 1.0,
+     "age": 0.88,
+     "height": 0.5,
+     "weight": 0.5,
+     "muscle": 0.45,
+     "proportions": 0.4,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "old_caucasian_male",
+    "sobrancelha": "eyebrow002"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.018,
+     "collar": 0.03,
+     "cell": "casaco"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.022,
+     "cuff": 0.03,
+     "cell": "manga"
+    },
+    {
+     "tipo": "saia",
+     "z_top": "waist",
+     "z_hem": "knee-0.2",
+     "off": 0.028,
+     "flare": 0.1,
+     "open_front": 0.35,
+     "cell": "aba",
+     "follow": 0.9
+    },
+    {
+     "tipo": "calca",
+     "off": 0.014,
+     "z_bot": "knee-0.1",
+     "cell": "calca"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee-0.04",
+     "cell": "bota"
+    },
+    {
+     "tipo": "cinto",
+     "z": "waist",
+     "off": 0.036,
+     "cell": "couro"
+    },
+    {
+     "tipo": "cachecol",
+     "thick": 0.034,
+     "tail": 0.16,
+     "side": 1,
+     "cell": "cachecol"
+    },
+    {
+     "tipo": "mochila",
+     "rolls": 3
+    },
+    {
+     "tipo": "oculos"
+    },
+    {
+     "tipo": "oculos_testa"
+    },
+    {
+     "tipo": "lampiao",
+     "side": "L",
+     "scale": 0.85
+    },
+    {
+     "tipo": "barba",
+     "full": true,
+     "off": 0.012,
+     "cell": "barba"
+    },
+    {
+     "tipo": "cabelo",
+     "style": "bagunca",
+     "volume": 0.014,
+     "cell": "cabelo",
+     "hl_front": 64
+    }
+   ],
+   "celulas": {
+    "casaco": {
+     "col": "3a3026",
+     "kind": "la",
+     "folds": 0.3
+    },
+    "manga": {
+     "col": "3a3026",
+     "kind": "la",
+     "folds": 0.25
+    },
+    "aba": {
+     "col": "3a3026",
+     "kind": "la",
+     "folds": 0.6,
+     "grime": 0.7,
+     "trim": "8a6a3a",
+     "trim_w": 0.05,
+     "motif_kind": "arco"
+    },
+    "calca": {
+     "col": "2a2420",
+     "kind": "la",
+     "folds": 0.3,
+     "grime": 0.5
+    },
+    "bota": {
+     "col": "2a1e16",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.6,
+     "seams": false
+    },
+    "couro": {
+     "col": "3a281c",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.2,
+     "seams": false
+    },
+    "cachecol": {
+     "col": "5a1a24",
+     "kind": "la"
+    },
+    "barba": {
+     "pintura": "barba",
+     "col": "c8c0b4"
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "b8b0a4"
+    },
+    "metal": {
+     "pintura": "metal",
+     "col": "8a6a3a",
+     "rust": 0.35
+    },
+    "brilho": {
+     "pintura": "brilho",
+     "col": "ffb35a"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "clipes": [
+    "idle",
+    "walk",
+    "run",
+    "talk",
+    "point",
+    "listen",
+    "wave",
+    "shrug",
+    "interact",
+    "hit",
+    "die"
+   ],
+   "lampiao_braco": true,
+   "sobrancelha_cor": "a8a094"
+  },
+  "npc_09_orfao": {
+   "id": "NPC_09",
+   "nome": "Órfão da Torre dos Sinos",
+   "corpo": {
+    "macro": {
+     "gender": 0.7,
+     "age": 0.19,
+     "height": 0.3,
+     "weight": 0.38,
+     "muscle": 0.4,
+     "proportions": 0.5,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "young_caucasian_male",
+    "sobrancelha": "eyebrow002"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.026,
+     "collar": 0.05,
+     "cell": "sobretudo"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.032,
+     "cuff": 0.04,
+     "t1": 1.0,
+     "cell": "manga"
+    },
+    {
+     "tipo": "saia",
+     "z_top": "waist",
+     "z_hem": "knee-0.22",
+     "off": 0.034,
+     "flare": 0.14,
+     "open_front": 0.3,
+     "cell": "aba",
+     "follow": 0.9
+    },
+    {
+     "tipo": "capa",
+     "z_bot": "chest-0.02",
+     "off": 0.045,
+     "flare": 0.05,
+     "cell": "aba"
+    },
+    {
+     "tipo": "calca",
+     "off": 0.012,
+     "z_bot": "knee-0.1",
+     "cell": "calca"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee-0.08",
+     "cell": "bota"
+    },
+    {
+     "tipo": "cachecol",
+     "thick": 0.034,
+     "tail": 0.2,
+     "side": -1,
+     "cell": "cachecol"
+    },
+    {
+     "tipo": "bolsa",
+     "side": 1,
+     "strap_from": -1,
+     "cell": "couro"
+    },
+    {
+     "tipo": "sino",
+     "a": 1.1
+    },
+    {
+     "tipo": "cabelo",
+     "style": "bagunca",
+     "cell": "cabelo",
+     "volume": 0.016,
+     "hl_front": 66
+    }
+   ],
+   "celulas": {
+    "sobretudo": {
+     "col": "2e2a2a",
+     "kind": "la",
+     "folds": 0.35,
+     "patches": 2
+    },
+    "manga": {
+     "col": "2e2a2a",
+     "kind": "la",
+     "folds": 0.3,
+     "patches": 1
+    },
+    "aba": {
+     "col": "2e2a2a",
+     "kind": "la",
+     "folds": 0.6,
+     "grime": 0.7,
+     "patches": 2
+    },
+    "calca": {
+     "col": "3a342c",
+     "kind": "la",
+     "folds": 0.3,
+     "grime": 0.6
+    },
+    "bota": {
+     "col": "2a1e16",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.6,
+     "seams": false
+    },
+    "couro": {
+     "col": "3a281c",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.2,
+     "seams": false
+    },
+    "cachecol": {
+     "col": "5e1a26",
+     "kind": "la",
+     "folds": 0.4
+    },
+    "metal": {
+     "pintura": "metal",
+     "col": "b08a40",
+     "rust": 0.2
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "2a1d16"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "clipes": [
+    "idle",
+    "walk",
+    "run",
+    "talk",
+    "point",
+    "listen",
+    "wave",
+    "shrug",
+    "interact",
+    "hit",
+    "die"
+   ]
+  },
+  "npc_10_professor": {
+   "id": "NPC_10",
+   "nome": "Professor Aposentado",
+   "corpo": {
+    "macro": {
+     "gender": 1.0,
+     "age": 0.95,
+     "height": 0.55,
+     "weight": 0.55,
+     "muscle": 0.4,
+     "proportions": 0.4,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "old_caucasian_male",
+    "sobrancelha": "eyebrow002"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.016,
+     "collar": 0.02,
+     "cell": "colete"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.022,
+     "cuff": 0.02,
+     "cell": "manga"
+    },
+    {
+     "tipo": "saia",
+     "z_top": "chest",
+     "z_hem": "knee-0.3",
+     "off": 0.034,
+     "flare": 0.14,
+     "open_front": 0.38,
+     "open_from": 1.0,
+     "cell": "toga",
+     "follow": 0.85
+    },
+    {
+     "tipo": "calca",
+     "off": 0.014,
+     "z_bot": 0.1,
+     "cell": "calca"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee-0.3",
+     "cell": "bota"
+    },
+    {
+     "tipo": "oculos"
+    },
+    {
+     "tipo": "haste",
+     "side": "R",
+     "kind": "bengala",
+     "head": "bengala"
+    },
+    {
+     "tipo": "livro",
+     "side": "L",
+     "size": [
+      0.15,
+      0.04,
+      0.21
+     ]
+    },
+    {
+     "tipo": "barba",
+     "full": true,
+     "off": 0.01,
+     "cell": "barba"
+    },
+    {
+     "tipo": "cabelo",
+     "style": "bagunca",
+     "volume": 0.016,
+     "cell": "cabelo",
+     "hl_front": 60
+    }
+   ],
+   "celulas": {
+    "colete": {
+     "col": "3a2a22",
+     "kind": "brocado",
+     "folds": 0.2
+    },
+    "manga": {
+     "col": "2e2420",
+     "kind": "la",
+     "folds": 0.3,
+     "trim": "6e5a3a",
+     "trim_w": 0.08
+    },
+    "toga": {
+     "col": "2e2420",
+     "kind": "la",
+     "folds": 0.6,
+     "grime": 0.4,
+     "trim": "8a6a3a",
+     "trim_w": 0.06,
+     "motif_kind": "losango"
+    },
+    "calca": {
+     "col": "2a2420",
+     "kind": "la",
+     "folds": 0.3
+    },
+    "bota": {
+     "col": "2a1e16",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.6,
+     "seams": false
+    },
+    "barba": {
+     "pintura": "barba",
+     "col": "a8a098"
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "9a948c"
+    },
+    "metal": {
+     "pintura": "metal",
+     "col": "8a6a3a",
+     "rust": 0.35
+    },
+    "madeira": {
+     "pintura": "madeira",
+     "col": "2a1e14"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "clipes": [
+    "idle",
+    "walk",
+    "run",
+    "talk",
+    "point",
+    "listen",
+    "wave",
+    "shrug",
+    "interact",
+    "hit",
+    "die"
+   ],
+   "sobrancelha_cor": "8a847c"
+  },
+  "npc_11_detetive": {
+   "id": "NPC_11",
+   "nome": "Detetive Mascarado",
+   "corpo": {
+    "macro": {
+     "gender": 0.5,
+     "age": 0.4,
+     "height": 0.58,
+     "weight": 0.42,
+     "muscle": 0.5,
+     "proportions": 0.55,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "young_caucasian_female",
+    "sobrancelha": "eyebrow003"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.016,
+     "collar": 0.07,
+     "cell": "sobretudo"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.02,
+     "cuff": 0.02,
+     "cell": "manga"
+    },
+    {
+     "tipo": "saia",
+     "z_top": "waist",
+     "z_hem": "knee-0.32",
+     "off": 0.026,
+     "flare": 0.12,
+     "open_front": 0.36,
+     "cell": "aba",
+     "follow": 0.9
+    },
+    {
+     "tipo": "capa",
+     "z_bot": "chest",
+     "off": 0.035,
+     "flare": 0.05,
+     "cell": "aba"
+    },
+    {
+     "tipo": "calca",
+     "off": 0.012,
+     "z_bot": "knee-0.1",
+     "cell": "calca"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee+0.02",
+     "cell": "bota"
+    },
+    {
+     "tipo": "cachecol",
+     "thick": 0.03,
+     "tail": 0.26,
+     "side": 1,
+     "cell": "cachecol"
+    },
+    {
+     "tipo": "luva",
+     "cell": "luva"
+    },
+    {
+     "tipo": "mascara",
+     "half": "direita",
+     "cell": "mascara"
+    },
+    {
+     "tipo": "livro",
+     "side": "L",
+     "size": [
+      0.1,
+      0.02,
+      0.14
+     ]
+    },
+    {
+     "tipo": "bolsa",
+     "side": 1,
+     "strap_from": -1,
+     "cell": "couro"
+    },
+    {
+     "tipo": "cabelo",
+     "style": "bagunca",
+     "cell": "cabelo",
+     "volume": 0.014,
+     "hl_front": 64
+    }
+   ],
+   "celulas": {
+    "sobretudo": {
+     "col": "26222a",
+     "kind": "la",
+     "folds": 0.3
+    },
+    "manga": {
+     "col": "26222a",
+     "kind": "la",
+     "folds": 0.25
+    },
+    "aba": {
+     "col": "26222a",
+     "kind": "la",
+     "folds": 0.6,
+     "grime": 0.5,
+     "trim": "6e5a3a",
+     "trim_w": 0.05,
+     "motif_kind": "cruz"
+    },
+    "calca": {
+     "col": "1e1a20",
+     "kind": "la",
+     "folds": 0.3
+    },
+    "bota": {
+     "col": "2a1e16",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.6,
+     "seams": false
+    },
+    "cachecol": {
+     "col": "5e1a26",
+     "kind": "la",
+     "folds": 0.4
+    },
+    "luva": {
+     "col": "2e2018",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.3,
+     "seams": false
+    },
+    "couro": {
+     "col": "3a281c",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.2,
+     "seams": false
+    },
+    "mascara": {
+     "col": "c8bca0",
+     "kind": "linho",
+     "folds": 0,
+     "grime": 0.1,
+     "seams": false,
+     "stripes": [
+      "8a6a3a",
+      0.08,
+      7
+     ]
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "1a1412"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "clipes": [
+    "idle",
+    "walk",
+    "run",
+    "talk",
+    "point",
+    "listen",
+    "wave",
+    "shrug",
+    "interact",
+    "hit",
+    "die"
+   ],
+   "sobrancelha_cor": "1a1412"
+  },
+  "npc_12_acolita": {
+   "id": "NPC_12",
+   "nome": "Acólita da Catedral",
+   "corpo": {
+    "macro": {
+     "gender": 0.0,
+     "age": 0.32,
+     "height": 0.56,
+     "weight": 0.42,
+     "muscle": 0.45,
+     "proportions": 0.6,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "young_caucasian_female"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.014,
+     "collar": 0.045,
+     "cell": "veste"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.028,
+     "cuff": 0.07,
+     "cell": "manga"
+    },
+    {
+     "tipo": "saia",
+     "id": "saia",
+     "z_top": "waist",
+     "z_hem": 0.05,
+     "off": 0.024,
+     "flare": 0.16,
+     "cell": "alva"
+    },
+    {
+     "tipo": "avental",
+     "ref": "saia",
+     "z_top": "waist",
+     "z_hem": 0.2,
+     "width": 0.32,
+     "cell": "estola"
+    },
+    {
+     "tipo": "capa",
+     "z_bot": "chest-0.05",
+     "off": 0.035,
+     "flare": 0.07,
+     "cell": "murca"
+    },
+    {
+     "tipo": "cinto",
+     "z": "waist",
+     "off": 0.032,
+     "cell": "couro"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee-0.15",
+     "cell": "bota"
+    },
+    {
+     "tipo": "incensario",
+     "side": "L"
+    },
+    {
+     "tipo": "cabelo",
+     "style": "trancas",
+     "cell": "cabelo",
+     "volume": 0.01,
+     "length": 0.34,
+     "locks": 2
+    }
+   ],
+   "celulas": {
+    "veste": {
+     "col": "4a1c2a",
+     "kind": "brocado",
+     "folds": 0.2
+    },
+    "manga": {
+     "col": "c0b49a",
+     "kind": "linho",
+     "folds": 0.4,
+     "trim": "8a6a3a",
+     "trim_w": 0.08
+    },
+    "alva": {
+     "col": "c0b49a",
+     "kind": "linho",
+     "folds": 0.7,
+     "grime": 0.4,
+     "trim": "8a6a3a",
+     "trim_w": 0.07,
+     "motif_kind": "arco"
+    },
+    "estola": {
+     "col": "5a1a2a",
+     "kind": "veludo",
+     "folds": 0.1,
+     "trim": "a08040",
+     "trim_w": 0.06,
+     "emboss": [
+      "a08040",
+      0.5,
+      0.5,
+      0.3,
+      "cruz"
+     ]
+    },
+    "murca": {
+     "col": "5a1a2a",
+     "kind": "veludo",
+     "folds": 0.2,
+     "trim": "a08040",
+     "trim_w": 0.08,
+     "motif_kind": "arco"
+    },
+    "couro": {
+     "col": "3a281c",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.2,
+     "seams": false
+    },
+    "bota": {
+     "col": "2a1e16",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.6,
+     "seams": false
+    },
+    "metal": {
+     "pintura": "metal",
+     "col": "a07a40",
+     "rust": 0.2
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "8a6a48"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "clipes": [
+    "idle",
+    "walk",
+    "run",
+    "talk",
+    "point",
+    "listen",
+    "wave",
+    "shrug",
+    "interact",
+    "hit",
+    "die"
+   ]
+  },
+  "mob_01_erudito": {
+   "id": "MOB_01",
+   "nome": "Erudito Oco",
+   "corpo": {
+    "macro": {
+     "gender": 1.0,
+     "age": 0.3,
+     "height": 0.68,
+     "weight": 0.2,
+     "muscle": 0.3,
+     "proportions": 0.3,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "young_caucasian_male",
+    "sobrancelha": "eyebrow002"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.016,
+     "collar": 0.02,
+     "cell": "colete"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.018,
+     "t1": 0.9,
+     "cuff": 0.03,
+     "cell": "manga"
+    },
+    {
+     "tipo": "saia",
+     "z_top": "waist",
+     "z_hem": "knee-0.12",
+     "off": 0.026,
+     "flare": 0.1,
+     "open_front": 0.4,
+     "ragged": 0.06,
+     "back_slit": 0.2,
+     "cell": "aba",
+     "follow": 0.9
+    },
+    {
+     "tipo": "calca",
+     "off": 0.012,
+     "z_bot": "knee-0.12",
+     "cell": "calca"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee-0.08",
+     "cell": "bota"
+    },
+    {
+     "tipo": "cachecol",
+     "thick": 0.02,
+     "tail": 0.3,
+     "side": 1,
+     "cell": "cachecol"
+    },
+    {
+     "tipo": "bolsa",
+     "side": -1,
+     "strap_from": 1,
+     "cell": "couro",
+     "size": [
+      0.12,
+      0.04,
+      0.1
+     ]
+    },
+    {
+     "tipo": "cabelo",
+     "style": "bagunca",
+     "cell": "cabelo",
+     "volume": 0.016,
+     "hl_front": 62,
+     "seed": 3
+    }
+   ],
+   "celulas": {
+    "colete": {
+     "col": "2e2a2c",
+     "kind": "la",
+     "folds": 0.3,
+     "patches": 3
+    },
+    "manga": {
+     "col": "3a3438",
+     "kind": "la",
+     "folds": 0.3,
+     "grime": 0.5,
+     "patches": 2
+    },
+    "aba": {
+     "col": "3a3438",
+     "kind": "la",
+     "folds": 0.6,
+     "grime": 0.9,
+     "patches": 3,
+     "trim": "1a1618",
+     "trim_w": 0.1
+    },
+    "calca": {
+     "col": "2a2628",
+     "kind": "la",
+     "folds": 0.3,
+     "grime": 0.7,
+     "patches": 2
+    },
+    "bota": {
+     "col": "2a1e16",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.6,
+     "seams": false
+    },
+    "cachecol": {
+     "col": "4a1a22",
+     "kind": "la",
+     "folds": 0.3,
+     "grime": 0.6
+    },
+    "couro": {
+     "col": "3a281c",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.2,
+     "seams": false
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "1a1412"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "clipes": [
+    "idle",
+    "walk",
+    "run",
+    "attack",
+    "heavy",
+    "hit",
+    "die",
+    "cast",
+    "listen",
+    "talk"
+   ],
+   "pele_tinta": "a8aab0",
+   "pele_sat": 0.35,
+   "olheiras": 0.7,
+   "postura": {
+    "Spine": 10,
+    "Spine1": 12,
+    "Neck": 8
+   },
+   "sem_nivelar": true,
+   "sobrancelha_cor": "1a1412"
+  },
+  "mob_03_errante": {
+   "id": "MOB_03",
+   "nome": "Errante do Gelo",
+   "corpo": {
+    "macro": {
+     "gender": 1.0,
+     "age": 0.6,
+     "height": 0.68,
+     "weight": 0.85,
+     "muscle": 0.75,
+     "proportions": 0.35,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "old_caucasian_male",
+    "sobrancelha": "eyebrow002"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.04,
+     "collar": 0.05,
+     "cell": "casacao"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.045,
+     "cuff": 0.05,
+     "cell": "manga"
+    },
+    {
+     "tipo": "saia",
+     "z_top": "waist",
+     "z_hem": "knee-0.2",
+     "off": 0.05,
+     "flare": 0.14,
+     "ragged": 0.05,
+     "cell": "aba",
+     "follow": 0.9
+    },
+    {
+     "tipo": "calca",
+     "off": 0.02,
+     "z_bot": "knee-0.1",
+     "cell": "calca"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee-0.02",
+     "cell": "bota",
+     "off": 0.024
+    },
+    {
+     "tipo": "cachecol",
+     "thick": 0.06,
+     "tail": 0.25,
+     "side": 1,
+     "cell": "cachecol"
+    },
+    {
+     "tipo": "cinto",
+     "z": "waist",
+     "off": 0.06,
+     "cell": "couro"
+    },
+    {
+     "tipo": "cristais",
+     "n": 14
+    },
+    {
+     "tipo": "luva",
+     "cell": "luva",
+     "off": 0.01
+    },
+    {
+     "tipo": "barba",
+     "full": true,
+     "off": 0.012,
+     "cell": "barba"
+    },
+    {
+     "tipo": "cabelo",
+     "style": "bagunca",
+     "volume": 0.02,
+     "cell": "cabelo",
+     "hl_front": 60
+    }
+   ],
+   "celulas": {
+    "casacao": {
+     "col": "4a4448",
+     "kind": "la",
+     "folds": 0.4,
+     "grime": 0.9,
+     "grime_col": "dfe6ee",
+     "patches": 2
+    },
+    "manga": {
+     "col": "4a4448",
+     "kind": "la",
+     "folds": 0.4,
+     "grime": 0.9,
+     "grime_col": "dfe6ee"
+    },
+    "aba": {
+     "col": "3e383c",
+     "kind": "la",
+     "folds": 0.7,
+     "grime": 1.0,
+     "grime_col": "e6ecf2",
+     "patches": 2
+    },
+    "calca": {
+     "col": "2e2a2c",
+     "kind": "la",
+     "grime": 0.9,
+     "grime_col": "dfe6ee"
+    },
+    "bota": {
+     "col": "2a221c",
+     "kind": "couro",
+     "grime": 1.0,
+     "grime_col": "e6ecf2",
+     "seams": false
+    },
+    "cachecol": {
+     "col": "4a1a22",
+     "kind": "la",
+     "folds": 0.4,
+     "grime": 0.7,
+     "grime_col": "dfe6ee"
+    },
+    "couro": {
+     "col": "3a281c",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.2,
+     "seams": false
+    },
+    "luva": {
+     "col": "3a3434",
+     "kind": "la",
+     "grime": 0.8,
+     "grime_col": "dfe6ee"
+    },
+    "barba": {
+     "pintura": "barba",
+     "col": "c8ccd4"
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "b8bcc4"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "clipes": [
+    "idle",
+    "walk",
+    "run",
+    "attack",
+    "heavy",
+    "hit",
+    "die",
+    "cast",
+    "listen",
+    "talk"
+   ],
+   "pele_tinta": "b8c0cc",
+   "pele_sat": 0.3,
+   "olheiras": 0.5,
+   "postura": {
+    "Spine": 6,
+    "Spine1": 8
+   },
+   "sem_nivelar": true,
+   "sobrancelha_cor": "a8acb4"
+  },
+  "mob_04_suplicante": {
+   "id": "MOB_04",
+   "nome": "Suplicante Encapuzado",
+   "corpo": {
+    "macro": {
+     "gender": 0.8,
+     "age": 0.45,
+     "height": 0.55,
+     "weight": 0.45,
+     "muscle": 0.5,
+     "proportions": 0.5,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "young_caucasian_male"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.016,
+     "collar": 0.02,
+     "cell": "manto"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.03,
+     "cuff": 0.06,
+     "cell": "manto_m"
+    },
+    {
+     "tipo": "saia",
+     "id": "saia",
+     "z_top": "waist",
+     "z_hem": 0.04,
+     "off": 0.026,
+     "flare": 0.16,
+     "cell": "batina"
+    },
+    {
+     "tipo": "avental",
+     "ref": "saia",
+     "z_top": "waist",
+     "z_hem": 0.15,
+     "width": 0.4,
+     "cell": "faixa"
+    },
+    {
+     "tipo": "capa",
+     "z_bot": "elbow",
+     "off": 0.035,
+     "flare": 0.08,
+     "ragged": 0.03,
+     "cell": "manto"
+    },
+    {
+     "tipo": "capuz",
+     "off": 0.045,
+     "peak": 0.08,
+     "cell": "capuz"
+    },
+    {
+     "tipo": "mascara",
+     "half": "toda",
+     "off": 0.004,
+     "cell": "vazio"
+    },
+    {
+     "tipo": "cinto",
+     "z": "waist",
+     "off": 0.034,
+     "cell": "corda"
+    },
+    {
+     "tipo": "lamina",
+     "side": "R",
+     "kind": "punhal"
+    },
+    {
+     "tipo": "luva",
+     "cell": "luva"
+    }
+   ],
+   "celulas": {
+    "manto": {
+     "col": "1e1a1e",
+     "kind": "la",
+     "folds": 0.3,
+     "trim": "5a1a24",
+     "trim_w": 0.06
+    },
+    "manto_m": {
+     "col": "1e1a1e",
+     "kind": "la",
+     "folds": 0.3,
+     "trim": "5a1a24",
+     "trim_w": 0.08
+    },
+    "batina": {
+     "col": "2a1a20",
+     "kind": "la",
+     "folds": 0.7,
+     "grime": 0.5,
+     "trim": "5a1a24",
+     "trim_w": 0.05
+    },
+    "faixa": {
+     "col": "4a1a24",
+     "kind": "veludo",
+     "folds": 0.1,
+     "trim": "8a6a3a",
+     "trim_w": 0.05,
+     "emboss": [
+      "8a6a3a",
+      0.5,
+      0.6,
+      0.3,
+      "cruz"
+     ]
+    },
+    "capuz": {
+     "col": "1e1a1e",
+     "kind": "la",
+     "folds": 0.2,
+     "trim": "5a1a24",
+     "trim_w": 0.08
+    },
+    "corda": {
+     "col": "6a5a44",
+     "kind": "linho",
+     "folds": 0
+    },
+    "luva": {
+     "col": "2e2018",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.3,
+     "seams": false
+    },
+    "metal": {
+     "pintura": "metal",
+     "col": "9a9aa0",
+     "rust": 0.2
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "clipes": [
+    "idle",
+    "walk",
+    "run",
+    "attack",
+    "heavy",
+    "hit",
+    "die",
+    "cast",
+    "listen",
+    "talk"
+   ],
+   "postura": {
+    "Spine1": 5,
+    "Neck": 6
+   },
+   "sem_nivelar": true
+  },
+  "mini_01_carrasco": {
+   "id": "MINI_01",
+   "nome": "Carrasco da Torre dos Sinos",
+   "corpo": {
+    "macro": {
+     "gender": 1.0,
+     "age": 0.5,
+     "height": 1.0,
+     "weight": 0.8,
+     "muscle": 1.0,
+     "proportions": 0.3,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "middleage_caucasian_male"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.03,
+     "collar": 0.02,
+     "cell": "gibao"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.035,
+     "cuff": 0.04,
+     "cell": "manga"
+    },
+    {
+     "tipo": "saia",
+     "z_top": "waist",
+     "z_hem": "knee-0.25",
+     "off": 0.04,
+     "flare": 0.16,
+     "ragged": 0.08,
+     "cell": "aba",
+     "follow": 0.9
+    },
+    {
+     "tipo": "capa",
+     "z_bot": "chest-0.08",
+     "off": 0.06,
+     "flare": 0.12,
+     "ragged": 0.05,
+     "cell": "ombreira"
+    },
+    {
+     "tipo": "calca",
+     "off": 0.02,
+     "z_bot": "knee-0.1",
+     "cell": "calca"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee",
+     "cell": "bota",
+     "off": 0.024
+    },
+    {
+     "tipo": "cinto",
+     "z": "waist",
+     "off": 0.05,
+     "cell": "couro"
+    },
+    {
+     "tipo": "correntes",
+     "n": 5
+    },
+    {
+     "tipo": "elmo_sino"
+    },
+    {
+     "tipo": "martelo",
+     "side": "R"
+    },
+    {
+     "tipo": "luva",
+     "cell": "luva",
+     "off": 0.01
+    }
+   ],
+   "celulas": {
+    "gibao": {
+     "col": "3a1820",
+     "kind": "la",
+     "folds": 0.3,
+     "grime": 0.6,
+     "patches": 2
+    },
+    "manga": {
+     "col": "2a2224",
+     "kind": "la",
+     "folds": 0.3,
+     "grime": 0.5
+    },
+    "aba": {
+     "col": "4a1a22",
+     "kind": "la",
+     "folds": 0.7,
+     "grime": 0.9,
+     "patches": 3,
+     "trim": "2a1418",
+     "trim_w": 0.08
+    },
+    "ombreira": {
+     "col": "3a3234",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.5,
+     "trim": "8a6a3a",
+     "trim_w": 0.08,
+     "motif_kind": "cruz"
+    },
+    "calca": {
+     "col": "221e20",
+     "kind": "la",
+     "grime": 0.6
+    },
+    "bota": {
+     "col": "2a1e16",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.6,
+     "seams": false
+    },
+    "couro": {
+     "col": "3a281c",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.2,
+     "seams": false
+    },
+    "luva": {
+     "col": "2e2018",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.3,
+     "seams": false
+    },
+    "metal": {
+     "pintura": "metal",
+     "col": "8a6a3a",
+     "rust": 0.35
+    },
+    "bronze": {
+     "pintura": "metal",
+     "col": "8a6a38",
+     "rust": 0.45
+    },
+    "madeira": {
+     "pintura": "madeira",
+     "col": "3a2a1c"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "clipes": [
+    "idle",
+    "walk",
+    "run",
+    "attack",
+    "heavy",
+    "hit",
+    "die",
+    "cast",
+    "listen",
+    "talk"
+   ],
+   "postura": {
+    "Spine1": 6
+   },
+   "sem_nivelar": true
+  },
+  "mini_02_duelista": {
+   "id": "MINI_02",
+   "nome": "Duelista das Cinzas",
+   "corpo": {
+    "macro": {
+     "gender": 1.0,
+     "age": 0.4,
+     "height": 0.85,
+     "weight": 0.3,
+     "muscle": 0.55,
+     "proportions": 0.6,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "young_caucasian_male",
+    "sobrancelha": "eyebrow002"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.014,
+     "collar": 0.08,
+     "cell": "gibao"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.018,
+     "cuff": 0.05,
+     "cell": "manga"
+    },
+    {
+     "tipo": "saia",
+     "z_top": "waist",
+     "z_hem": "knee-0.08",
+     "off": 0.024,
+     "flare": 0.12,
+     "open_front": 0.45,
+     "cell": "aba",
+     "follow": 0.9
+    },
+    {
+     "tipo": "saia",
+     "z_top": "neck-0.03",
+     "z_hem": "knee-0.35",
+     "off": 0.05,
+     "flare": 0.3,
+     "front_only": [
+      1.9,
+      4.38
+     ],
+     "ragged": 0.05,
+     "cell": "capa",
+     "name": "capa_longa"
+    },
+    {
+     "tipo": "calca",
+     "off": 0.01,
+     "z_bot": "knee-0.1",
+     "cell": "calca"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee+0.06",
+     "cell": "bota"
+    },
+    {
+     "tipo": "cinto",
+     "z": "waist",
+     "off": 0.03,
+     "cell": "couro"
+    },
+    {
+     "tipo": "lamina",
+     "side": "R",
+     "kind": "florete",
+     "length": 1.0
+    },
+    {
+     "tipo": "luva",
+     "cell": "luva"
+    },
+    {
+     "tipo": "cabelo",
+     "style": "longo",
+     "cell": "cabelo",
+     "volume": 0.014,
+     "length": 0.3,
+     "locks": 2
+    }
+   ],
+   "celulas": {
+    "gibao": {
+     "col": "2a2026",
+     "kind": "brocado",
+     "folds": 0.2,
+     "trim": "8a6a3a",
+     "trim_w": 0.06
+    },
+    "manga": {
+     "col": "2a2026",
+     "kind": "brocado",
+     "folds": 0.3,
+     "trim": "d8ccb4",
+     "trim_w": 0.12
+    },
+    "aba": {
+     "col": "2a2026",
+     "kind": "la",
+     "folds": 0.6,
+     "grime": 0.4,
+     "trim": "8a6a3a",
+     "trim_w": 0.05,
+     "motif_kind": "losango"
+    },
+    "capa": {
+     "col": "3a1826",
+     "kind": "veludo",
+     "folds": 0.6,
+     "grime": 0.4,
+     "trim": "6a1a2c",
+     "trim_w": 0.06
+    },
+    "calca": {
+     "col": "1e1a1e",
+     "kind": "la"
+    },
+    "bota": {
+     "col": "2a1e16",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.6,
+     "seams": false
+    },
+    "couro": {
+     "col": "3a281c",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.2,
+     "seams": false
+    },
+    "luva": {
+     "col": "2e2018",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.3,
+     "seams": false
+    },
+    "metal": {
+     "pintura": "metal",
+     "col": "b0aaa0",
+     "rust": 0.1
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "a8a49c"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "clipes": [
+    "idle",
+    "walk",
+    "run",
+    "attack",
+    "heavy",
+    "hit",
+    "die",
+    "cast",
+    "listen",
+    "talk"
+   ],
+   "pele_tinta": "d8d4d4",
+   "pele_sat": 0.45,
+   "olheiras": 0.4,
+   "sobrancelha_cor": "8a867e"
+  },
+  "mini_03_carcereiro": {
+   "id": "MINI_03",
+   "nome": "Carcereiro dos Trilhos",
+   "corpo": {
+    "macro": {
+     "gender": 1.0,
+     "age": 0.55,
+     "height": 0.95,
+     "weight": 0.95,
+     "muscle": 1.0,
+     "proportions": 0.25,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "middleage_caucasian_male"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.045,
+     "collar": 0.03,
+     "cell": "couraca"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.045,
+     "cuff": 0.04,
+     "cell": "manga"
+    },
+    {
+     "tipo": "saia",
+     "z_top": "waist",
+     "z_hem": "knee-0.12",
+     "off": 0.05,
+     "flare": 0.14,
+     "ragged": 0.08,
+     "cell": "aba",
+     "follow": 0.9
+    },
+    {
+     "tipo": "capa",
+     "z_bot": "chest-0.04",
+     "off": 0.07,
+     "flare": 0.1,
+     "cell": "ombreira"
+    },
+    {
+     "tipo": "calca",
+     "off": 0.024,
+     "z_bot": "knee-0.1",
+     "cell": "calca"
+    },
+    {
+     "tipo": "bota",
+     "z_top": "knee+0.02",
+     "cell": "bota",
+     "off": 0.03
+    },
+    {
+     "tipo": "cinto",
+     "z": "waist",
+     "off": 0.06,
+     "cell": "couro"
+    },
+    {
+     "tipo": "mochila",
+     "rolls": 0
+    },
+    {
+     "tipo": "elmo_grade"
+    },
+    {
+     "tipo": "cogumelos",
+     "where": "ombros",
+     "n": 9,
+     "size": 0.05
+    },
+    {
+     "tipo": "gancho",
+     "side": "R"
+    },
+    {
+     "tipo": "lampiao",
+     "side": "L",
+     "scale": 1.5
+    },
+    {
+     "tipo": "luva",
+     "cell": "luva",
+     "off": 0.012
+    }
+   ],
+   "celulas": {
+    "couraca": {
+     "col": "3a3430",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.7,
+     "patches": 3,
+     "trim": "5a4a3a",
+     "trim_w": 0.05
+    },
+    "manga": {
+     "col": "2e2a28",
+     "kind": "la",
+     "grime": 0.7
+    },
+    "aba": {
+     "col": "3a2024",
+     "kind": "la",
+     "folds": 0.6,
+     "grime": 0.9,
+     "patches": 3
+    },
+    "ombreira": {
+     "col": "4a4440",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.6,
+     "trim": "8a6a3a",
+     "trim_w": 0.06
+    },
+    "calca": {
+     "col": "2a2624",
+     "kind": "la",
+     "grime": 0.8
+    },
+    "bota": {
+     "col": "2a1e16",
+     "kind": "couro",
+     "folds": 0.1,
+     "grime": 0.6,
+     "seams": false
+    },
+    "couro": {
+     "col": "3a281c",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.2,
+     "seams": false
+    },
+    "luva": {
+     "col": "2e2018",
+     "kind": "couro",
+     "folds": 0,
+     "grime": 0.3,
+     "seams": false
+    },
+    "metal": {
+     "pintura": "metal",
+     "col": "6a645c",
+     "rust": 0.6
+    },
+    "brilho": {
+     "pintura": "brilho",
+     "col": "b080ff"
+    },
+    "madeira": {
+     "pintura": "madeira",
+     "col": "3a2a1c"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "clipes": [
+    "idle",
+    "walk",
+    "run",
+    "attack",
+    "heavy",
+    "hit",
+    "die",
+    "cast",
+    "listen",
+    "talk"
+   ],
+   "postura": {
+    "Spine": 6,
+    "Spine1": 8
+   },
+   "sem_nivelar": true,
+   "lampiao_braco": true
+  },
+  "mini_04_matriarca": {
+   "id": "MINI_04",
+   "nome": "Matriarca do Coro Velado",
+   "corpo": {
+    "macro": {
+     "gender": 0.0,
+     "age": 0.6,
+     "height": 0.9,
+     "weight": 0.35,
+     "muscle": 0.4,
+     "proportions": 0.6,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "old_caucasian_female"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.016,
+     "collar": 0.06,
+     "cell": "veste"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.035,
+     "cuff": 0.1,
+     "cell": "veu_m"
+    },
+    {
+     "tipo": "saia",
+     "z_top": "waist",
+     "z_hem": -0.05,
+     "off": 0.03,
+     "flare": 0.28,
+     "ragged": 0.08,
+     "cell": "veu"
+    },
+    {
+     "tipo": "capa",
+     "z_bot": "waist-0.1",
+     "off": 0.05,
+     "flare": 0.2,
+     "ragged": 0.06,
+     "cell": "veu"
+    },
+    {
+     "tipo": "capuz",
+     "off": 0.03,
+     "opening": 1.1,
+     "peak": 0.02,
+     "cell": "veu_c"
+    },
+    {
+     "tipo": "aureola"
+    },
+    {
+     "tipo": "incensario",
+     "side": "L"
+    },
+    {
+     "tipo": "incensario",
+     "side": "R",
+     "name": "incensario2"
+    },
+    {
+     "tipo": "cabelo",
+     "style": "longo",
+     "cell": "cabelo",
+     "volume": 0.012,
+     "length": 0.5,
+     "locks": 2
+    }
+   ],
+   "celulas": {
+    "veste": {
+     "col": "4a1c2a",
+     "kind": "brocado",
+     "folds": 0.2,
+     "trim": "a08040",
+     "trim_w": 0.06
+    },
+    "veu_m": {
+     "col": "8a8478",
+     "kind": "linho",
+     "folds": 0.5,
+     "grime": 0.3
+    },
+    "veu": {
+     "col": "8a8478",
+     "kind": "linho",
+     "folds": 0.7,
+     "grime": 0.5,
+     "trim": "a08040",
+     "trim_w": 0.04,
+     "motif_kind": "arco"
+    },
+    "veu_c": {
+     "col": "8a8478",
+     "kind": "linho",
+     "folds": 0.3
+    },
+    "bronze": {
+     "pintura": "metal",
+     "col": "a88a48",
+     "rust": 0.2
+    },
+    "metal": {
+     "pintura": "metal",
+     "col": "a07a40",
+     "rust": 0.2
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "c8c4bc"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "clipes": [
+    "idle",
+    "walk",
+    "run",
+    "attack",
+    "heavy",
+    "hit",
+    "die",
+    "cast",
+    "listen",
+    "talk"
+   ],
+   "pele_tinta": "dcdce4",
+   "pele_sat": 0.35,
+   "olheiras": 0.5
+  },
+  "boss_01_grande_interprete": {
+   "id": "BOSS_01",
+   "nome": "O Grande Intérprete",
+   "corpo": {
+    "macro": {
+     "gender": 1.0,
+     "age": 0.75,
+     "height": 1.0,
+     "weight": 0.4,
+     "muscle": 0.5,
+     "proportions": 0.5,
+     "race": {
+      "african": 0.15,
+      "caucasian": 0.7,
+      "asian": 0.15
+     }
+    },
+    "pele": "old_caucasian_male",
+    "sobrancelha": "eyebrow002"
+   },
+   "pecas": [
+    {
+     "tipo": "tronco",
+     "z_bot": "hip",
+     "z_top": "neck",
+     "off": 0.02,
+     "collar": 0.08,
+     "cell": "veste"
+    },
+    {
+     "tipo": "manga",
+     "off": 0.04,
+     "cuff": 0.12,
+     "cell": "manga"
+    },
+    {
+     "tipo": "saia",
+     "id": "saia",
+     "z_top": "waist",
+     "z_hem": 0.0,
+     "off": 0.03,
+     "flare": 0.3,
+     "ragged": 0.06,
+     "cell": "manto"
+    },
+    {
+     "tipo": "avental",
+     "ref": "saia",
+     "z_top": "waist",
+     "z_hem": 0.08,
+     "width": 0.36,
+     "cell": "estola"
+    },
+    {
+     "tipo": "saia",
+     "z_top": "neck-0.02",
+     "z_hem": 0.02,
+     "off": 0.07,
+     "flare": 0.35,
+     "front_only": [
+      1.4,
+      4.88
+     ],
+     "ragged": 0.1,
+     "cell": "capa",
+     "name": "manto_externo"
+    },
+    {
+     "tipo": "capa",
+     "z_bot": "chest-0.1",
+     "off": 0.06,
+     "flare": 0.12,
+     "ragged": 0.04,
+     "cell": "murca"
+    },
+    {
+     "tipo": "coroa",
+     "spires": 9,
+     "h": 0.32
+    },
+    {
+     "tipo": "haste",
+     "side": "R",
+     "length": 2.3,
+     "head": "anel"
+    },
+    {
+     "tipo": "livro",
+     "side": "L",
+     "size": [
+      0.3,
+      0.07,
+      0.4
+     ]
+    },
+    {
+     "tipo": "cabelo",
+     "style": "longo",
+     "cell": "cabelo",
+     "volume": 0.014,
+     "length": 0.55,
+     "locks": 2
+    }
+   ],
+   "celulas": {
+    "veste": {
+     "col": "2a1e26",
+     "kind": "brocado",
+     "folds": 0.2,
+     "trim": "a08040",
+     "trim_w": 0.05
+    },
+    "manga": {
+     "col": "2a1e26",
+     "kind": "brocado",
+     "folds": 0.5,
+     "trim": "a08040",
+     "trim_w": 0.08,
+     "motif_kind": "arco"
+    },
+    "manto": {
+     "col": "221a22",
+     "kind": "veludo",
+     "folds": 0.7,
+     "grime": 0.5,
+     "trim": "a08040",
+     "trim_w": 0.05,
+     "motif_kind": "arco"
+    },
+    "estola": {
+     "col": "5a1a2a",
+     "kind": "veludo",
+     "folds": 0.1,
+     "trim": "a08040",
+     "trim_w": 0.06,
+     "emboss": [
+      "a08040",
+      0.5,
+      0.6,
+      0.25,
+      "cruz"
+     ]
+    },
+    "capa": {
+     "col": "2e2028",
+     "kind": "veludo",
+     "folds": 0.7,
+     "grime": 0.4,
+     "trim": "6a1a2c",
+     "trim_w": 0.06,
+     "motif_kind": "arco"
+    },
+    "murca": {
+     "col": "3a1a28",
+     "kind": "brocado",
+     "folds": 0.2,
+     "trim": "a08040",
+     "trim_w": 0.1,
+     "motif_kind": "cruz"
+    },
+    "bronze": {
+     "pintura": "metal",
+     "col": "a88a48",
+     "rust": 0.25
+    },
+    "metal": {
+     "pintura": "metal",
+     "col": "b0904a",
+     "rust": 0.2
+    },
+    "livro": {
+     "pintura": "tecido",
+     "col": "3a1a20",
+     "kind": "couro",
+     "folds": 0,
+     "trim": "b0904a",
+     "trim_w": 0.12
+    },
+    "cabelo": {
+     "pintura": "cabelo",
+     "col": "d0ccc0"
+    }
+   },
+   "esconder": [
+    "Spine1",
+    "LeftShoulder",
+    "RightShoulder",
+    "Hips",
+    "LowerBack",
+    "Spine",
+    "LHipJoint",
+    "RHipJoint",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "LeftLeg",
+    "RightLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToeBase",
+    "RightToeBase",
+    "LeftArm",
+    "RightArm"
+   ],
+   "clipes": [
+    "idle",
+    "walk",
+    "run",
+    "attack",
+    "heavy",
+    "hit",
+    "die",
+    "cast",
+    "listen",
+    "talk"
+   ],
+   "pele_tinta": "dcd8dc",
+   "pele_sat": 0.4,
+   "sobrancelha_cor": "b0aca4"
+  }
+ }
+}

@@ -9,11 +9,11 @@ import { AudioSys, type AmbienceLoop, type Surface } from './core/audio';
 import { DEFAULT_SETTINGS, loadSettings, storeSettings, type Settings } from './core/settings';
 import { UI, type BookTab } from './ui/ui';
 import { Player } from './entities/player';
-import { preloadModels } from './entities/figure';
+import { loadExternalModel, preloadModels } from './entities/figure';
 import { DEFAULT_PAD } from './core/input';
-import { preloadProps, PROPS_FIRST } from './core/assets';
+import { loadGltf, preloadProps, PROPS_FIRST } from './core/assets';
 import { Crivo } from './entities/crivo';
-import { Enemy, Projectile, ENEMY_CFG, type EnemyCtx, type EnemyKind } from './entities/enemy';
+import { Enemy, Projectile, ENEMY_CFG, enemyModelPath, type EnemyCtx, type EnemyKind } from './entities/enemy';
 import { Npc, NPCS } from './entities/npc';
 import { buildRegion } from './world/index';
 import { groundAt, pointBlocked, type BuiltRegion, type PropPlacement, type RegionId } from './world/region';
@@ -439,6 +439,14 @@ export class Game {
     if (id !== 'atrio') await this.restProps;
     const t1 = performance.now();
     this.region = buildRegion(id, { flags, quality: this.settings.quality, ps2: !!this.engine.ps2 });
+    // corpos de quem mora ou ronda a região: baixam aqui, não na abertura
+    const bodies = new Set<string>();
+    for (const e of this.region.enemies) {
+      if (e.ifFlag && !flags.has(e.ifFlag)) continue;
+      const m = enemyModelPath(e.kind);
+      if (m) bodies.add(m);
+    }
+    await Promise.all([...[...bodies].map((m) => loadGltf(m)), ...this.region.npcs.map((n) => loadExternalModel(NPCS[n.id]?.model ?? n.id))]);
     const t2 = performance.now();
     sc.add(this.region.root);
     this.engine.applyEnv(this.region.env);
