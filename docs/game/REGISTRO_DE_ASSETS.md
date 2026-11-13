@@ -88,3 +88,14 @@ Os 29 GLB de `public/models/personagens/ps2/` (protagonistas em oito combinaçõ
 | Clipes de animação dos humanos (os mesmos números CMU da tabela do lote 1) e as variantes derivadas (braço do lampião, tocha, cabeça nivelada, pernas paradas nos gestos) | embutidos nos GLB humanos | CMU Graphics Lab Motion Capture Database, redirecionada por `tools/pipeline/retarget.py` | Uso livre. Agradecimento pedido: "The data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217." |
 
 Os oito `player_*.glb` antigos de `public/models/personagens/` saíram do repositório: o manifesto aponta para os novos. O `vulto.glb` antigo fica como reserva de corpo de inimigo.
+
+## Scavenging de 13/11/2026: nenhum asset entrou no jogo
+
+O relatório `docs/game/SCAVENGING_2026-11-13.md` avaliou 30 fontes. Nada foi copiado para `public/`. Só entram no repositório duas capturas de teste e scripts, registrados abaixo; todo asset de terceiros avaliado ficou fora do git.
+
+| Asset | Onde | Origem | Licença |
+| --- | --- | --- | --- |
+| Capturas de teste `kaykit-raw.png` e `kaykit-ps2.png` (esqueletos Skeleton_Warrior e Skeleton_Mage e peças de cenário wall, wall_arched, floor_tile_large, pillar_decorated, table_long_decorated_A, torch_mounted) | `docs/game/capturas/scavenging/` | KayKit Character Pack Skeletons 1.0 e KayKit Dungeon Remastered 1.0, de Kay Lousberg, clonados de github.com/KayKit-Game-Assets em 13/11/2026; `LICENSE.txt` de cada pacote declara CC0 | CC0 |
+| Dependências de teste (three, @recast-navigation/core e @recast-navigation/three 0.44.0, navcat 0.4.1, inkjs 2.4.0, three.quarks 0.17.1) | `tools/scavenging/package.json` | npm | MIT |
+
+Fontes avaliadas e ainda não usadas, com a licença como lida em 13/11/2026: Quaternius UAL 1 e UAL 2 e KayKit Animations (CC0, páginas lidas, nada baixado); Kenney Impact Sounds (CC0 só pelo catálogo Free Game Dev Assets, página não aberta). Entram nesta tabela quando o Gabriel baixar os arquivos.
