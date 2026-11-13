@@ -211,3 +211,15 @@ html[data-arte] #dialogue {
 }
 html[data-arte] #ui .card { border-image: url('/ui/ps2/moldura-pedra.svg') 16 / 16px stretch; }
 html[data-arte] #dialogue { border-image: url('/ui/ps2/moldura-bronze.svg') 16 / 16px stretch; }
+
+/* papel no dossiê; glifos pequenos em rótulos */
+html[data-arte] #case .paper {
+  border: 16px solid transparent;
+  border-image: url('/ui/ps2/moldura-papel.svg') 16 fill / 16px stretch;
+  background: none;
+  padding: 14px 20px;
+  box-shadow: none;
+  image-rendering: pixelated;
+}
+html[data-arte] .label .glifo, html[data-arte] small .glifo, html[data-arte] .shop-row .p .glifo { color: var(--ouro-3); margin-right: 2px; vertical-align: -2px; }
+html:not([data-arte]) .quest small .glifo, html:not([data-arte]) .shop-row .p .glifo, html:not([data-arte]) .label .glifo { display: none; }
