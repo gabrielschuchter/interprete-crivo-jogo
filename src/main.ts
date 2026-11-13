@@ -13,3 +13,9 @@ const game = new Game(canvas, ui);
 if (new URLSearchParams(location.search).has('teste')) ui.instant = true;
 const fonts = (document as Document & { fonts?: { ready: Promise<unknown> } }).fonts;
 Promise.race([fonts?.ready ?? Promise.resolve(), new Promise((r) => setTimeout(r, 1500))]).then(() => game.boot());
+// a interface PS2 é o padrão (data-arte no html); ?arte=off devolve a interface anterior
+try {
+  if (new URLSearchParams(location.search).get('arte') === 'off' || localStorage.getItem('interprete-arte') === 'off') document.documentElement.removeAttribute('data-arte');
+} catch {
+  /* sem acesso ao armazenamento: mantém o padrão */
+}

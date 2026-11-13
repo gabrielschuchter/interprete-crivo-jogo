@@ -119,3 +119,66 @@ html[data-arte] .meter { border: 0; background: var(--breu-1); box-shadow: 0 0 0
 html[data-arte] .meter b { background: repeating-linear-gradient(90deg, var(--vinho-4) 0 6px, var(--vinho-3) 6px 8px); transition: width 0.18s steps(6, end); }
 html[data-arte] .meter.vigor { height: 7px; }
 html[data-arte] .meter.vigor b { background: repeating-linear-gradient(90deg, var(--ouro-4) 0 6px, var(--ouro-3) 6px 8px); }
+
+/* ---- cobertura das demais telas ---- */
+html[data-arte] .card,
+html[data-arte] #case .frame,
+html[data-arte] #hint,
+html[data-arte] .toast,
+html[data-arte] #subtitle,
+html[data-arte] #boss .meter { border: 0; box-shadow: var(--ps2-frame); }
+html[data-arte] .card { background: var(--g-panel) var(--texture-grain); }
+html[data-arte] .card h2,
+html[data-arte] #banner .t,
+html[data-arte] .detail h3,
+html[data-arte] #boss .nm,
+html[data-arte] .quest b,
+html[data-arte] .node b,
+html[data-arte] #case .desk h3 { font-family: var(--ps2-font-titulo); font-weight: 700; letter-spacing: var(--ps2-tracking-titulo); }
+html[data-arte] #banner .t { text-transform: uppercase; letter-spacing: 0.1em; text-shadow: 2px 2px 0 var(--breu-1); }
+html[data-arte] #hint,
+html[data-arte] .empty-state,
+html[data-arte] .steps li em,
+html[data-arte] #create .prof-line { font-family: var(--ps2-font-manuscrito); }
+html[data-arte] #subtitle,
+html[data-arte] .codex-body p,
+html[data-arte] .detail p,
+html[data-arte] .card p,
+html[data-arte] .set label,
+html[data-arte] .set small,
+html[data-arte] .shop-row,
+html[data-arte] .node,
+html[data-arte] .quest,
+html[data-arte] .tabs button { font-family: var(--ps2-font-texto); }
+html[data-arte] #subtitle { background: var(--g-panel); }
+html[data-arte] .toast { padding: 8px 14px; animation: none; background: var(--g-panel); }
+html[data-arte] .tabs { border-bottom: 2px solid var(--breu-1); box-shadow: 0 1px 0 var(--ouro-2); }
+html[data-arte] .tabs button { font-family: var(--ps2-font-titulo); letter-spacing: 0.06em; border-bottom-width: 4px; }
+html[data-arte] .tabs button[aria-selected='true'] { border-bottom-color: var(--brasa-3); color: var(--osso-6); }
+html[data-arte] .node,
+html[data-arte] .shop-row:hover,
+html[data-arte] .set select,
+html[data-arte] .set .btn,
+html[data-arte] input[type='text'] { border: 0; box-shadow: inset 0 0 0 1px var(--ouro-2), 0 0 0 1px var(--breu-1); }
+html[data-arte] .node.on { box-shadow: inset 0 0 0 2px var(--ouro-4), 0 0 0 1px var(--breu-1); }
+html[data-arte] .node.can { box-shadow: inset 0 0 0 2px var(--osso-5), 0 0 0 1px var(--breu-1); }
+html[data-arte] .node::before { transform: none; }
+html[data-arte] .steps li::before { transform: none; }
+html[data-arte] .quest[aria-pressed='true'],
+html[data-arte] .shop-row[aria-pressed='true'] { border-left: 4px solid var(--brasa-3); background: var(--vinho-1); }
+html[data-arte] .shop-row { transition: none; }
+html[data-arte] .shop-row:hover,
+html[data-arte] .shop-row:focus-visible { background: var(--g-raise); }
+html[data-arte] .detail .big { border: 0; box-shadow: inset 1px 1px 0 var(--ouro-1), inset -1px -1px 0 var(--breu-1), 0 0 0 1px var(--breu-1); background: var(--breu-2); }
+html[data-arte] #map-canvas { border: 0; box-shadow: 0 0 0 2px var(--breu-1), inset 0 0 0 1px var(--ouro-3); image-rendering: pixelated; }
+html[data-arte] .center,
+html[data-arte] #case { background: rgba(11, 7, 9, 0.88); }
+html[data-arte] #case .paper { box-shadow: 0 0 0 2px var(--breu-1), inset 0 0 0 2px var(--osso-3); }
+html[data-arte] .set input[type='range'] { accent-color: var(--ouro-4); }
+html[data-arte] #boss .meter b { background: repeating-linear-gradient(90deg, #d62839 0 6px, #b31f2f 6px 8px); }
+html[data-arte] #hud .pending,
+html[data-arte] #marker span { font-family: var(--ps2-font-dado); }
+html[data-arte] #marker i { transform: rotate(45deg); background: var(--brasa-3); border: 0; }
+html[data-arte] .chip,
+html[data-arte] .swatch { transition: none; }
+html[data-arte] ::selection { background: var(--vinho-4); color: var(--osso-6); }
