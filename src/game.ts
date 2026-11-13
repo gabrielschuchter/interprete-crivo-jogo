@@ -1504,6 +1504,7 @@ export class Game {
   }
 
   private interactBuffer = 0;
+  private interactHeld = 0;
   private updateWorld(dt: number, controls: boolean): void {
     const s = this.state!;
     const p = this.player!;
@@ -1695,14 +1696,19 @@ export class Game {
       const near = this.nearest();
       this.ui.prompt(near ? near.label : null);
       // o toque em Interagir fica guardado por um instante: apertar no fim de um golpe ou de um tranco não se perde
-      if (inp.took('interagir')) this.interactBuffer = 0.35;
+      if (inp.took('interagir')) {
+        this.interactBuffer = 0.35;
+        this.interactHeld = 0;
+      }
+      // o prazo só corre com o personagem livre: um golpe longo não come o toque
       if (this.interactBuffer > 0) {
-        this.interactBuffer -= dt;
-        if (near && !p.fig.busy) {
+        if (p.fig.busy) this.interactHeld += dt;
+        else if (near) {
           this.interactBuffer = 0;
           this.interact(near);
-        }
-      }
+        } else this.interactBuffer -= dt;
+        if (this.interactHeld > 1.5) this.interactBuffer = 0;
+      } else this.interactHeld = 0;
     } else {
       this.ui.prompt(null);
       this.interactBuffer = 0;
