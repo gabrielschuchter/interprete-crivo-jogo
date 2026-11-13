@@ -188,3 +188,15 @@ html[data-arte] .brasao { color: var(--ouro-4); margin-bottom: 14px; display: fl
 html[data-arte] #menu .side .brasao { justify-content: flex-start; }
 html:not([data-arte]) .brasao { display: none; }
 .glifo { display: inline-block; vertical-align: middle; }
+
+/* molduras 9-slice (public/ui/ps2, geradas por tools/ps2/gerar-molduras.mjs) */
+html[data-arte] .moldura-pedra,
+html[data-arte] .moldura-bronze,
+html[data-arte] .moldura-papel {
+  border: 16px solid transparent;
+  box-shadow: none;
+  image-rendering: pixelated;
+}
+html[data-arte] .moldura-pedra { border-image: url('/ui/ps2/moldura-pedra.svg') 16 / 16px stretch; }
+html[data-arte] .moldura-bronze { border-image: url('/ui/ps2/moldura-bronze.svg') 16 / 16px stretch; }
+html[data-arte] .moldura-papel { border-image: url('/ui/ps2/moldura-papel.svg') 16 fill / 16px stretch; }

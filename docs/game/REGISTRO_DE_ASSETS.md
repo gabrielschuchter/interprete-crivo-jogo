@@ -16,6 +16,7 @@ Todo asset do jogo, com origem e licença. Um asset que não está aqui não ent
 | Textura de comparação PS2 | `public/direcao-de-arte/img/tex-*.webp` | Derivada de `public/textures/cobblestone_embedded_asphalt_diff.webp` (Poly Haven, CC0) por `tools/ps2/degradar-textura.py` | CC0 |
 | Capturas de comparação das predefinições de arte | `public/direcao-de-arte/img/*.jpg`, `docs/game/capturas/ps2/` | Capturas do próprio jogo por `tools/ps2/capturar.mjs` | Autoral, do projeto |
 | Texturas de piso e parede PS2 (7 PNG indexados de 128 px, 24 cores) | `public/textures/ps2/` | Seis derivadas por `tools/ps2/recolorir-piso.py` de texturas CC0 do Poly Haven já registradas (cobblestone_embedded_asphalt, coast_rocks_01, road_damaged, fort_wall, bark_debris_01), recoloridas nas rampas ardósia e musgo dos tokens; `piso_madeira.png` é autoral, gerada por código | CC0 (derivadas) e autoral, do projeto |
+| Molduras 9-slice da interface PS2 (pedra, bronze, papel), SVG de 48 px | `public/ui/ps2/moldura-*.svg` | Geradas por código em `tools/ps2/gerar-molduras.mjs` a partir das rampas dos tokens | Autoral, do projeto |
 | Three.js | dependência npm | three.js authors | MIT |
 
 As cinco imagens góticas e o atlas visual enviados ao projeto foram usados como referência de direção de arte. Nenhuma delas foi copiada para o repositório nem usada como textura.
