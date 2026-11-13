@@ -403,8 +403,70 @@ export class Engine {
     }
   }
 
+  // ---------- retratos de diálogo ----------
+  private portraitCam = new THREE.PerspectiveCamera(24, 1, 0.05, 6);
+  private portraitQueue: Array<{ obj: THREE.Object3D; head: THREE.Vector3; yaw: number; done: (c: HTMLCanvasElement) => void }> = [];
+  /** pede um busto do objeto (figura de NPC) visto de frente, com a luz da própria cena. O quadro é tirado no
+   *  próximo render, num canto do canvas, antes do quadro normal, que o cobre: nada pisca na tela. */
+  requestPortrait(obj: THREE.Object3D, head: THREE.Vector3, yaw: number, done: (c: HTMLCanvasElement) => void): void {
+    this.portraitQueue.push({ obj, head: head.clone(), yaw, done });
+  }
+  private takePortraits(): void {
+    const LAYER = 7;
+    const r = this.renderer;
+    const pr = r.getPixelRatio();
+    const css = 64;
+    const px = Math.round(css * pr);
+    const cv = r.domElement;
+    if (cv.width < px || cv.height < px) return;
+    this.scene.traverse((o) => {
+      if ((o as THREE.Light).isLight) o.layers.enable(LAYER);
+    });
+    const cam = this.portraitCam;
+    cam.layers.set(LAYER);
+    const bg = this.scene.background;
+    const auto = r.shadowMap.autoUpdate;
+    r.shadowMap.autoUpdate = false;
+    this.scene.background = new THREE.Color(0x1a0c10);
+    for (const q of this.portraitQueue.splice(0)) {
+      const marked: THREE.Object3D[] = [];
+      q.obj.traverse((o) => {
+        if ((o as THREE.Mesh).isMesh && o.visible) {
+          o.layers.enable(LAYER);
+          marked.push(o);
+        }
+      });
+      const fx = Math.sin(q.yaw);
+      const fz = Math.cos(q.yaw);
+      cam.position.set(q.head.x + fx * 0.95, q.head.y + 0.02, q.head.z + fz * 0.95);
+      cam.lookAt(q.head.x, q.head.y - 0.1, q.head.z);
+      cam.updateMatrixWorld();
+      r.setRenderTarget(null);
+      r.setScissorTest(true);
+      r.setViewport(0, 0, css, css);
+      r.setScissor(0, 0, css, css);
+      r.render(this.scene, cam);
+      const out = document.createElement('canvas');
+      out.width = out.height = 48;
+      const c = out.getContext('2d', { willReadFrequently: true })!;
+      c.imageSmoothingEnabled = true;
+      c.drawImage(cv, 0, cv.height - px, px, px, 0, 0, 48, 48);
+      ps2Treat(c, 48);
+      for (const o of marked) o.layers.disable(LAYER);
+      q.done(out);
+    }
+    this.scene.background = bg;
+    r.shadowMap.autoUpdate = auto;
+    r.setScissorTest(false);
+    const w = cv.width / pr;
+    const h = cv.height / pr;
+    r.setViewport(0, 0, w, h);
+    r.setScissor(0, 0, w, h);
+  }
+
   render(dt: number, focus: THREE.Vector3): void {
     this.time += dt;
+    if (this.portraitQueue.length) this.takePortraits();
     this.skyMat.uniforms.uTime.value = this.time;
     this.rainMat.uniforms.uTime.value = this.time;
     (this.rainMat.uniforms.uCam.value as THREE.Vector3).copy(this.camera.position);
@@ -430,4 +492,25 @@ export class Engine {
     if (this.quality === 'baixa' && !this.ps2) this.renderer.render(this.scene, this.camera);
     else this.composer.render(dt);
   }
+}
+
+/** tratamento PS2 do retrato: cor em 5 bits por canal com pontilhado ordenado 4x4 e leve viragem para o vinho */
+const BAYER4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+function ps2Treat(c: CanvasRenderingContext2D, n: number): void {
+  const img = c.getImageData(0, 0, n, n);
+  const d = img.data;
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      const i = (y * n + x) * 4;
+      const t = (BAYER4[(y & 3) * 4 + (x & 3)] / 16 - 0.5) * 8;
+      const l = d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11;
+      const rr = d[i] * 0.88 + l * 0.12 + 4;
+      const gg = d[i + 1] * 0.86 + l * 0.1;
+      const bb = d[i + 2] * 0.84 + l * 0.1;
+      d[i] = Math.max(0, Math.min(255, Math.round((rr + t) / 8) * 8));
+      d[i + 1] = Math.max(0, Math.min(255, Math.round((gg + t) / 8) * 8));
+      d[i + 2] = Math.max(0, Math.min(255, Math.round((bb + t) / 8) * 8));
+    }
+  }
+  c.putImageData(img, 0, 0);
 }

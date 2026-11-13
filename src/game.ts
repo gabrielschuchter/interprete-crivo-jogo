@@ -707,7 +707,28 @@ export class Game {
   async say(who: string, text: string): Promise<void> {
     if (this.cancelled) return;
     const def = NPCS[who];
+    this.ui.portrait(who ? this.portraitOf(who) : null);
     await this.ui.say(def?.name ?? who, def?.role ?? '', text);
+  }
+  /** busto do NPC que fala, tirado da própria figura 3D na primeira fala e guardado para as próximas */
+  portraits = new Map<string, HTMLCanvasElement | 'pendente'>();
+  private portraitOf(who: string): HTMLCanvasElement | null {
+    const got = this.portraits.get(who);
+    if (got instanceof HTMLCanvasElement) return got;
+    const n = this.npcs.find((x) => x.def.id === who);
+    if (!n || got === 'pendente') return null;
+    const f = n.fig;
+    const head = new THREE.Vector3();
+    const bone = f.headBone;
+    f.root.updateMatrixWorld(true);
+    if (bone) bone.getWorldPosition(head);
+    else head.set(n.pos.x, n.pos.y + f.height * 0.9, n.pos.z);
+    this.portraits.set(who, 'pendente');
+    this.engine.requestPortrait(f.root, head, f.root.rotation.y, (c) => {
+      this.portraits.set(who, c);
+      if (this.mode === 'dialogue' && this.ui.speaker === (NPCS[who]?.name ?? who)) this.ui.portrait(c);
+    });
+    return null;
   }
   async choose(options: Array<{ text: string; tag?: string }>, pre?: number): Promise<number> {
     if (this.cancelled) throw SCRIPT_CANCEL;
@@ -1482,6 +1503,7 @@ export class Game {
     this.focus.set(0, 0, 4);
   }
 
+  private interactBuffer = 0;
   private updateWorld(dt: number, controls: boolean): void {
     const s = this.state!;
     const p = this.player!;
@@ -1672,8 +1694,19 @@ export class Game {
     if (controls && !p.dead) {
       const near = this.nearest();
       this.ui.prompt(near ? near.label : null);
-      if (near && !p.fig.busy && inp.took('interagir')) this.interact(near);
-    } else this.ui.prompt(null);
+      // o toque em Interagir fica guardado por um instante: apertar no fim de um golpe ou de um tranco não se perde
+      if (inp.took('interagir')) this.interactBuffer = 0.35;
+      if (this.interactBuffer > 0) {
+        this.interactBuffer -= dt;
+        if (near && !p.fig.busy) {
+          this.interactBuffer = 0;
+          this.interact(near);
+        }
+      }
+    } else {
+      this.ui.prompt(null);
+      this.interactBuffer = 0;
+    }
 
     // marcador de objetivo
     const tgt = this.secret?.pos ?? this.targetPos();
