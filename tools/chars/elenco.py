@@ -260,11 +260,11 @@ E["npc_11_detetive"] = R("NPC_11", "Detetive Mascarado", {"macro": macro(0.5, 0.
      {"tipo": "calca", "off": 0.012, "z_bot": "knee-0.1", "cell": "calca"},
      {"tipo": "bota", "z_top": "knee+0.02", "cell": "bota"},
      {"tipo": "cachecol", "thick": 0.03, "tail": 0.26, "side": 1, "cell": "cachecol"},
-     {"tipo": "luva", "cell": "luva"}, {"tipo": "mascara", "half": "direita", "cell": "mascara"},
+     {"tipo": "luva", "cell": "luva"}, {"tipo": "mascara", "half": "domino", "off": 0.009, "cell": "mascara"},
      {"tipo": "livro", "side": "L", "size": [0.1, 0.02, 0.14]}, {"tipo": "bolsa", "side": 1, "strap_from": -1, "cell": "couro"}] + hp,
     {"sobretudo": cloth("26222a", "la", folds=0.3), "manga": cloth("26222a", "la", folds=0.25), "aba": cloth("26222a", "la", folds=0.6, grime=0.5, trim="6e5a3a", trim_w=0.05, motif_kind="cruz"),
      "calca": cloth("1e1a20", "la", folds=0.3), "bota": BOOT, "cachecol": cloth("5e1a26", "la", folds=0.4), "luva": GLOVE, "couro": LEATHER,
-     "mascara": cloth("c8bca0", "linho", folds=0, grime=0.1, seams=False, stripes=["8a6a3a", 0.08, 7])} | hc, sobrancelha_cor="1a1412")
+     "mascara": cloth("ece2c8", "linho", folds=0, grime=0.05, seams=False, trim="a07a38", trim_w=0.12, stripes=["b08a40", 0.06, 5])} | hc, sobrancelha_cor="1a1412")
 
 hp, hc = hair("8a6a48", "trancas", volume=0.01, length=0.34, locks=2)
 E["npc_12_acolita"] = R("NPC_12", "Acólita da Catedral", {"macro": macro(0.0, 0.32, 0.56, 0.42, 0.45, 0.6), "pele": "young_caucasian_female"},

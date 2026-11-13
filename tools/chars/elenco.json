@@ -3410,7 +3410,8 @@
     },
     {
      "tipo": "mascara",
-     "half": "direita",
+     "half": "domino",
+     "off": 0.009,
      "cell": "mascara"
     },
     {
@@ -3488,15 +3489,17 @@
      "seams": false
     },
     "mascara": {
-     "col": "c8bca0",
+     "col": "ece2c8",
      "kind": "linho",
      "folds": 0,
-     "grime": 0.1,
+     "grime": 0.05,
      "seams": false,
+     "trim": "a07a38",
+     "trim_w": 0.12,
      "stripes": [
-      "8a6a3a",
-      0.08,
-      7
+      "b08a40",
+      0.06,
+      5
      ]
     },
     "cabelo": {

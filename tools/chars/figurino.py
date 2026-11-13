@@ -577,8 +577,24 @@ def mask(body, mk, eyes, off=0.006, cell='mascara', name='mascara', half='direit
     def pred(p):
         if half == 'toda':
             return (mk.neck1 - 0.01 < p[2] < ez + 0.07) and p[1] < mk.head_c.y - 0.02
+        if half == 'domino':
+            # faixa larga sobre os dois olhos e a testa baixa, com furos nos olhos (as pálpebras piscam por baixo)
+            if not (ez - 0.024 < p[2] < ez + 0.05 and p[1] < mk.head_c.y - 0.01): return False
+            if abs(p[0]) < 0.022 and p[2] < ez - 0.004: return False  # nariz livre
+            return all(math.hypot(p[0] - e[0], (p[2] - e[2]) * 1.3) > 0.021 for e in eyes)
         return (ez - 0.03 < p[2] < ez + 0.055) and p[1] < mk.head_c.y - 0.03 and (p[0] * sgn > -0.02)
     shell(body, P, ['Head'], off, pred=pred)
+    if half == 'domino':
+        # asas nas têmporas: a silhueta da máscara lê de longe mesmo quando o rosto vira pontos
+        ey = min(e[1] for e in eyes)
+        for sx in (-1, 1):
+            ex = max(abs(e[0]) for e in eyes)
+            root_t, root_b = Vector((sx * (ex + 0.03), ey + 0.03, ez + 0.035)), Vector((sx * (ex + 0.035), ey + 0.035, ez - 0.012))
+            tip = Vector((sx * (ex + 0.07), ey + 0.075, ez + 0.06))
+            mid = Vector((sx * (ex + 0.06), ey + 0.065, ez + 0.012))
+            V = [tuple(root_b), tuple(root_t), tuple(tip), tuple(mid)]
+            F = [[0, 1, 2, 3], [3, 2, 1, 0]]
+            P.add(V, F, [[(0, 0), (0, 1), (1, 1), (1, 0)], [(1, 0), (1, 1), (0, 1), (0, 0)]])
     return P
 
 
