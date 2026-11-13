@@ -65,6 +65,10 @@ try {
   await E(fs.readFileSync(path.join(here, 'page-helpers.js'), 'utf8'));
   ok(await E(() => !!__game.player.fig.ext), 'o protagonista usa o modelo do elenco PS2');
   ok(await E(() => __game.player.fig.ext.clips.has('torch_idle') && __game.player.fig.ext.clips.has('jump')), 'o protagonista traz clipes de tocha e de pulo');
+  const EXPR = ['piscar', 'sobrancelha_erguer', 'sobrancelha_franzir', 'boca_abrir', 'sorriso', 'tristeza'];
+  const exprDe = (alvo) => { let d = null; alvo.traverse((o) => { if (o.morphTargetDictionary && o.material && /body/i.test(o.material.name)) d = Object.keys(o.morphTargetDictionary); }); return d || []; };
+  const exprOk = (l) => EXPR.every((n) => l.includes(n));
+  ok(exprOk(await E(`(${exprDe})(__game.player.fig.root)`)), 'o protagonista tem as seis expressões faciais no corpo');
 
   console.log('Moradores');
   for (const [reg, ids] of Object.entries(process.env.SO === 'inimigos' ? {} : MORADORES)) {
@@ -76,10 +80,13 @@ try {
         if (!n) return { falta: true };
         const props = g.props.filter((x) => x.def.kind !== 'trail').map((x) => ({ id: x.def.id, d: Math.hypot(x.pos.x - n.pos.x, x.pos.z - n.pos.z) }));
         const perto = props.filter((x) => x.d < 3.2);
-        return { modelo: !!n.fig.ext, clipes: n.fig.ext ? [...n.fig.ext.clips.keys()] : [], perto, y: n.pos.y, alt: n.fig.height };
+        let expr = [];
+        n.fig.root.traverse((o) => { if (o.morphTargetDictionary && o.material && /body/i.test(o.material.name)) expr = Object.keys(o.morphTargetDictionary); });
+        return { expr, modelo: !!n.fig.ext, clipes: n.fig.ext ? [...n.fig.ext.clips.keys()] : [], perto, y: n.pos.y, alt: n.fig.height };
       }, id);
       if (r.falta) { fail(`${id} ausente em ${reg}`); continue; }
       ok(r.modelo, `${id}: modelo carregado (${reg})`);
+      ok(exprOk(r.expr), `${id}: expressões faciais (${r.expr.length})`);
       ok(['talk', 'wave', 'point', 'listen', 'shrug'].every((c) => r.clipes.includes(c)), `${id}: clipes de gesto`);
       ok(!r.perto.length, `${id}: longe de objetos de missão ${r.perto.length ? JSON.stringify(r.perto) : ''}`);
       const said = await E(async (id) => {

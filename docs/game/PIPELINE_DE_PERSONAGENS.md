@@ -70,7 +70,13 @@ Os corpos dos moradores e inimigos baixam junto com a região em que aparecem; a
 
 ## Limitações conhecidas
 
-O rosto é a textura de pele do MakeHuman assada em 512 px: legível de perto, mas sem expressão animada (não há blendshapes; a expressão vem da postura e do gesto). A máscara da detetive é pequena demais para ler à distância de jogo. Os mini-chefes reaproveitam os clipes humanos de captura; o martelo do Carrasco e o gancho do Carcereiro balançam com a mão, sem golpe próprio. A Matriarca anda em vez de pairar. Os sete NPCs da história (Heloísa, Íris e os demais) continuam com os modelos anteriores, e o próximo passo natural é passá-los pela forja.
+O rosto é a textura de pele do MakeHuman assada em 512 px. Desde 13/11/2026 a malha do corpo (material `Human.body`) de cada um dos 28 humanos traz seis morph targets com valores de 0 a 1: `piscar`, `sobrancelha_erguer`, `sobrancelha_franzir`, `boca_abrir`, `sorriso` e `tristeza`. Eles saem das unidades de expressão do MakeHuman (CC0), carregadas como shape keys na malha base e transferidas para a proxy por projeção baricêntrica na superfície mais próxima (vértices a mais de 3 cm são ignorados); cerca de 300 vértices do rosto se movem por expressão. A receita pode desligar com `sem_expressoes`. Quem aciona os morphs em tempo real é o código do jogo (`morphTargetDictionary` e `morphTargetInfluences`); a forja só garante que existam. Na barba cheia do Professor a boca quase não aparece, e `boca_abrir` em 1 mostra a língua: em fala, valores de 0,2 a 0,5 leem melhor.
+
+O olho low-poly saía do Blender com `alphaMode: BLEND`, e o GLTFLoader desliga a escrita de profundidade nesse modo: o interior do crânio, de dupla face, cobria o globo, e os olhos pareciam vazios. A forja agora exporta o olho opaco.
+
+A máscara da detetive virou dominó (faixa dos olhos com o nariz livre, furos largos e abas nas têmporas) em linho claro com barra dourada, legível de corpo inteiro. A verificação de expressões fica em `prancha.ts?expr=neutro,piscar,...&zoom=0.4` (com `esconde=` e `marca=` para depurar material), e o `e2e:elenco` confere as seis expressões no protagonista e nos doze moradores.
+
+Os mini-chefes reaproveitam os clipes humanos de captura; o golpe próprio do martelo e do gancho e a Matriarca pairando são feitos em tempo real no jogo, não na forja. Os sete NPCs da história (Heloísa, Íris e os demais) continuam com os modelos anteriores, e o próximo passo natural é passá-los pela forja.
 
 ## Como rodar
 

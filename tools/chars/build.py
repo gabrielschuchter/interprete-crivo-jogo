@@ -94,6 +94,51 @@ bpy.ops.object.bake(type='DIFFUSE', pass_filter={'COLOR'}, use_selected_to_activ
 bake_img.pack()
 skin_mat = bm_
 log('pele assada em %.1fs' % (time.time() - T0))
+# expressões faciais: unidades de expressão do MakeHuman (CC0) carregadas na malha base e transferidas para a proxy
+# pelo ponto mais próximo da superfície (pesos baricêntricos). Viram morph targets do corpo no GLB.
+EXPR = {
+    'piscar': [('eye-left-closure', 1.5), ('eye-right-closure', 1.5)],
+    'sobrancelha_erguer': [('eyebrows-left-up', 1.5), ('eyebrows-right-up', 1.5)],
+    'sobrancelha_franzir': [('eyebrows-left-down', 1.5), ('eyebrows-right-down', 1.5)],
+    'boca_abrir': [('mouth-open', 0.6)],
+    'sorriso': [('mouth-corner-puller', 1.1), ('eye-left-slit', 0.25), ('eye-right-slit', 0.25)],
+    'tristeza': [('mouth-depression', 1.0), ('eyebrows-left-inner-up', 1.3), ('eyebrows-right-inner-up', 1.3)],
+}
+EXPR_D = {}
+if not R.get('sem_expressoes'):
+    from mathutils.bvhtree import BVHTree
+    from mathutils.interpolate import poly_3d_calc
+    UN = os.path.join(TG, 'expression', 'units', 'caucasian')
+    dg = bpy.context.evaluated_depsgraph_get()
+    bme = basex.evaluated_get(dg).to_mesh()
+    BV = np.array([tuple(v.co) for v in bme.vertices])
+    tris_b = [tuple(p.vertices) for p in bme.polygons]
+    bvh_b = BVHTree.FromPolygons([tuple(v) for v in BV], tris_b)
+    basex.evaluated_get(dg).to_mesh_clear()
+    unit_d = {}
+    kb = basex.data.shape_keys.key_blocks if basex.data.shape_keys else None
+    for name, units in EXPR.items():
+        tot = np.zeros_like(BV)
+        for u, w in units:
+            if u not in unit_d:
+                k = TargetService.load_target(basex, os.path.join(UN, u + '.target.gz'), weight=0.0, name='x_' + u)
+                ref = k.relative_key
+                unit_d[u] = np.array([tuple(a.co - b.co) for a, b in zip(k.data, ref.data)])
+            tot += unit_d[u] * w
+        EXPR_D[name] = tot
+    # proxy: cada vértice herda o deslocamento da face mais próxima da malha base
+    pv = [bodyo.matrix_world @ v.co for v in bodyo.data.vertices]
+    MAPD = {n: np.zeros((len(pv), 3)) for n in EXPR}
+    for i, p in enumerate(pv):
+        loc, nrm, fi, dist = bvh_b.find_nearest(p)
+        if fi is None or dist > 0.03: continue
+        ids = tris_b[fi]
+        ws = poly_3d_calc([Vector(BV[j]) for j in ids], loc)
+        for n in EXPR:
+            d = sum(EXPR_D[n][j] * wj for j, wj in zip(ids, ws))
+            MAPD[n][i] = d
+    EXPR_D = MAPD
+    log('expressões: %d morphs, %d vértices do rosto se movem' % (len(EXPR), int((np.abs(sum(EXPR_D.values())).sum(1) > 1e-5).sum())))
 bpy.data.objects.remove(basex)
 for o in sc.objects:
     if o.type == 'MESH' and o.data.shape_keys:
@@ -101,6 +146,7 @@ for o in sc.objects:
         o.shape_key_clear()
 bodyo.name = 'corpo'
 body = geo.Body(bodyo, rig)
+REST_P = np.array([tuple(v.co) for v in bodyo.data.vertices])  # para reencontrar os vértices depois do corte
 mk = FG.Marks(body)
 ev = np.array([tuple(eyeso.matrix_world @ v.co) for v in eyeso.data.vertices])
 eyes = (tuple(ev[ev[:, 0] > 0].mean(0)), tuple(ev[ev[:, 0] < 0].mean(0)))
@@ -343,6 +389,19 @@ if hide:
     bmesh.ops.delete(bm, geom=kill, context='FACES')
     bm.to_mesh(bodyo.data); bm.free()
     log('corpo: %d faces escondidas' % len(kill))
+# morph targets das expressões, por posição de repouso (o corte de faces muda os índices)
+if EXPR_D:
+    from mathutils.kdtree import KDTree
+    kd = KDTree(len(REST_P))
+    for i, p in enumerate(REST_P): kd.insert(Vector(p), i)
+    kd.balance()
+    idx = [kd.find(v.co)[1] for v in bodyo.data.vertices]
+    bodyo.shape_key_add(name='Basis', from_mix=False)
+    for n, D_ in EXPR_D.items():
+        k = bodyo.shape_key_add(name=n, from_mix=False)
+        k.slider_min, k.slider_max = 0.0, 1.0
+        for v, j in zip(k.data, idx): v.co = v.co + Vector(D_[j])
+    log('morphs no corpo:', ', '.join(EXPR_D))
 # cílios em cartão alfa somem; sobrancelha vira pintura na pele
 for o in list(sc.objects):
     if o.type == 'MESH' and 'eyelash' in o.name.lower(): bpy.data.objects.remove(o)
@@ -393,6 +452,22 @@ for img in node_images(skin_mat)[:1]:
     log('pele', img.name, img.size[:])
 for img in node_images(eyeso.data.materials[0] if eyeso.data.materials else None):
     if img.size[0] > 128: img.scale(128, 128)
+    # olho legível na distância de jogo: esclera menos branca, íris e pupila mais escuras e contrastadas
+    e = img_np(img)
+    lum = e[..., :3].mean(-1, keepdims=True)
+    sat = e[..., :3].max(-1, keepdims=True) - e[..., :3].min(-1, keepdims=True)
+    sclera = np.clip((lum - 0.55) * 4, 0, 1) * np.clip(1 - sat * 4, 0, 1)
+    e[..., :3] = e[..., :3] * (1 - sclera * 0.3)
+    e[..., :3] = np.where(lum < 0.5, e[..., :3] * 0.55, e[..., :3])
+    set_np(img, e)
+# olho opaco: em BLEND o GLTFLoader desliga a escrita de profundidade e o interior do crânio (dupla face) cobre o globo
+for m in eyeso.data.materials:
+    if m and m.use_nodes:
+        for n in m.node_tree.nodes:
+            if n.type == 'BSDF_PRINCIPLED':
+                for l in list(n.inputs['Alpha'].links): m.node_tree.links.remove(l)
+                n.inputs['Alpha'].default_value = 1.0
+    if m: m.blend_method = 'OPAQUE' if hasattr(m, 'blend_method') else None
 for o in list(sc.objects):
     if o == browo: bpy.data.objects.remove(o)
 # normal maps fora (PS2 não tinha)
@@ -601,7 +676,7 @@ bpy.ops.object.select_all(action='SELECT')
 bpy.ops.export_scene.gltf(filepath=OUT, export_format='GLB', export_image_format='WEBP', export_image_quality=90,
                           export_animations=True, export_animation_mode='NLA_TRACKS', export_force_sampling=True,
                           export_frame_step=1, export_def_bones=True, export_optimize_animation_size=True,
-                          export_apply=False, export_skins=True, export_morph=False, export_yup=True, use_selection=False,
+                          export_apply=False, export_skins=True, export_morph=True, export_morph_normal=False, export_morph_tangent=False, export_yup=True, use_selection=False,
                           export_extras=True)
 log('OK', OUT, total, 'tris em %.1fs' % (time.time() - T0))
 print(json.dumps({'ok': True, 'out': OUT, 'tris': total, 'altura': mk.height, 'clipes': len(acts), 's': round(time.time() - T0, 1)}))
