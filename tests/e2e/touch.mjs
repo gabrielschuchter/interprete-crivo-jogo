@@ -109,7 +109,7 @@ async function session(W, H, full) {
   const btn = async (id) => { await p.locator(`#touch [data-b=${id}]`).waitFor({ state: 'visible', timeout: 20000 }); const bb = await p.locator(`#touch [data-b=${id}]`).boundingBox(); await tap(bb.x + bb.width / 2, bb.y + bb.height / 2); };
   await E(() => { __game.state.hp = 60; __game.player.vigor = 100; __game.state.inventory.caldo = 2; });
   await btn('ataque'); await sleep(200);
-  ok(await E(() => __game.player.fig.action.startsWith('attack')), 'botão Golpe ataca');
+  ok(await E(() => __game.player.fig.action === 'esgrima' && !!__game.player.golpe), 'botão Golpe ataca');
   await sleep(800); await E(() => { __game.player.vigor = 100; });
   await btn('esquiva'); await sleep(150);
   ok(await E(() => __game.player.fig.action === 'dodge'), 'botão Esquiva esquiva');
