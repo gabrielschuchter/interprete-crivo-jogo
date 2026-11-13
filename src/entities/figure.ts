@@ -89,11 +89,11 @@ export function loadExternalModel(key: string): Promise<GLTF | null> {
   return manifest.then((mf) => (mf[key] ? loadGltf(`models/${mf[key]}`) : null));
 }
 
-/** Pré-carrega todos os modelos do manifesto (tela de abertura). */
+/** Pré-carrega os protagonistas (tela de abertura). Moradores e inimigos baixam com a região em que aparecem. */
 export async function preloadModels(): Promise<void> {
   manifest ??= fetch(`${import.meta.env.BASE_URL}models/manifest.json`).then((r) => (r.ok ? (r.json() as Promise<ModelManifest>) : {})).catch(() => ({}));
   const mf = await manifest;
-  await Promise.all(Object.keys(mf).map((k) => loadExternalModel(k)));
+  await Promise.all(Object.keys(mf).filter((k) => k.startsWith('player_')).map((k) => loadExternalModel(k)));
 }
 
 /** Clipes de captura de movimento por ação. Ações sem clipe próprio usam o vizinho mais próximo. */
@@ -123,6 +123,7 @@ const TIMED: Action[] = ['attack1', 'attack2', 'heavy', 'dodge', 'hit', 'interac
 const LOOPED = new Set(['idle', 'walk', 'run', 'talk', 'listen']);
 
 const _v = new THREE.Vector3();
+const _tc = new THREE.Color();
 
 export class Figure {
   root = new THREE.Group();
@@ -488,13 +489,17 @@ export class Figure {
       const n = m.name.toLowerCase();
       if (o.tintSkin !== undefined && /body|skin/.test(n)) m.color.set(o.tintSkin);
       else if (o.tintHair !== undefined && /hair|bob0|braid|bun|short0|long0|afro|ponytail|eyebrow/.test(n)) m.color.set(o.tintHair);
-      else if (o.tintCoat !== undefined && !/body|skin|high-poly|eye|shoe|teeth|tongue/.test(n)) m.color.set(o.tintCoat);
+      else if (o.tintCoat !== undefined && /roupa_ps2/.test(n)) m.color.set(0xffffff).lerp(_tc.set(o.tintCoat), 0.45);
+      // elenco PS2: o atlas já tem a paleta (vinho, couro, bronze); a cor escolhida tinge pela metade
+      else if (o.tintCoat !== undefined && !/body|skin|high-poly|low-poly|eye|shoe|teeth|tongue|brilho/.test(n)) m.color.set(o.tintCoat);
       this.mats.push(m);
     });
     const box = new THREE.Box3().setFromObject(scene);
-    const k = this.height / Math.max(0.01, box.max.y - box.min.y);
+    // modelos do elenco PS2 declaram a altura do corpo (ps2_altura): haste, chapéu e coroa não encolhem a figura
+    const declared = Number(g.scene.userData.ps2_altura) || 0;
+    const k = this.height / Math.max(0.01, declared || box.max.y - box.min.y);
     scene.scale.setScalar(k);
-    scene.position.y = -box.min.y * k;
+    scene.position.y = declared ? 0 : -box.min.y * k; // no elenco PS2 os pés já estão em y = 0
     this.body.visible = false;
     this.root.add(scene);
     const mixer = new THREE.AnimationMixer(scene);

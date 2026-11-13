@@ -73,3 +73,16 @@ O jogo carrega modelos de alta resolução de `public/models/`, listados em `man
 As sete armas do Poly Haven listadas no lote 1 (antique_estoc, wooden_handle_saber, ornate_medieval_dagger, machete, ornate_medieval_mace, ornate_war_hammer, wooden_axe) deixaram de ser só adereço e agora são as armas empunhadas e as armas caídas no chão. A licença continua CC0; a única alteração é a normalização em tempo de carga (`src/entities/weapons.ts`), que mede a lâmina, põe a origem no punho e esconde a bainha.
 
 Feitos em código, sem arquivo externo e sem licença de terceiros: a tocha da mão esquerda (cabo torneado, anéis de corda, chama em três planos com shader, em `src/entities/weapons.ts`), a lanterna de latão da Lanterna da Transparência (`src/entities/player.ts`) e as silhuetas de cidade ao longe no Pátio e abaixo do terraço do Observatório (`skyline` em `src/world/kit.ts`).
+
+## Elenco PS2 da forja (13/11/2026)
+
+Os 29 GLB de `public/models/personagens/ps2/` (protagonistas em oito combinações, doze moradores, quatro inimigos comuns, quatro mini-chefes e o chefe final) saem de `tools/chars/` sem edição manual. Detalhes e evidências em `docs/game/PIPELINE_DE_PERSONAGENS.md`. Nenhum personagem representa pessoa real; o corpo é paramétrico (MakeHuman), não escaneado.
+
+| Asset | Onde | Origem | Licença |
+| --- | --- | --- | --- |
+| Corpo de baixa contagem (proxies female1605 e male1591), malha base, peles (young/middleage/old caucasian), olhos low-poly e sobrancelhas | embutidos nos GLB de `personagens/ps2/` | MakeHuman 1.x, assets de sistema e pacotes skins01 e eyebrows01, montados com MPFB2 (código GPL usado só como ferramenta, fora do jogo) | CC0 |
+| Figurino, cabelo, barba, máscaras, adereços (lampião, alabarda, martelo, gancho, florete, punhal, incensários, coroa, auréola, cristais, correntes, cogumelos) e o atlas pintado | idem | Geometria e textura procedurais de `tools/chars/figurino.py` e `tools/chars/paint.py`, escritas para este projeto | Autoral, do projeto |
+| Espectro da Lanterna (malha, esqueleto, textura e dez clipes) | `personagens/ps2/mob_02_espectro.glb` | `tools/chars/criatura.py`, procedural | Autoral, do projeto |
+| Clipes de animação dos humanos (os mesmos números CMU da tabela do lote 1) e as variantes derivadas (braço do lampião, tocha, cabeça nivelada, pernas paradas nos gestos) | embutidos nos GLB humanos | CMU Graphics Lab Motion Capture Database, redirecionada por `tools/pipeline/retarget.py` | Uso livre. Agradecimento pedido: "The data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217." |
+
+Os oito `player_*.glb` antigos de `public/models/personagens/` saíram do repositório: o manifesto aponta para os novos. O `vulto.glb` antigo fica como reserva de corpo de inimigo.

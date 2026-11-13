@@ -5,9 +5,11 @@
  * escolha custa) e só ganham nome depois, no códice, para quem quiser ler.
  */
 import type { Game } from './game';
+import type { Npc } from './entities/npc';
 import type { PropPlacement } from './world/region';
 import { CODEX, MESTRES_IDS, OBRAS_IDS, PAGES, PROFESSIONS, QUESTS } from './content/data';
 import * as D from './domain/state';
+import { MORADORES } from './content/moradores';
 
 type G = Game;
 
@@ -89,6 +91,9 @@ export async function talk(g: G, id: string): Promise<void> {
       break;
     case 'tome':
       await tome(g);
+      break;
+    default:
+      if (MORADORES[id]) await morador(g, id);
       break;
   }
   await conversaDeOficio(g, id);
@@ -467,6 +472,24 @@ function ventoHeard(g: G): void {
     g.advance('vento', 1);
     if (D.questVar(s, 'vento', 'vento_terraco') && D.questVar(s, 'vento', 'vento_beco')) g.advance('vento', 2);
   }
+}
+
+// ---------- moradores do elenco PS2 ----------
+/** Saudação, assunto do ofício (uma vez com gesto, depois resumido), reação ao andamento e despedida. */
+async function morador(g: G, id: string): Promise<void> {
+  const m = MORADORES[id];
+  const s = g.state!;
+  const S = (t: string) => g.say(id, t);
+  const gesto = (a: Parameters<Npc['fig']['play']>[0]) => g.npcs.find((n) => n.def.id === id)?.fig.play(a);
+  const etapa = s.flags.includes('epilogo') ? 2 : s.flags.includes('arquivo_concluido') ? 1 : 0;
+  await S(m.saudacao);
+  if (D.markCollected(s, 'conversa:' + id)) {
+    gesto(m.gestoAssunto);
+    for (const l of m.assunto) await S(l);
+  } else await S(m.assunto[m.assunto.length - 1]);
+  await S(m.andamento[etapa]);
+  gesto('wave');
+  await S(m.despedida);
 }
 
 // ---------- páginas ----------

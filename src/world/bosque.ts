@@ -387,6 +387,10 @@ export function buildBosque(ctx: RegionCtx): BuiltRegion {
   b.finalize();
 
   r.spawns = { de_atrio: { x: -41.5, z: 0, yaw: Math.PI / 2 } };
+  r.npcs = [
+    { id: 'gloria', x: -36, z: 5.5, yaw: -2.2 },
+    { id: 'matias', x: -35, z: -6, yaw: -1.0 },
+  ];
   r.enemies = [
     { kind: 'fiapo', x: -23, z: 2.5, group: 'trilha' },
     { kind: 'fiapo', x: -15, z: -3, group: 'trilha' },
@@ -397,8 +401,10 @@ export function buildBosque(ctx: RegionCtx): BuiltRegion {
     { kind: 'vulto', x: 50, z: -3, group: 'margem', ifFlag: 'ponte_estendida' },
     { kind: 'fiapo', x: 47, z: 6, group: 'margem', ifFlag: 'ponte_estendida' },
     // depois do Veredito: o foco residual da clareira (missão Focos Residuais)
-    { kind: 'vulto', x: -6, z: -19, group: 'foco', ifFlag: 'epilogo' },
-    { kind: 'vulto', x: 2, z: -20, group: 'foco', ifFlag: 'epilogo' },
+    // foco da clareira: a Duelista das Cinzas e dois Eruditos Ocos
+    { kind: 'duelista', x: -2, z: -21, group: 'foco', ifFlag: 'epilogo' },
+    { kind: 'erudito', x: -6, z: -19, group: 'foco', ifFlag: 'epilogo' },
+    { kind: 'erudito', x: 2, z: -19.5, group: 'foco', ifFlag: 'epilogo' },
     { kind: 'fiapo', x: -9, z: -14, group: 'foco', ifFlag: 'epilogo' },
     { kind: 'fiapo', x: 0, z: -14.5, group: 'foco', ifFlag: 'epilogo' },
     { kind: 'fiapo', x: -3, z: -23, group: 'foco', ifFlag: 'epilogo' },

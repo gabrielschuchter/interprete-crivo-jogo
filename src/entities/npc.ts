@@ -1,11 +1,14 @@
 import * as THREE from 'three';
 import { Figure, HAIRS, SKINS, type Action, type FigureOpts } from './figure';
+import { MORADORES } from '../content/moradores';
 
 export interface NpcDef {
   id: string;
   name: string;
   role: string;
   fig: FigureOpts;
+  /** chave do modelo no manifesto, quando difere do id */
+  model?: string;
 }
 
 /** Personagens fictícios. Nenhum representa pessoa real. */
@@ -18,6 +21,10 @@ export const NPCS: Record<string, NpcDef> = {
   noemia: { id: 'noemia', name: 'Noêmia', role: 'Vigia do terraço', fig: { skin: SKINS[0], hair: HAIRS[2], hairStyle: 'longo', coat: 0x3a2a4a, cape: 0x201a2a, height: 1.7 } },
   tome: { id: 'tome', name: 'Tomé', role: 'Acendedor de lampiões', fig: { skin: SKINS[2], hair: HAIRS[1], hairStyle: 'curto', hat: true, beard: true, coat: 0x2f2a22, height: 1.76, build: 1.04 } },
 };
+// moradores do elenco PS2: o corpo procedural só aparece se o modelo faltar
+for (const m of Object.values(MORADORES)) {
+  NPCS[m.id] = { id: m.id, name: m.nome, role: m.papel, model: m.modelo, fig: { skin: SKINS[1], hair: HAIRS[1], hairStyle: 'curto', coat: 0x2a2226, height: m.altura } };
+}
 
 let markGeo: THREE.BufferGeometry | null = null;
 let markMat: THREE.MeshBasicMaterial | null = null;
@@ -34,7 +41,7 @@ export class Npc {
   private t = Math.random() * 6;
 
   constructor(public def: NpcDef, x: number, y: number, z: number, yaw: number) {
-    this.fig = new Figure({ ...def.fig, model: def.id });
+    this.fig = new Figure({ ...def.fig, model: def.model ?? def.id });
     this.pos.set(x, y, z);
     this.yaw = this.homeYaw = yaw;
     this.fig.root.position.copy(this.pos);

@@ -21,7 +21,7 @@ export interface NpcPlacement {
 }
 
 export interface EnemyPlacement {
-  kind: 'fiapo' | 'vulto' | 'eco' | 'veredito';
+  kind: 'fiapo' | 'vulto' | 'eco' | 'veredito' | 'erudito' | 'errante' | 'suplicante' | 'duelista' | 'carcereiro' | 'matriarca';
   x: number;
   z: number;
   y?: number;

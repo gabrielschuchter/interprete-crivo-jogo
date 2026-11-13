@@ -1,6 +1,7 @@
 import type { EquipSlot, ProfessionId, SkillDef } from '../domain/state';
 import { GEAR, RARITY_LABEL, type Rarity } from '../domain/gear';
 import type { ClinicalCase } from '../domain/clinical';
+import { MORADORES } from './moradores';
 
 export const CONTENT_VERSION = '0.1.0';
 
@@ -487,6 +488,17 @@ export const CODEX: Record<string, CodexEntry> = {
   },
 
 };
+
+// ---------- elenco PS2: criaturas novas e moradores ----------
+Object.assign(CODEX, {
+  erudito: { id: 'erudito', title: 'Erudito Oco', group: 'Criaturas', body: ['Um estudante que leu tanto a mesma conclusão que esqueceu a pergunta. Anda curvado, ataca rápido e cede a dois golpes seguidos.'] },
+  errante: { id: 'errante', title: 'Errante do Gelo', group: 'Criaturas', body: ['Coberto de geada e de certezas antigas. Lento para se preparar e pesado quando acerta. Fique fora do alcance enquanto ele ergue os braços.'] },
+  suplicante: { id: 'suplicante', title: 'Suplicante Encapuzado', group: 'Criaturas', body: ['Pede uma resposta, qualquer uma, e investe com um punhal curto. O aviso é breve; o golpe, também. Um golpe firme o derruba.'] },
+  duelista: { id: 'duelista', title: 'Duelista das Cinzas', group: 'Criaturas', body: ['Esgrimista do Bosque. Encadeia estocadas: duas, e três quando ferido. Cada estocada tem um aviso curto, e a última deixa a guarda aberta.'] },
+  carcereiro: { id: 'carcereiro', title: 'Carcereiro dos Trilhos', group: 'Criaturas', body: ['Guarda o Arquivo com um gancho de ferroviário e um lampião violeta. Bate no chão em anel e, ferido, chama reforços.'] },
+  matriarca: { id: 'matriarca', title: 'Matriarca do Coro Velado', group: 'Criaturas', body: ['Paira sobre o terraço com dois incensários. Canta em leque: três sopros, e cinco depois de ferida. O espaço entre eles é o caminho.'] },
+});
+for (const m of Object.values(MORADORES)) CODEX[m.id] = { id: m.id, title: m.nome, group: 'Pessoas', body: [`${m.papel}. ${m.assunto[m.assunto.length - 1]}`] };
 
 export const MESTRES_IDS = ['lind', 'nightingale', 'semmelweis', 'fisher', 'hill', 'cochrane', 'sackett', 'altman'];
 export const OBRAS_IDS = ['obra_ebm', 'obra_chalmers', 'obra_greenhalgh', 'obra_gigerenzer', 'obra_ioannidis', 'obra_cochrane_br'];

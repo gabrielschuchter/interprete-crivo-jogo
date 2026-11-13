@@ -210,11 +210,19 @@ export function buildObservatorio(ctx: RegionCtx): BuiltRegion {
   b.finalize();
 
   r.spawns = { de_atrio: { x: 0, z: 12.4, yaw: Math.PI } };
+  r.npcs = [
+    { id: 'severino', x: 0.5, z: 10.0, yaw: Math.PI },
+    { id: 'rosario', x: -7.0, z: 5.5, yaw: 2.2 },
+    { id: 'celeste', x: 8.6, z: 1.2, yaw: -2.0 },
+    { id: 'inacio', x: -1.0, z: 6.0, yaw: Math.PI },
+  ];
   r.enemies = [
     { kind: 'veredito', x: 0, z: AZ - 3, group: 'veredito', ifFlag: 'grade_aberta' },
-    { kind: 'vulto', x: -5, z: AZ + 2, group: 'foco', ifFlag: 'epilogo' },
-    { kind: 'vulto', x: 5, z: AZ + 2, group: 'foco', ifFlag: 'epilogo' },
-    { kind: 'vulto', x: 0, z: AZ - 6, group: 'foco', ifFlag: 'epilogo' },
+    // foco do terraço: a Matriarca do Coro Velado, dois Suplicantes e um Espectro da Lanterna
+    { kind: 'matriarca', x: 0, z: AZ - 6, group: 'foco', ifFlag: 'epilogo' },
+    { kind: 'suplicante', x: -5, z: AZ + 2, group: 'foco', ifFlag: 'epilogo' },
+    { kind: 'suplicante', x: 5, z: AZ + 2, group: 'foco', ifFlag: 'epilogo' },
+    { kind: 'vulto', x: 0, z: AZ - 1, group: 'foco', ifFlag: 'epilogo' },
     { kind: 'fiapo', x: -3, z: AZ - 2, group: 'foco', ifFlag: 'epilogo' },
     { kind: 'fiapo', x: 3, z: AZ - 2, group: 'foco', ifFlag: 'epilogo' },
   ];
