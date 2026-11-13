@@ -57,32 +57,56 @@ export class Npc {
 
   /** posição da câmera, atualizada pelo jogo a cada quadro */
   static cam = new THREE.Vector3(0, 1e3, 0);
+  /** a interface ainda escreve a fala: a boca mexe só enquanto o texto corre */
+  static typing = false;
+
+  /** fala em curso nesta conversa (o morador fala; senão, escuta) */
+  speaking = false;
+  private lookP = new THREE.Vector3();
+  private turning = false;
 
   update(dt: number, playerPos: THREE.Vector3): void {
     this.t += dt;
     const dx = playerPos.x - this.pos.x;
     const dz = playerPos.z - this.pos.z;
     const d = Math.hypot(dx, dz);
-    const want = d < 5.5 || this.talking ? Math.atan2(dx, dz) : this.homeYaw;
+    const near = d < 5.5 || this.talking;
+    // primeiro os olhos e a cabeça; o corpo só vira quando o jogador sai do campo de quem olha de lado
+    this.lookP.set(playerPos.x, playerPos.y + 1.55, playerPos.z);
+    this.fig.lookAt = d < 7.5 || this.talking ? this.lookP : null;
+    const want = near ? Math.atan2(dx, dz) : this.homeYaw;
     let dy = want - this.yaw;
     while (dy > Math.PI) dy -= Math.PI * 2;
     while (dy < -Math.PI) dy += Math.PI * 2;
-    this.yaw += dy * Math.min(1, dt * 3.5);
+    if (Math.abs(dy) > (this.talking ? 0.35 : 0.85)) this.turning = true;
+    else if (Math.abs(dy) < 0.08) this.turning = false;
+    let rate = 0;
+    if (this.turning) {
+      // vira em passos, a no máximo 2,4 rad/s, desacelerando no fim
+      rate = Math.sign(dy) * Math.min(2.4, Math.abs(dy) * 4);
+      this.yaw += rate * dt;
+    }
+    this.fig.turnRate = rate;
     this.fig.root.rotation.y = this.yaw;
-    if (this.talking && this.fig.action !== 'talk') this.fig.play('talk');
-    if (!this.talking && this.fig.action === 'talk') this.fig.action = 'none';
+    this.fig.speaking = this.talking && this.speaking && Npc.typing;
+    const conv: Action = this.speaking ? 'talk' : 'listen';
+    if (this.talking && this.fig.action !== conv && !(this.fig.action !== 'none' && this.fig.action !== 'talk' && this.fig.action !== 'listen' && this.fig.progress < 1)) this.fig.play(conv);
+    if (!this.talking && (this.fig.action === 'talk' || this.fig.action === 'listen')) this.fig.action = 'none';
     this.fig.speed = 0;
     // gestos espontâneos: cumprimenta uma vez ao se aproximar e, de vez em quando, pensa, assente ou dá de ombros
-    if (!this.talking && this.fig.action === 'none') {
-      if (d < 7 && !this.greeted) {
+    if (!this.talking && this.fig.action === 'none' && !this.turning) {
+      if (d < 7 && !this.greeted && Math.abs(dy) < 0.6) {
         this.greeted = true;
         this.fig.play('wave');
       } else if (d > 11) this.greeted = false;
       this.gestureCd -= dt;
       if (this.gestureCd <= 0) {
-        this.gestureCd = 7 + Math.random() * 10;
-        const pool: Action[] = d < 9 ? ['think', 'nod', 'shrug', 'think'] : ['think', 'shrug'];
-        this.fig.play(pool[Math.floor(Math.random() * pool.length)]);
+        this.gestureCd = 9 + Math.random() * 12;
+        // longe do jogador, a persona cuida do próprio ofício; perto, reage a ele
+        if (d < 9) {
+          const pool: Action[] = ['think', 'nod', 'shrug'];
+          this.fig.play(pool[Math.floor(Math.random() * pool.length)]);
+        }
       }
     }
     this.fig.update(dt);
