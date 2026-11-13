@@ -1,84 +1,68 @@
-import type { Quality } from './engine';
-import type { Aparencia } from './ps2';
 import { DEFAULT_KEYS, type ActionName } from './input';
 import { DEFAULT_DIFFICULTY, isDifficulty, type DifficultyId } from '../domain/difficulty';
 
+/**
+ * Ajustes do jogador. A lista é curta de propósito (docs/game/AJUSTES.md): só entra o que muda a jogabilidade
+ * ou a acessibilidade. Imagem e qualidade são do jogo, não do jogador: a PS2 tardia é a única imagem e a
+ * qualidade sai do aparelho e do ritmo de quadros (src/core/quality.ts).
+ */
 export interface Settings {
-  quality: Quality;
-  /** PS2 tardia (padrão), Era PS2 crua ou Limpa (sem a camada de época); vale ao recarregar */
-  aparencia: Aparencia;
   volGeral: number;
   volMusica: number;
+  /** efeitos e ambiente (vento, chuva, salas) num controle só */
   volEfeitos: number;
-  volAmbiente: number;
   sens: number;
-  /** multiplicador do eixo vertical sobre a sensibilidade geral */
-  sensY: number;
-  /** distância da câmera ao personagem, em metros */
-  camDist: number;
-  /** escala da interface durante o jogo (barras, bússola, atalhos) */
-  hudScale: number;
   invertY: boolean;
-  grain: boolean;
-  vignette: boolean;
+  /** gama do passe de cor: 1 é neutro, acima abre as sombras, abaixo fecha */
+  brilho: number;
   reduceMotion: boolean;
   highContrast: boolean;
+  /** escala do texto e, em proporção menor, da interface em jogo (barras, objetivo, atalhos) */
   textScale: number;
   /** dificuldade das novas partidas; a de uma partida em curso mora no registro (GameState.difficulty) */
   difficulty: DifficultyId;
-  fov: number;
-  hud: boolean;
   /** tamanho dos botões de toque */
   touchScale: number;
-  /** corrida por toque já a partir de 60% do curso do analógico, sem ir à borda */
-  touchEasyRun: boolean;
-  /** zona morta dos analógicos do gamepad */
-  padDeadzone: number;
   /** botão do gamepad de cada ação; ausente = mapa padrão */
   pad?: Partial<Record<ActionName, number>>;
-  /** segundos que avisos e dicas ficam na tela, como multiplicador */
-  noticeTime: number;
-  /** mostrar números de vida, vigor e experiência nas barras */
-  hudNumbers: boolean;
   /** falso até a pessoa mexer em "Reduzir movimento": enquanto isso, vale a preferência do sistema */
   reduceMotionSet: boolean;
   keys: Partial<Record<ActionName, string[]>>;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  quality: 'alta',
-  aparencia: 'tardia',
   volGeral: 0.8,
   volMusica: 0.6,
   volEfeitos: 0.85,
-  volAmbiente: 0.7,
   sens: 1,
-  sensY: 1,
-  camDist: 4.6,
-  hudScale: 1,
   invertY: false,
-  grain: true,
-  vignette: true,
+  brilho: 1,
   reduceMotion: false,
   highContrast: false,
   textScale: 1,
   difficulty: DEFAULT_DIFFICULTY,
-  fov: 58,
-  hud: true,
   touchScale: 1,
-  touchEasyRun: false,
-  padDeadzone: 0.18,
-  noticeTime: 1,
-  hudNumbers: false,
   reduceMotionSet: false,
   keys: {},
 };
 
+/** faixa do brilho (gama); fora dela o breu vira cinza ou as sombras engolem a leitura do golpe */
+export const BRILHO_MIN = 0.7;
+export const BRILHO_MAX = 1.5;
+
+/** escala da interface em jogo derivada do tamanho do texto: cresce mais devagar, para não cobrir a cena */
+export function hudScaleFor(textScale: number): number {
+  return Math.min(1.3, Math.max(0.9, 1 + (textScale - 1) * 0.5));
+}
+
 const KEY = 'interprete-rpg-config-v1';
 
-const QUALITIES = ['baixa', 'media', 'alta'];
-
-/** Aceita só valores do tipo e da faixa esperados; o resto volta ao padrão. */
+/**
+ * Aceita só valores do tipo e da faixa esperados; o resto volta ao padrão. Campos de versões antigas
+ * (aparência, qualidade, campo de visão, grão, vinheta, sensibilidade vertical, distância da câmera, escala
+ * própria da interface, interface oculta, números nas barras, corrida fácil no toque, zona morta, duração de
+ * avisos, volume de ambiente) caem em silêncio: o jogo passa a decidir por eles.
+ */
 export function sanitizeSettings(raw: unknown): Settings {
   const d = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   const s: Settings = { ...DEFAULT_SETTINGS, keys: {} };
@@ -89,15 +73,12 @@ export function sanitizeSettings(raw: unknown): Settings {
   const bool = (k: keyof Settings) => {
     if (typeof d[k] === 'boolean') (s as unknown as Record<string, unknown>)[k] = d[k];
   };
-  if (QUALITIES.includes(d.quality as string)) s.quality = d.quality as Quality;
   if (isDifficulty(d.difficulty)) s.difficulty = d.difficulty;
-  // 'ps2' era o padrão antigo, gravado por quem nunca escolheu nada: passa ao padrão novo, a PS2 tardia
-  if (d.aparencia === 'tardia' || d.aparencia === 'crua' || d.aparencia === 'limpa') s.aparencia = d.aparencia;
-  else if (d.aparencia === 'ps2') s.aparencia = 'tardia';
-  num('volGeral', 0, 1); num('volMusica', 0, 1); num('volEfeitos', 0, 1); num('volAmbiente', 0, 1);
-  num('sens', 0.3, 2.5); num('sensY', 0.4, 2); num('camDist', 3.2, 6.5); num('hudScale', 0.8, 1.4); num('textScale', 0.9, 1.6); num('fov', 48, 75); num('touchScale', 0.8, 1.4);
-  num('padDeadzone', 0.05, 0.45); num('noticeTime', 0.5, 4);
-  for (const k of ['invertY', 'grain', 'vignette', 'reduceMotion', 'highContrast', 'hud', 'touchEasyRun', 'hudNumbers', 'reduceMotionSet'] as const) bool(k);
+  num('volGeral', 0, 1); num('volMusica', 0, 1); num('volEfeitos', 0, 1);
+  // a escala própria da interface em jogo saiu: quem tinha aumentado só ela passa a "Maior" no tamanho do texto
+  if (typeof d.hudScale === 'number' && d.hudScale >= 1.15 && (d.textScale === undefined || d.textScale === 1)) s.textScale = 1.15;
+  num('sens', 0.3, 2.5); num('brilho', BRILHO_MIN, BRILHO_MAX); num('textScale', 0.9, 1.6); num('touchScale', 0.8, 1.4);
+  for (const k of ['invertY', 'reduceMotion', 'highContrast', 'reduceMotionSet'] as const) bool(k);
   if (d.keys && typeof d.keys === 'object') {
     for (const [a, list] of Object.entries(d.keys as Record<string, unknown>)) {
       if (a in DEFAULT_KEYS && Array.isArray(list)) s.keys[a as ActionName] = list.filter((c): c is string => typeof c === 'string' && c.length < 24).slice(0, 4);
@@ -128,11 +109,7 @@ export function loadSettings(): Settings {
   } catch {
     /* armazenamento indisponível ou conteúdo ilegível: segue com o padrão */
   }
-  if (!s) {
-    s = { ...DEFAULT_SETTINGS, keys: {} };
-    // primeira execução em aparelho de toque: qualidade baixa poupa bateria e garante fluidez
-    if (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches) s.quality = 'baixa';
-  }
+  if (!s) s = { ...DEFAULT_SETTINGS, keys: {} };
   // enquanto a pessoa não escolher, "reduzir movimento" acompanha o sistema, inclusive se ele mudar depois
   if (!s.reduceMotionSet) s.reduceMotion = systemReduce();
   return s;

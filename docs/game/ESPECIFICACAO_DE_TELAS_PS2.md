@@ -1,6 +1,6 @@
 # Especificação de telas na direção PS2
 
-Complementa `DIRECAO_DE_ARTE_PS2.md` (seção 7) com o que cada tela usa, em termos de molduras, tokens e comportamento. Todos os valores vêm de `design/ps2/ps2.tokens.json`; o acabamento está em `src/ui/ps2-ui.css` e vale por padrão (`data-arte="ps2"` no html; `?arte=off` desliga). Glifos e brasão em `src/ui/ps2-glyphs.ts`.
+Complementa `DIRECAO_DE_ARTE_PS2.md` (seção 7) com o que cada tela usa, em termos de molduras, tokens e comportamento. Todos os valores vêm de `design/ps2/ps2.tokens.json`; o acabamento está em `src/ui/ps2-ui.css` e vale sempre (`data-arte="ps2"` fixo no html). Glifos e brasão em `src/ui/ps2-glyphs.ts`.
 
 ## Regras comuns
 

@@ -75,8 +75,6 @@ export interface BuiltRegion {
 export interface RegionCtx {
   flags: Set<string>;
   quality: 'baixa' | 'media' | 'alta';
-  /** pele de época (texturas de public/textures/ps2); falso na Aparência Limpa */
-  ps2?: boolean;
 }
 
 export function emptyRegion(id: RegionId, name: string, subtitle: string, b: RegionBuilder, env: EnvPreset): BuiltRegion {

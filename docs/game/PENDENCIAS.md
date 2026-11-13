@@ -42,7 +42,7 @@ Feito em 13/11: expressão facial (seis morphs nos 28 humanos, PR #16, ligados �
 
 ## Trabalho de design e acessibilidade ainda não feito
 
-Feito em 13/11: trocar de alvo travado com puxão lateral do mouse, do toque ou do analógico, ou Z e C (36); sensibilidade vertical própria (75); escala própria da interface em jogo (60); distância da câmera (55). Segue aberto: dificuldade por componente (72), paleta para daltonismo e avisos de ataque que não dependam de cor (73, 77), colisão contínua de câmera (56). Consulta sob demanda do estado de combate para leitor de tela (43). Enigmas: calibragem da ponte, erro repetido, braseiro e névoa, explicações menos imediatas (97 a 101). Nó cooperativo visível na árvore (102). Mais opções na criação (103). Matriz das 39 superfícies P0 do atlas (108). Perfis de reverberação, mais superfícies de passo, som posicional, voz do Crivo (163 a 167, 170).
+Feito em 13/11: trocar de alvo travado com puxão lateral do mouse, do toque ou do analógico, ou Z e C (36); sensibilidade vertical própria (75); escala própria da interface em jogo (60); distância da câmera (55). Os três saíram dos Ajustes na revisão mínima do mesmo dia (`docs/game/AJUSTES.md`). Segue aberto: dificuldade por componente (72), paleta para daltonismo e avisos de ataque que não dependam de cor (73, 77), colisão contínua de câmera (56). Consulta sob demanda do estado de combate para leitor de tela (43). Enigmas: calibragem da ponte, erro repetido, braseiro e névoa, explicações menos imediatas (97 a 101). Nó cooperativo visível na árvore (102). Mais opções na criação (103). Matriz das 39 superfícies P0 do atlas (108). Perfis de reverberação, mais superfícies de passo, som posicional, voz do Crivo (163 a 167, 170).
 
 ## Técnicas, sem bloqueio
 

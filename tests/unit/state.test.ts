@@ -160,15 +160,14 @@ describe('registro e configurações resistem a dados corrompidos', () => {
     expect(back.flags).toEqual(['a']);
   });
   it('configuração fora da faixa ou de tipo errado cai no padrão', () => {
-    const s = sanitizeSettings({ quality: 'ultra', volGeral: 40, sens: 'rápida', fov: 5, textScale: 9, keys: { ataque: ['KeyJ', 7], voar: ['KeyV'] }, pad: { ataque: 2, esquiva: 'B' }, hud: 'sim' });
-    expect(s.quality).toBe(DEFAULT_SETTINGS.quality);
+    const s = sanitizeSettings({ volGeral: 40, sens: 'rápida', brilho: 9, textScale: 9, keys: { ataque: ['KeyJ', 7], voar: ['KeyV'] }, pad: { ataque: 2, esquiva: 'B' }, invertY: 'sim' });
     expect(s.volGeral).toBe(1);
     expect(s.sens).toBe(DEFAULT_SETTINGS.sens);
-    expect(s.fov).toBe(48);
+    expect(s.brilho).toBe(1.5);
     expect(s.textScale).toBe(1.6);
     expect(s.keys).toEqual({ ataque: ['KeyJ'] });
     expect(s.pad).toEqual({ ataque: 2 });
-    expect(s.hud).toBe(true);
+    expect(s.invertY).toBe(false);
   });
 });
 
@@ -224,17 +223,5 @@ describe('armas e armaduras', () => {
     expect(rollDrop('veredito', (id) => id === 'estoque_replicacao', 0, 0.5)).toBe('armadura_protocolo');
     expect(rollDrop('fiapo', () => false, 0.5, 0.5)).toBeNull();
     expect(rollDrop('vulto', () => true, 0, 0.5)).toBeNull();
-  });
-});
-
-
-describe('ajustes de câmera e interface', () => {
-  it('limita sensibilidade vertical, distância da câmera e escala da interface', () => {
-    const s = sanitizeSettings({ sensY: 9, camDist: 1, hudScale: 'grande' });
-    expect(s.sensY).toBe(2);
-    expect(s.camDist).toBe(3.2);
-    expect(s.hudScale).toBe(DEFAULT_SETTINGS.hudScale);
-    const d = sanitizeSettings({});
-    expect([d.sensY, d.camDist, d.hudScale]).toEqual([1, 4.6, 1]);
   });
 });

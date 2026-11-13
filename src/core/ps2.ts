@@ -1,16 +1,11 @@
 /**
- * Camada de aparência PS2 "Luz de estudo" (docs/game/DIRECAO_DE_ARTE_PS2.md). Ligada por padrão; Ajustes,
- * Aparência, escolhe entre "PS2 tardia" (padrão, o fim da geração), "Era PS2" (a predefinição crua de 448 linhas) e
- * "Limpa", que desliga. ?arte=a|b|c|ps2|tardia compara as predefinições.
+ * Imagem PS2 tardia "Luz de estudo" (docs/game/DIRECAO_DE_ARTE_PS2.md), a única do jogo: o fim da geração, com
+ * God of War e RE4 como teto. Os números vêm de design/ps2/ps2.tokens.json (render.imagem).
  *
- * A PS2 tardia acrescenta, sempre por campos opcionais da predefinição (as outras ficam idênticas ao que eram):
- * resolução interna conforme a Qualidade, mipmaps trilineares com anisotropia, anti-serrilhado leve no passe final,
- * névoa rasteira em camada sobre a de distância, sombra PCF suave e mais contraste no passe de cor.
- *
- * Quatro peças, na ordem em que atuam: resolução interna baixa com ampliação sem
- * suavização, vértices presos a uma grade de tela, texturas sem filtro suave e
- * névoa linear colorida, e um passe final que quantiza as cores com dither ordenado.
- * Os números de cada predefinição vêm de design/ps2/ps2.tokens.json.
+ * Peças, na ordem em que atuam: resolução interna baixa conforme a qualidade, ampliada com filtro suave;
+ * vértices presos a uma grade fina de tela; texturas com mipmaps trilineares e anisotropia; névoa linear
+ * colorida com uma camada rasteira por cima; e um passe final com anti-serrilhado leve por luma, que quantiza
+ * as cores com dither ordenado.
  */
 import * as THREE from 'three';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
@@ -18,7 +13,7 @@ import tokens from '../../design/ps2/ps2.tokens.json';
 
 export interface Ps2Preset {
   nome: string;
-  alturaInterna: number;
+  alturaPorQualidade: { baixa: number; media: number; alta: number };
   niveis: number;
   dither: number;
   snap: number;
@@ -27,41 +22,14 @@ export interface Ps2Preset {
   nevoaPerto: number;
   nevoaLonge: number;
   bloom: number;
-  textura: 'nearest' | 'linear';
-  ampliacao: 'pixel' | 'suave';
-  alturaPorQualidade?: { baixa: number; media: number; alta: number };
-  niveisMip?: 'nearest' | 'trilinear';
-  anisotropia?: number;
-  suavizar?: number;
-  nevoaBaixa?: number;
-  nevoaAlturaM?: number;
-  sombraSuave?: boolean;
-  contraste?: number;
+  anisotropia: number;
+  suavizar: number;
+  nevoaBaixa: number;
+  nevoaAlturaM: number;
+  contraste: number;
 }
 
-/** Valor de Aparência dos Ajustes. 'crua' é a Era PS2 de 448 linhas; 'tardia' é o padrão. */
-export type Aparencia = 'tardia' | 'crua' | 'limpa';
-
-const PRESETS = tokens.render.predefinicoes as Record<string, Ps2Preset>;
-
-/**
- * Escolhe a predefinição. Ordem: ?arte=a|b|c|ps2|off na URL, depois o valor guardado em localStorage
- * (página de comparação), depois a opção Aparência dos Ajustes. A Era PS2 é o padrão do jogo; 'limpa' ou
- * 'off' desliga a camada.
- */
-export function readPs2Preset(aparencia: Aparencia = 'tardia'): Ps2Preset | null {
-  let q = '';
-  try {
-    q = new URLSearchParams(location.search).get('arte') ?? localStorage.getItem('interprete-arte') ?? '';
-  } catch {
-    /* sem acesso ao armazenamento: vale a opção dos Ajustes */
-  }
-  if (q === '') q = aparencia === 'limpa' ? 'off' : aparencia === 'crua' ? 'ps2' : tokens.render.padrao;
-  if (q === 'off' || q === 'limpa') return null;
-  if (q === '1' || q === 'on') q = tokens.render.padrao;
-  if (q === 'crua') q = 'ps2';
-  return PRESETS[q] ?? null;
-}
+export const PS2_IMAGEM: Ps2Preset = tokens.render.imagem;
 
 const Ps2Shader = {
   uniforms: {
@@ -135,23 +103,23 @@ export class Ps2 {
 
   constructor(readonly preset: Ps2Preset) {
     hookAdd();
-    this.mist.value = preset.nevoaBaixa ?? 0;
-    this.mistH.value = preset.nevoaAlturaM ?? 1.8;
+    this.mist.value = preset.nevoaBaixa;
+    this.mistH.value = preset.nevoaAlturaM;
     this.pass = new ShaderPass(Ps2Shader);
     const u = this.pass.uniforms;
     u.uLevels.value = preset.niveis;
     u.uDither.value = preset.dither;
     u.uSat.value = preset.saturacao;
     u.uCrush.value = preset.crush;
-    u.uSoft.value = preset.suavizar ?? 0;
+    u.uSoft.value = preset.suavizar;
   }
 
   /**
-   * Altura interna do buffer. Com alturaPorQualidade (PS2 tardia), a Qualidade dos Ajustes escolhe as linhas;
-   * nunca passa da altura real da tela, para não desenhar pixels que o navegador vai descartar.
+   * Altura interna do buffer conforme a qualidade (escolhida pelo jogo); nunca passa da altura real da tela,
+   * para não desenhar pixels que o navegador vai descartar.
    */
   linhas(cssHeight: number, quality: 'baixa' | 'media' | 'alta' = 'alta'): number {
-    const alvo = this.preset.alturaPorQualidade?.[quality] ?? this.preset.alturaInterna;
+    const alvo = this.preset.alturaPorQualidade[quality];
     return Math.min(alvo, Math.max(1, cssHeight) * Math.min(2, window.devicePixelRatio || 1));
   }
 
@@ -160,7 +128,7 @@ export class Ps2 {
     return this.linhas(cssHeight, quality) / Math.max(1, cssHeight);
   }
 
-  /** Névoa rasteira (PS2 tardia): força, altura em que some e o chão de referência, que acompanha o jogador. */
+  /** Névoa rasteira: força, altura em que some e o chão de referência, que acompanha o jogador. */
   private mist = { value: 0 };
   private mistH = { value: 1.8 };
   private mistBase = { value: 0 };
@@ -182,7 +150,7 @@ export class Ps2 {
     this.snapRes.value.set((w * f) / 2, (h * f) / 2);
   }
 
-  /** Névoa linear colorida, como nos motores da época. Troca a FogExp2 do motor na primeira chamada. */
+  /** Névoa linear colorida, como nos motores da época: perto e longe a partir da densidade de cada região. */
   fog(scene: THREE.Scene, color: number, density: number): void {
     const far = this.preset.nevoaLonge / Math.max(0.004, density);
     const near = far * this.preset.nevoaPerto;
@@ -223,10 +191,10 @@ export class Ps2 {
       // needsUpdate de novo a cada clone fazia a mesma imagem subir para a placa outra vez a cada personagem
       if (!t || this.texDone.has(t)) continue;
       this.texDone.add(t);
-      t.magFilter = this.preset.textura === 'nearest' ? THREE.NearestFilter : THREE.LinearFilter;
+      t.magFilter = THREE.LinearFilter;
       // trilinear: a troca de mipmap vira um degradê, sem a faixa que corria no piso à frente da câmera
-      t.minFilter = this.preset.niveisMip === 'trilinear' ? THREE.LinearMipmapLinearFilter : THREE.LinearMipmapNearestFilter;
-      t.anisotropy = this.preset.anisotropia ?? 1;
+      t.minFilter = THREE.LinearMipmapLinearFilter;
+      t.anisotropy = this.preset.anisotropia;
       t.needsUpdate = true;
     }
     // sem mapa de normais nem de rugosidade: o visual da era não os tinha, e eles custam sombra fina que não pertence.

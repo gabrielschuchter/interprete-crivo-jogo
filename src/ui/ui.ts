@@ -12,6 +12,7 @@ import { RARITY_LABEL } from '../domain/gear';
 import { DIFFICULTIES, DIFFICULTY_IDS, isDifficulty, type DifficultyId } from '../domain/difficulty';
 import { icon } from './icons';
 import { problems } from '../core/diag';
+import { BRILHO_MAX, BRILHO_MIN } from '../core/settings';
 import { CaseView } from './caseview';
 import { TouchControls, isTouchDevice } from './touch';
 
@@ -106,11 +107,10 @@ export class UI {
       <div id="hud" class="hidden">
         <div class="status">
           <div class="who"><span class="lvl" data-k="lvl"></span><span class="nm" data-k="nm"></span></div>
-          <div class="meter" role="meter" aria-label="Vida" aria-valuemin="0" data-k="hpM"><b class="lag" data-k="hplag"></b><b data-k="hp"></b><span class="num" data-k="hpN"></span></div>
-          <div class="meter vigor" role="meter" aria-label="Vigor" aria-valuemin="0" data-k="vigorM"><b data-k="vigor"></b><span class="num" data-k="vigorN"></span></div>
+          <div class="meter" role="meter" aria-label="Vida" aria-valuemin="0" data-k="hpM"><b class="lag" data-k="hplag"></b><b data-k="hp"></b></div>
+          <div class="meter vigor" role="meter" aria-label="Vigor" aria-valuemin="0" data-k="vigorM"><b data-k="vigor"></b></div>
           <div class="foco" role="meter" aria-label="Foco" aria-valuemin="0" aria-valuemax="3" data-k="focoM"><i></i><i></i><i></i></div>
           <div class="meter xp" role="meter" aria-label="Experiência" aria-valuemin="0" aria-valuemax="100" data-k="xpM"><b data-k="xp"></b></div>
-          <div class="xpn" data-k="xpN"></div>
         </div>
         <div class="objective"><div class="label">Objetivo</div><div class="q" data-k="quest"></div><div class="s" data-k="step"></div></div>
         <div class="coins" data-k="coins"></div>
@@ -367,7 +367,7 @@ export class UI {
     const t = el(`<div class="toast">${label ? `<span class="label">${esc(label)}</span>` : ''}${esc(text)}</div>`);
     this.$.toasts.prepend(t);
     while (this.$.toasts.children.length > 4) this.$.toasts.lastElementChild?.remove();
-    const ms = seconds * 1000 * (this.g?.settings.noticeTime ?? 1);
+    const ms = seconds * 1000;
     setTimeout(() => t.classList.add('out'), ms);
     setTimeout(() => t.remove(), ms + 600);
   }
@@ -377,7 +377,7 @@ export class UI {
     if (text) {
       this.remember(label, text);
       this.$.hint.innerHTML = `<span class="label">${esc(label)}</span>${esc(text)}`;
-      this.hintTimer = window.setTimeout(() => this.show('hint', false), seconds * 1000 * (this.g?.settings.noticeTime ?? 1));
+      this.hintTimer = window.setTimeout(() => this.show('hint', false), seconds * 1000);
     }
   }
   subtitle(text: string | null): void {
@@ -426,10 +426,6 @@ export class UI {
     this.focoPips(d.foco ?? 0);
     const hp = Math.ceil(d.hp);
     const vg = Math.round(d.vigor);
-    const nums = this.g.settings.hudNumbers;
-    this.set('hpN', nums ? `${hp} / ${d.maxHp}` : '');
-    this.set('vigorN', nums ? `${vg} / ${Math.round(d.maxVigor)}` : '');
-    this.set('xpN', nums ? (d.xpLeft > 0 ? `faltam ${Math.ceil(d.xpLeft)} de experiência` : 'nível máximo') : '');
     this.aria('hpM', hp, d.maxHp, `${hp} de ${d.maxHp}`);
     this.aria('vigorM', vg, Math.round(d.maxVigor), `${vg} de ${Math.round(d.maxVigor)}`);
     this.aria('xpM', Math.round(d.xp * 100), 100, d.xpLeft > 0 ? `faltam ${Math.ceil(d.xpLeft)} pontos para o próximo nível` : 'nível máximo');
@@ -1140,13 +1136,7 @@ export class UI {
   private pageConfig(page: HTMLElement): void {
     const st = this.g.settings;
     const fmt: Partial<Record<keyof typeof st, (v: number) => string>> = {
-      fov: (v) => `${v}°`,
       sens: (v) => `${v.toFixed(1)}×`,
-      sensY: (v) => `${v.toFixed(1)}×`,
-      camDist: (v) => `${v.toFixed(1)} m`,
-      touchScale: (v) => `${Math.round(v * 100)}%`,
-      padDeadzone: (v) => `${Math.round(v * 100)}%`,
-      noticeTime: (v) => `${v.toFixed(1)}×`,
     };
     const show = (k: keyof typeof st, v: number) => (fmt[k] ?? ((x: number) => `${Math.round(x * 100)}%`))(v);
     const range = (k: keyof typeof st, label: string, min: number, max: number, step: number, note = '') =>
@@ -1159,13 +1149,16 @@ export class UI {
     const padActs = acts.filter((a) => !['frente', 'tras', 'esquerda', 'direita', 'camEsq', 'camDir', 'habilidades'].includes(a));
     const bindRow = (a: ActionName) =>
       `<div class="set"><label>${ACTION_LABEL[a]}</label><span class="binds"><button class="btn" data-bind="${a}" aria-label="${ACTION_LABEL[a]}: tecla ${inp.keys[a].map(keyLabel).join(' ou ') || 'nenhuma'}. Acione para trocar.">${inp.keys[a].map(keyLabel).join(' · ') || 'sem tecla'}</button>${padActs.includes(a) ? `<button class="btn" data-bindpad="${a}" aria-label="${ACTION_LABEL[a]}: botão do controle ${padLabel(inp.pad[a])}. Acione para trocar.">${padLabel(inp.pad[a])}</button>` : '<span class="btn ghost" aria-hidden="true">analógico</span>'}</span></div>`;
+    // amostra de calibragem: três emblemas no breu, do quase invisível ao nítido, com a mesma curva do render
+    // a cor vai direto no traço do SVG: a regra de cor dos glifos da interface não pode tingir a amostra
+    const calib = (g: number) => CALIB.map((v) => `<i>${glyphSvg('crivo', 34).replace(/currentColor/g, `rgb(${Array(3).fill(Math.round(255 * Math.pow(v, 1 / g))).join(',')})`)}</i>`).join('');
     page.innerHTML = `<div class="label">Valem para este navegador</div><h2>Configurações</h2><div class="scroll"><div class="settings">
-      <h4>Imagem</h4>${select('aparencia', 'Aparência', [['tardia', 'PS2 tardia'], ['crua', 'Era PS2 crua'], ['limpa', 'Limpa']], 'PS2 tardia: o fim da geração, com mais linhas, filtro de textura melhor, bordas amaciadas e névoa rasteira. Era PS2 crua: 448 linhas e pontilhado grosso. Limpa: sem a camada de época. A troca recarrega o jogo.')}${select('quality', 'Qualidade', [['baixa', 'Baixa'], ['media', 'Média'], ['alta', 'Alta']], 'Baixa desliga sombras e brilho. A troca pode levar um instante.')}${range('fov', 'Campo de visão', 48, 75, 1)}${check('grain', 'Grão de filme')}${check('vignette', 'Vinheta')}
-      <h4>Som</h4>${range('volGeral', 'Volume geral', 0, 1, 0.05)}${range('volMusica', 'Música', 0, 1, 0.05)}${range('volEfeitos', 'Efeitos', 0, 1, 0.05)}${range('volAmbiente', 'Ambiente', 0, 1, 0.05)}
-      <h4>Jogo</h4><div class="set"><label for="cfg-difficulty">Dificuldade${this.g.state ? ' desta partida' : ' das novas partidas'}<small data-diffnote>${esc(DIFFICULTIES[this.g.difficultyId].detail)}</small></label><select id="cfg-difficulty" data-k="difficulty">${DIFFICULTY_IDS.map((id) => `<option value="${id}" ${this.g.difficultyId === id ? 'selected' : ''}>${DIFFICULTIES[id].name}</option>`).join('')}</select></div>${range('sens', this.touch.enabled ? 'Sensibilidade da câmera e do toque' : 'Sensibilidade da câmera', 0.3, 2.5, 0.1)}${range('sensY', 'Sensibilidade vertical', 0.4, 2, 0.1, 'Multiplica a sensibilidade só no eixo de cima e baixo')}${range('camDist', 'Distância da câmera', 3.2, 6.5, 0.1)}${range('touchScale', 'Tamanho dos botões de toque', 0.8, 1.4, 0.05, this.touch.enabled ? '' : 'Vale quando a tela for tocada')}${check('touchEasyRun', 'Correr sem levar o dedo à borda', 'No toque, a corrida começa a 60% do curso do analógico, em vez de 94%')}${check('invertY', 'Inverter eixo vertical')}${check('hud', 'Mostrar interface durante o jogo')}${range('hudScale', 'Tamanho da interface em jogo', 0.8, 1.4, 0.05, 'Barras, objetivo, moedas e atalhos')}${check('hudNumbers', 'Números nas barras', 'Vida, vigor e experiência que falta, em números')}
-      <h4>Acessibilidade</h4>${select('textScale', 'Tamanho do texto', [['0.9', 'Menor'], ['1', 'Padrão'], ['1.15', 'Maior'], ['1.3', 'Muito maior'], ['1.6', 'Máximo']])}${check('highContrast', 'Alto contraste')}${check('reduceMotion', 'Reduzir movimento', 'Sem tremor de câmera, clarões e texto animado. Começa igual à preferência do sistema.')}${range('noticeTime', 'Duração de avisos e dicas', 0.5, 4, 0.5, 'Avisos passados ficam no Diário')}
+      <h4>Imagem</h4>${range('brilho', 'Brilho', BRILHO_MIN, BRILHO_MAX, 0.05, `Suba até o emblema da esquerda mal aparecer no escuro<span class="calib" data-calib aria-hidden="true">${calib(st.brilho)}</span>`)}
+      <h4>Som</h4>${range('volGeral', 'Volume geral', 0, 1, 0.05)}${range('volMusica', 'Música', 0, 1, 0.05)}${range('volEfeitos', 'Efeitos e ambiente', 0, 1, 0.05)}
+      <h4>Jogo</h4><div class="set"><label for="cfg-difficulty">Dificuldade${this.g.state ? ' desta partida' : ' das novas partidas'}<small data-diffnote>${esc(DIFFICULTIES[this.g.difficultyId].detail)}</small></label><select id="cfg-difficulty" data-k="difficulty">${DIFFICULTY_IDS.map((id) => `<option value="${id}" ${this.g.difficultyId === id ? 'selected' : ''}>${DIFFICULTIES[id].name}</option>`).join('')}</select></div>${range('sens', this.touch.enabled ? 'Sensibilidade da câmera e do toque' : 'Sensibilidade da câmera', 0.3, 2.5, 0.1)}${check('invertY', 'Inverter eixo vertical')}${this.touch.enabled ? range('touchScale', 'Tamanho dos botões de toque', 0.8, 1.4, 0.05) : ''}
+      <h4>Acessibilidade</h4>${select('textScale', 'Tamanho do texto e da interface', [['0.9', 'Menor'], ['1', 'Padrão'], ['1.15', 'Maior'], ['1.3', 'Muito maior'], ['1.6', 'Máximo']])}${check('highContrast', 'Alto contraste')}${check('reduceMotion', 'Reduzir movimento', 'Sem tremor de câmera, clarões, grão e texto animado. Começa igual à preferência do sistema.')}
       <h4>Controles · acione para remapear</h4><div class="set"><label>Teclado e mouse à esquerda, controle à direita<small>Depois de acionar, pressione a tecla, o botão do mouse ou o botão do controle. Esc cancela. Se a escolha já for de outra ação, as duas trocam e um aviso diz o que mudou.</small></label></div></div><div class="keys">${acts.map(bindRow).join('')}</div>
-      <div class="settings"><h4>Controle</h4>${range('padDeadzone', 'Zona morta dos analógicos', 0.05, 0.45, 0.01, 'Aumente se o personagem ou a câmera andarem sozinhos')}<div class="set"><label>Analógico esquerdo move, direito olha, RT também corre. Nos menus, direcional ou analógico percorrem, A aciona e B volta.</label></div><div class="set"><button class="btn" data-a="reset">Restaurar padrões</button></div>
+      <div class="settings"><div class="set"><label>Analógico esquerdo move, direito olha, RT também corre. Nos menus, direcional ou analógico percorrem, A aciona e B volta.</label></div><div class="set"><button class="btn" data-a="reset">Restaurar padrões</button></div></div>
       ${problems.length ? `<div class="settings"><h4>Diagnóstico</h4><div class="set"><label>${problems.length} ${problems.length === 1 ? 'arquivo não carregou' : 'arquivos não carregaram'} nesta sessão. O jogo usa a versão de reserva deles.<small>${problems.map(esc).join('<br>')}</small></label></div></div>` : ''}
       <div class="settings credits"><h4>Créditos</h4>
       <div class="set"><label>Música<small>"Night Vigil", "Equatorial Complex", "Aquarium", "Ether Vox" e "That Zen Moment", de Kevin MacLeod (incompetech.com). Licenciadas sob Creative Commons Atribuição 4.0, creativecommons.org/licenses/by/4.0/. Alterações: arquivos recomprimidos; "That Zen Moment" cortada em cinco minutos.</small></label></div>
@@ -1192,6 +1185,10 @@ export class UI {
           const out = inp.parentElement?.querySelector('output');
           if (out) out.textContent = show(k, Number(v));
         }
+        if (k === 'brilho') {
+          const c = page.querySelector('[data-calib]');
+          if (c) c.innerHTML = calib(Number(v));
+        }
         this.g.applySettings();
       }),
     );
@@ -1216,6 +1213,9 @@ export class UI {
 }
 
 export { xpForLevel };
+
+/** cinzas da amostra de brilho, em espaço de tela: 3%, 7% e 13% sobre o preto (o breu das salas e da névoa) */
+const CALIB = [0.03, 0.07, 0.13];
 
 const MAP_GLYPH: Record<'portal' | 'npc' | 'poi', Ps2Glyph> = { portal: 'descoberta', npc: 'pergunta', poi: 'evidencia' };
 const glyphCache = new Map<string, HTMLImageElement>();

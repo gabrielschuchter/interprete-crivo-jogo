@@ -6,7 +6,8 @@ import * as THREE from 'three';
 import { Engine } from './core/engine';
 import { Input, DEFAULT_KEYS, type ActionName } from './core/input';
 import { AudioSys, type AmbienceLoop, type Surface } from './core/audio';
-import { DEFAULT_SETTINGS, loadSettings, storeSettings, type Settings } from './core/settings';
+import { DEFAULT_SETTINGS, hudScaleFor, loadSettings, storeSettings, type Settings } from './core/settings';
+import { QualityGovernor, initialQuality } from './core/quality';
 import { UI, type BookTab } from './ui/ui';
 import { Player, type AttackEvent } from './entities/player';
 import { loadExternalModel, preloadModels, playerModelKey, HAIRS, type Action } from './entities/figure';
@@ -143,13 +144,16 @@ export class Game {
   private busy = false;
   frames = 0;
   fps = 0;
+  /** qualidade escolhida pelo jogo: começa pelo aparelho e desce sozinha se o quadro não segurar */
+  readonly qualityGov = new QualityGovernor(initialQuality(typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches));
   private fpsAcc = 0;
   private fpsN = 0;
   /** registro de erros para os testes */
   errors: string[] = [];
 
   constructor(canvas: HTMLCanvasElement, public ui: UI) {
-    this.engine = new Engine(canvas, this.settings.aparencia);
+    this.engine = new Engine(canvas);
+    this.engine.setQuality(this.qualityGov.quality);
     this.input = new Input(canvas);
     ui.bind(this);
     this.pulseRing = new THREE.Mesh(
@@ -276,37 +280,26 @@ export class Game {
   applySettings(): void {
     const s = this.settings;
     const e = this.engine;
-    if (e.quality !== s.quality) e.setQuality(s.quality);
-    e.settings.vignette = s.vignette;
-    e.settings.grain = s.grain;
     e.settings.reduceMotion = s.reduceMotion;
     e.settings.highContrast = s.highContrast;
-    if (e.settings.fov !== s.fov) {
-      e.settings.fov = s.fov;
-      e.resize();
-    }
+    e.settings.brilho = s.brilho;
+    // vale já no próximo quadro, mesmo com o jogo em pausa por trás dos Ajustes
+    e.grade.uniforms.uGamma.value = s.brilho;
     document.body.classList.toggle('hc', s.highContrast);
     document.body.classList.toggle('rm', s.reduceMotion);
-    document.body.classList.toggle('nohud', !s.hud);
     document.body.classList.toggle('big', s.textScale >= 1.3);
     document.documentElement.style.setProperty('--ui-scale', String(s.textScale));
-    document.documentElement.style.setProperty('--touch-scale', String(s.touchScale ?? 1));
-    document.documentElement.style.setProperty('--hud-scale', String(s.hudScale ?? 1));
+    document.documentElement.style.setProperty('--touch-scale', String(s.touchScale));
+    document.documentElement.style.setProperty('--hud-scale', String(hudScaleFor(s.textScale)));
     for (const a of Object.keys(DEFAULT_KEYS) as ActionName[]) this.input.keys[a] = s.keys[a] ?? [...DEFAULT_KEYS[a]];
     this.input.pad = { ...(s.pad ?? DEFAULT_PAD) };
-    this.input.padDeadzone = s.padDeadzone;
-    this.ui.touch.easyRun = s.touchEasyRun;
     this.applyAudio();
     storeSettings(s);
-    if (s.aparencia !== e.aparencia) {
-      // a camada PS2 mexe nos materiais ao montar a cena; a troca grava o progresso e recarrega
-      this.save();
-      location.reload();
-    }
   }
   private applyAudio(): void {
     const s = this.settings;
-    this.audio.volumes = { geral: s.volGeral, musica: s.volMusica, efeitos: s.volEfeitos, ambiente: s.volAmbiente };
+    // o ambiente segue o volume de efeitos, na proporção do antigo par de padrões (0,7 para 0,85)
+    this.audio.volumes = { geral: s.volGeral, musica: s.volMusica, efeitos: s.volEfeitos, ambiente: s.volEfeitos * 0.82 };
     this.audio.applyVolumes();
   }
   resetSettings(): void {
@@ -509,7 +502,7 @@ export class Game {
     const t0 = performance.now();
     if (id !== 'atrio') await this.restProps;
     const t1 = performance.now();
-    this.region = buildRegion(id, { flags, quality: this.settings.quality, ps2: !!this.engine.ps2 });
+    this.region = buildRegion(id, { flags, quality: this.engine.quality });
     // corpos de quem mora ou ronda a região: baixam aqui, não na abertura
     const bodies = new Set<string>();
     for (const e of this.region.enemies) {
@@ -1540,6 +1533,11 @@ export class Game {
     }
     // menu parado: termina, um a um, os shaders que a abertura deixou pendentes (ver Engine.linkPending)
     if (this.mode === 'splash' || this.mode === 'menu' || this.mode === 'create') this.engine.linkPending(12);
+    // só o jogo em curso mede o quadro; nos testes (?teste) o render por software é lento de propósito e não conta
+    if (this.mode === 'play' && !this.ui.instant) {
+      const q = this.qualityGov.frame(raw);
+      if (q) this.engine.setQuality(q);
+    }
     try {
       this.tick(Math.min(0.05, raw));
     } catch (err) {
@@ -1776,8 +1774,6 @@ export class Game {
 
     p.sensitivity = this.settings.sens;
     p.invertY = this.settings.invertY;
-    p.sensitivityY = this.settings.sensY;
-    p.camDist = this.settings.camDist;
     const lantern = D.isEquipped(s, 'lanterna_transparencia');
     // 9 estourava o rosto visto de frente (auditoria, item 3); a lanterna segue sendo o ganho de alcance
     // a tocha tremula; a Lanterna da Transparência pende do cinto e soma uma luz fria e estável

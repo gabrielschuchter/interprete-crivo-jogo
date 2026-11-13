@@ -311,7 +311,6 @@ input[type='text']:focus { outline: none; border-color: var(--g-text); box-shado
 /* alto contraste e movimento reduzido */
 body.hc { --g-panel: rgba(0,0,0,0.96); --g-panel-solid: #000; --g-dim: #e6dade; --g-mute: #b9a6ae; --g-line: #bd9a61; }
 body.rm * { animation: none !important; transition: none !important; }
-body.nohud #hud { display: none; }
 
 @media (max-width: 900px) and (orientation: portrait) {
   #menu { grid-template-columns: 1fr; }
@@ -480,10 +479,6 @@ body.touch #book nav .foot button::before { content: '× '; }
 
 /* auditoria de 12/11/2026: números nas barras, avisos de registro, remapeamento em duas colunas */
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.meter .num { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); font: 500 9px/1 var(--font-mono); color: var(--g-paper); text-shadow: 0 0 3px #000, 0 0 3px #000; pointer-events: none; }
-.meter.vigor .num { font-size: 8px; right: -46px; }
-.status .xpn { font: 400 10px/1.2 var(--font-mono); color: var(--g-dim); margin-top: 2px; }
-.status .xpn:empty { display: none; }
 .warn { border-left: 2px solid var(--classic-crimson); padding: 6px 10px; background: rgba(214,40,57,0.12); color: var(--g-text); font-size: 14px; }
 .save-tools { gap: 8px; }
 .btn.small { padding: 7px 12px; font-size: 12px; width: auto; }
@@ -518,3 +513,7 @@ body.touch #hud .pending { left: calc(14px + env(safe-area-inset-left, 0px)); bo
 
 /* escala própria da interface em jogo (Ajustes > Jogo); cada bloco cresce a partir do próprio canto */
 #hud .status, #hud .objective, #hud .quick, #hud .coins, #hud .pending { zoom: var(--hud-scale, 1); }
+
+/* amostra de calibragem do brilho: o fundo é preto puro, os emblemas seguem a mesma curva de gama do render */
+.set .calib { display: flex; width: max-content; gap: 4px; margin-top: 8px; padding: 8px; background: #000; box-shadow: inset 0 0 0 1px var(--g-line); }
+.set .calib i { display: block; line-height: 0; }

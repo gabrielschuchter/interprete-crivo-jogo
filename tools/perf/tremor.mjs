@@ -32,7 +32,7 @@ for (const reg of regions) {
     const G = window.__game;
     G.tick = () => {};
     const eng = G.engine;
-    eng.settings.grain = false;
+    eng.settings.reduceMotion = true; // sem grão animado nem tremor de câmera na medida
     eng.scene.traverse((o) => { if (o.material === eng.rainMat) o.visible = false; });
     const gl = eng.renderer.getContext();
     const W = gl.drawingBufferWidth, H = gl.drawingBufferHeight;
