@@ -279,7 +279,7 @@ const CENAS = {
   },
 };
 // inimigos: ataque visto de trás do jogador, que fica parado e invulnerável
-for (const kind of ['erudito', 'errante', 'suplicante', 'vulto', 'duelista', 'carcereiro', 'matriarca', 'eco', 'veredito']) {
+for (const kind of ['fiapo', 'erudito', 'errante', 'suplicante', 'vulto', 'duelista', 'carcereiro', 'matriarca', 'eco', 'veredito']) {
   CENAS['inimigo_' + kind] = async () => {
     await clearEnemies();
     const fr = await E(async (kind) => {

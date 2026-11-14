@@ -12,6 +12,8 @@ O caminho B, a forja (`tools/chars/build.py`), parte do corpo MakeHuman de baixa
 
 O caminho C (imagem para 3D com TripoSR, Hunyuan3D ou TRELLIS) foi recusado depois de testado: os pesos ficam no Hugging Face, que a rede deste ambiente bloqueia, e nenhum dos três roda em tempo útil sem GPU. Mesmo com acesso, a saída é uma malha única sem esqueleto, com textura projetada e topologia que não aceita animação sem retopologia manual, o que contraria a meta de pipeline reutilizável.
 
+O Fiapo da Névoa (MOB_00, `mob_00_fiapo`) entrou depois, em 14/11/2026. Até então era o único inimigo comum fora da forja: o jogo ainda montava um espectro de primitivas (cones, cápsulas e esferas) em `enemy.ts`, e por isso as rodadas de personagens e de movimento não o alteraram. O corpo novo sai do mesmo caminho A (`criatura.py fiapo_nevoa`): tronco de vareta, capuz pequeno, braços longos de osso e garras, rabo de seis fitas, cerca de 1 mil triângulos. Todo clipe abre os braços para fora do plano do peito (a rotação lateral nunca muda de sinal), de modo que nenhuma mão cruza o corpo em parado, perseguição, golpe, dano ou morte. Capturas em `docs/game/capturas/movimento/inimigo_fiapo_antes.jpg` e `inimigo_fiapo_depois.jpg`.
+
 ## Rubrica
 
 Notas de 1 a 5, comparando com a versão anterior dos personagens (`tools/pipeline/ps2_cast.py`, roupas da comunidade MakeHuman reduzidas). As imagens `cmp_npc.jpg` e `cmp_mob.jpg` mostram a anterior na linha de cima.

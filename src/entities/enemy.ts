@@ -53,7 +53,7 @@ interface Cfg {
 const PS2 = 'models/personagens/ps2/';
 
 export const ENEMY_CFG: Record<EnemyKind, Cfg> = {
-  fiapo: { name: 'Fiapo da Névoa', hp: 46, speed: 2.7, scale: 1, sight: 12, meleeRange: 2.1, windup: 0.62, lunge: 2.8, dmg: 12, recover: 1.0, xp: 14, coins: [2, 5], tint: 0x5f7f78, eye: 0x7fffd0, poise: 1 },
+  fiapo: { name: 'Fiapo da Névoa', hp: 46, speed: 2.7, scale: 1, sight: 12, meleeRange: 2.1, windup: 0.62, lunge: 2.8, dmg: 12, recover: 1.0, xp: 14, coins: [2, 5], tint: 0x5f7f78, eye: 0x7fffd0, poise: 1, model: 'mob_00_fiapo', alt: 2.0, eyes: false },
   vulto: { name: 'Vulto', hp: 96, speed: 2.1, scale: 1.35, sight: 16, meleeRange: 2.3, windup: 0.8, lunge: 2.2, dmg: 16, recover: 1.2, xp: 32, coins: [6, 10], ranged: true, tint: 0x4a5f7a, eye: 0x9fd0ff, poise: 3 },
   eco: { name: 'O Eco', hp: 340, speed: 2.9, scale: 1.9, sight: 30, meleeRange: 2.9, windup: 0.7, lunge: 3.4, dmg: 18, recover: 1.0, xp: 130, coins: [30, 40], boss: true, tint: 0x7a6a4a, eye: 0xffd28a, poise: 99 },
   veredito: { name: 'O Veredito', hp: 880, speed: 2.4, scale: 2.7, sight: 60, meleeRange: 3.9, windup: 0.85, lunge: 3.0, dmg: 20, recover: 1.1, xp: 320, coins: [60, 60], boss: true, ranged: true, tint: 0x4a3a5a, eye: 0xff5a6a, poise: 99 },
@@ -71,9 +71,8 @@ Object.assign(ENEMY_CFG.vulto, { model: 'mob_02_espectro', alt: 2.25, eyes: fals
 Object.assign(ENEMY_CFG.eco, { model: 'mini_01_carrasco', alt: 3.3, eyes: false });
 Object.assign(ENEMY_CFG.veredito, { model: 'boss_01_grande_interprete', alt: 4.6, eyes: false });
 
-/** caminho do corpo glTF de um tipo de inimigo (null: espectro procedural) */
+/** caminho do corpo glTF de um tipo de inimigo */
 export function enemyModelPath(kind: EnemyKind): string | null {
-  if (kind === 'fiapo') return null;
   const m = ENEMY_CFG[kind].model;
   return m ? `${PS2}${m}.glb` : BODY_PATH;
 }
@@ -402,7 +401,7 @@ export class Enemy {
     this.bar.renderOrder = 20;
     this.root.add(this.bar);
     this.root.position.copy(this.pos);
-    if (kind !== 'fiapo') this.useBody(eyeM);
+    this.useBody(eyeM);
   }
 
   /** Troca o espectro de primitivas por um corpo humano encapuzado, escurecido e com olhos acesos. */

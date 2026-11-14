@@ -415,7 +415,272 @@ def espectro_lanterna():
     return rig, clips
 
 
-BUILDERS = {'espectro_lanterna': espectro_lanterna}
+# ================================================================== MOB_00 Fiapo da Névoa
+def fiapo_nevoa():
+    """Fiapo: o espectro mais fino e mais comum. Tronco de vareta, capuz pequeno de crânio, braços longos que
+    pendem para os lados (nunca cruzam o corpo), mãos de quatro garras longas e um rabo de névoa em fitas.
+    Nenhum clipe leva uma mão para além do plano do peito: abrir é sempre para fora."""
+    rnd = random.Random(11)
+    rig = Rig()
+    H0 = 0.22
+    rig.bone('Root', (0, 0, 0), (0, 0, 0.2))
+    rig.bone('Hips', (0, 0, 0.92), (0, 0, 1.08), 'Root')
+    rig.bone('Spine', (0, 0, 1.08), (0, 0, 1.28), 'Hips')
+    rig.bone('Spine1', (0, 0, 1.28), (0, 0, 1.46), 'Spine')
+    rig.bone('Neck', (0, 0, 1.46), (0, -0.02, 1.54), 'Spine1')
+    rig.bone('Head', (0, -0.02, 1.54), (0, -0.04, 1.74), 'Neck')
+    for s, X in (('Left', 1), ('Right', -1)):
+        rig.bone(s + 'Shoulder', (0.03 * X, 0, 1.42), (0.15 * X, 0, 1.41), 'Spine1')
+        rig.bone(s + 'Arm', (0.15 * X, 0, 1.41), (0.30 * X, -0.03, 1.10), s + 'Shoulder')
+        rig.bone(s + 'ForeArm', (0.30 * X, -0.03, 1.10), (0.38 * X, -0.12, 0.80), s + 'Arm')
+        rig.bone(s + 'Hand', (0.38 * X, -0.12, 0.80), (0.40 * X, -0.15, 0.66), s + 'ForeArm')
+    NR = 6
+    ribbons = []
+    for k in range(NR):
+        a = TAU * k / NR + 0.3
+        r0 = 0.1
+        base = Vector((r0 * math.sin(a), -r0 * math.cos(a), 0.98))
+        chain = []
+        prev = 'Hips'
+        L = 0.85 + 0.2 * rnd.random()
+        for j in range(3):
+            h = base + Vector((math.sin(a) * 0.04 * j, -math.cos(a) * 0.04 * j, -L * j / 3))
+            t = base + Vector((math.sin(a) * 0.04 * (j + 1), -math.cos(a) * 0.04 * (j + 1), -L * (j + 1) / 3))
+            nm = f'Fita{k}_{j}'
+            rig.bone(nm, h, t, prev); prev = nm; chain.append(nm)
+        ribbons.append((a, chain, base, L))
+    rig.done()
+
+    AT = paint.Atlas(256, seed=9)
+    for key, wh in (('manto', (128, 128)), ('capuz', (64, 64)), ('vazio', (16, 16)), ('osso', (32, 32)), ('brilho', (16, 16)), ('olho', (16, 16))):
+        AT.alloc(key, *wh)
+    paint_shroud(AT, 'manto', '4f6a66', '9fc2ba')
+    paint_shroud(AT, 'capuz', '455e5b', '8fb0a8')
+    paint.paint_flat(AT, 'vazio', '040608', 0.05)
+    paint.paint_flat(AT, 'osso', 'b8b4a0', 0.3)
+    paint.paint_glow(AT, 'brilho', '7fffd0')
+    paint.paint_glow(AT, 'olho', '9fffe0')
+    roupa, brilho = [], []
+
+    # capuz pequeno e alto
+    P = Piece('capuz', 'capuz')
+    c = Vector((0, -0.015, 1.66))
+    A = angles_n(12)
+    rings = []
+    for ph in [150, 124, 98, 72, 48, 24, 10]:
+        phr = math.radians(ph)
+        R = []
+        for a in A:
+            back = max(0.0, math.cos(a - math.pi))
+            rr = 0.105 + 0.015 * math.sin(phr) + 0.04 * back * sm((ph - 10) / 60) * (1 - sm((ph - 100) / 40))
+            R.append(c + Vector((math.sin(phr) * math.sin(a) * rr * 0.95, -math.sin(phr) * math.cos(a) * rr, math.cos(phr) * rr * 1.35)))
+        rings.append(np.array([tuple(p) for p in R]))
+    loft(P, rings, gaps=lambda i, k: abs(((k + 0.5) / 12 * TAU + math.pi) % TAU - math.pi) < 0.7 and 1 <= i <= 4)
+    tip = c + Vector((0, 0.1, 0.22))
+    top = rings[-1]
+    Pt = Piece('ponta', 'capuz')
+    loft(Pt, [top, np.array([tuple(Vector(p).lerp(tip, 0.6)) for p in top]), np.array([tuple(tip)] * len(top))])
+    roupa += [(P, ['Head', 'Neck']), (Pt, 'rigid:Head')]
+    V = Piece('vazio', 'vazio')
+    sphere(V, c + Vector((0, 0.0, -0.01)), 0.075, 0.07, 0.1, nu=8, nv=5)
+    roupa.append((V, 'rigid:Head'))
+    # tronco de vareta: costelas sob um manto fino
+    M = Piece('manto', 'manto')
+    A = angles_n(12)
+    rings = []
+    prof = [(0.98, 0.15, 0.1), (1.1, 0.13, 0.09), (1.24, 0.125, 0.085), (1.36, 0.14, 0.09), (1.43, 0.15, 0.09), (1.5, 0.08, 0.06), (1.56, 0.055, 0.05)]
+    for z, rx, ry in prof:
+        rings.append(np.array([(rx * math.sin(a), -ry * math.cos(a), z) for a in A]))
+    loft(M, rings, vrange=(0.35, 1.0))
+    roupa.append((M, ['Hips', 'Spine', 'Spine1', 'Neck', 'LeftShoulder', 'RightShoulder']))
+    S = Piece('saia', 'manto')
+    rings = [np.array([(0.15 * math.sin(a), -0.11 * math.cos(a), 0.98) for a in A]),
+             np.array([(0.12 * math.sin(a), -0.09 * math.cos(a), 0.62) for a in A]),
+             np.array([(0.05 * math.sin(a), -0.04 * math.cos(a), 0.34) for a in A])]
+    loft(S, rings[::-1], vrange=(0.0, 0.35))
+    roupa.append((S, ['Hips'] + [r[1][0] for r in ribbons]))
+    for k, (a, chain, base, L) in enumerate(ribbons):
+        F = Piece(f'fita{k}', 'manto')
+        n_ = 7
+        rings = []
+        for j in range(n_):
+            t = j / (n_ - 1)
+            p = base + Vector((math.sin(a) * 0.12 * t, -math.cos(a) * 0.12 * t, -L * t))
+            w = 0.075 * (1 - 0.9 * t ** 1.2) + 0.003
+            side = Vector((math.cos(a), math.sin(a), 0)) * w
+            out = Vector((math.sin(a), -math.cos(a), 0)) * 0.003
+            rings.append(np.array([tuple(p - side + out), tuple(p + side + out)]))
+        rings = rings[::-1]
+        rings[0][0][2] += 0.04 * rnd.random(); rings[0][1][2] -= 0.05 * rnd.random()
+        loft(F, rings, closed=False, vrange=(0.0, 0.6))
+        roupa.append((F, ['Hips'] + chain))
+    # braços de osso fino com manga rasgada curta; mãos de garras longas
+    for s, X in (('Left', 1), ('Right', -1)):
+        sh = Vector(rig.seg[s + 'Arm'][0]); el = Vector(rig.seg[s + 'ForeArm'][0]); wr = Vector(rig.seg[s + 'Hand'][0])
+        Bn = Piece('osso' + s, 'osso')
+        cylinder(Bn, sh, el, 0.017, n=5, r2=0.014)
+        cylinder(Bn, el, wr, 0.014, n=5, r2=0.011)
+        sphere(Bn, el, 0.022, 0.022, 0.022, nu=6, nv=4)
+        roupa.append((Bn, [s + 'Arm', s + 'ForeArm']))
+        Q = Piece('manga' + s, 'manto')
+        pts = geo.polyline([sh + Vector((-0.02 * X, 0, 0.02)), sh.lerp(el, 0.7), el.lerp(wr, 0.35)], 5)
+        rings = []
+        for i, p in enumerate(pts):
+            t = i / 4
+            d = (pts[min(i + 1, 4)] - pts[max(i - 1, 0)])
+            Xv, Yv = geo.limb_frame(d)
+            r = 0.035 + 0.05 * t ** 1.4
+            R = ring_points(p, [r] * 8, angles_n(8), frame=(Xv, Yv))
+            if i == 4:
+                for q in range(8): R[q][2] -= 0.04 + 0.08 * rnd.random() * (q % 2)
+            rings.append(R)
+        loft(Q, rings)
+        roupa.append((Q, [s + 'Shoulder', s + 'Arm', s + 'ForeArm', 'Spine1']))
+        Hn = Piece('mao' + s, 'osso')
+        hb, ht = Vector(rig.seg[s + 'Hand'][0]), Vector(rig.seg[s + 'Hand'][1])
+        box(Hn, hb.lerp(ht, 0.3), 0.016, 0.012, 0.03)
+        for f_ in range(4):
+            o = Vector(((f_ - 1.5) * 0.011 * X, -0.008, 0))
+            cylinder(Hn, ht + o, ht + o + Vector((0.012 * X * (f_ - 1.5), -0.04, -0.13)), 0.0045, n=4, r2=0.0015)
+        roupa.append((Hn, 'rigid:' + s + 'Hand'))
+    E = Piece('olhos', 'olho')
+    for X in (1, -1):
+        sphere(E, c + Vector((0.03 * X, -0.065, 0.0)), 0.011, 0.006, 0.008, nu=6, nv=4)
+    brilho.append((E, 'rigid:Head'))
+
+    for lst in (roupa, brilho):
+        for p, _ in lst:
+            p.v = [(x, y, z + H0) for (x, y, z) in p.v]
+    bpy.context.view_layer.objects.active = rig.ob
+    bpy.ops.object.mode_set(mode='EDIT')
+    for b in rig.ob.data.edit_bones:
+        if b.name != 'Root': b.head.z += H0; b.tail.z += H0
+    bpy.ops.object.mode_set(mode='OBJECT')
+    for k_ in list(rig.seg):
+        h_, t_ = rig.seg[k_]
+        if k_ != 'Root': rig.seg[k_] = (h_ + Vector((0, 0, H0)), t_ + Vector((0, 0, H0)))
+
+    px = paint.ps2_grade(AT.px.copy(), sat=0.8, levels=31)
+    img = make_image('fiapo_ps2', px)
+    MR = mat_atlas('roupa_ps2', img); MB = mat_atlas('brilho_ps2', img, rough=0.5, emit=3.0)
+    for lst, mat, nm in ((roupa, MR, 'roupa'), (brilho, MB, 'brilho')):
+        for p, _ in lst:
+            p.uv = [[AT.uv_map(p.cell, max(0, min(1, u)), max(0, min(1, v))) for (u, v) in f] for f in p.uv]
+        ob, spans = geo.to_mesh(nm, [p for p, _ in lst])
+        ob.data.materials.append(mat)
+        for poly in ob.data.polygons: poly.use_smooth = True
+        skin(ob, rig, [(a, b, allow) for (p, a, b), (_, allow) in zip(spans, lst)])
+
+    # ---------------------------------------------------------- animação
+    # braços: rz afasta o braço do corpo (sinal conferido na prancha), rx leva a mão para a frente
+    OUT = 1.0
+    def ribbons_pose(t, trail=0.0, amp=0.12, spd=1.0, spread=0.0):
+        d = {}
+        for k, (a, chain, base, L) in enumerate(ribbons):
+            fb = -math.cos(a)
+            for j, nm in enumerate(chain):
+                w = math.sin(TAU * (t * 0.5 * spd) - j * 0.7 - k * 0.8)
+                rx = -trail * (0.6 + 0.4 * j) * 0.5 + amp * w * (0.5 + 0.5 * j)
+                rz = amp * 0.6 * math.cos(TAU * t * 0.37 * spd - k)
+                if spread:
+                    rx += spread * fb * (0.8 if j == 0 else 0.3)
+                    rz += -spread * math.sin(a) * (0.8 if j == 0 else 0.3)
+                d[nm] = (rx, 0, rz)
+        return d
+
+    def arms(l=(0.1, 0.0), r=(0.1, 0.0), lf=0.25, rf=0.25, out=0.22):
+        """l, r = (rx, rz extra); out = abertura base para os lados"""
+        return {'LeftArm': (l[0], 0, OUT * (out + l[1])), 'RightArm': (r[0], 0, -OUT * (out + r[1])),
+                'LeftForeArm': (lf, 0, 0), 'RightForeArm': (rf, 0, 0)}
+
+    def base_pose(t, bob=0.04, lean=0.0, spd=1.0):
+        d = {}
+        z = bob * math.sin(TAU * t * 0.5 * spd)
+        d['Hips'] = ((lean, 0, 0.04 * math.sin(TAU * t * 0.23)), (0, 0, 0))
+        d['Root'] = ((0, 0, 0), (0, 0, z))
+        d['Spine'] = (lean * 0.4 + 0.03 * math.sin(TAU * t * 0.5 * spd + 1), 0, 0)
+        d['Spine1'] = (0.06, 0, 0.03 * math.sin(TAU * t * 0.31))
+        d['Head'] = (0.14 + 0.05 * math.sin(TAU * t * 0.27), 0.14 * math.sin(TAU * t * 0.19), 0)
+        sw = 0.06 * math.sin(TAU * t * 0.5 * spd)
+        d.update(arms((0.12 + sw, 0.03 * math.sin(TAU * t * 0.4)), (0.12 - sw, -0.03 * math.sin(TAU * t * 0.4))))
+        d['LeftHand'] = (0.1 * math.sin(TAU * t * 0.5 + 0.6), 0, 0)
+        d['RightHand'] = (0.1 * math.sin(TAU * t * 0.5 + 2.1), 0, 0)
+        return d
+
+    def mix(*ds):
+        out = {}
+        for d in ds: out.update(d)
+        return out
+
+    clips = []
+    clips.append(bake_clip(rig, 'idle', 4.0, lambda t, u: mix(base_pose(t), ribbons_pose(t))))
+    clips.append(bake_clip(rig, 'listen', 4.0, lambda t, u: mix(base_pose(t, bob=0.02), ribbons_pose(t, amp=0.06))))
+    clips.append(bake_clip(rig, 'talk', 2.0, lambda t, u: mix(base_pose(t * 2), ribbons_pose(t * 2))))
+
+    def walk(t, u):
+        d = mix(base_pose(t, bob=0.05, lean=0.2, spd=2), ribbons_pose(t, trail=0.5, amp=0.14, spd=2))
+        s_ = math.sin(TAU * u)
+        d.update(arms((0.15 + 0.3 * s_, 0), (0.15 - 0.3 * s_, 0), 0.35, 0.35, out=0.28))
+        return d
+    clips.append(bake_clip(rig, 'walk', 2.0, walk))
+
+    def run(t, u):
+        d = mix(base_pose(t, bob=0.06, lean=0.42, spd=3.3), ribbons_pose(t, trail=1.0, amp=0.18, spd=3.3))
+        s_ = math.sin(TAU * u)
+        # braços para trás, abertos, como quem se joga contra o vento
+        d.update(arms((-0.55 + 0.35 * s_, 0.0), (-0.55 - 0.35 * s_, 0.0), 0.3, 0.3, out=0.5))
+        return d
+    clips.append(bake_clip(rig, 'run', 1.2, run))
+
+    def heavy(t, u):
+        # 0..0.42: recua e abre os dois braços para cima e para fora; 0.42..0.6: desce em arco para a frente; resto recupera
+        a = sm(u / 0.42); b = sm((u - 0.42) / 0.14); r = sm((u - 0.65) / 0.35)
+        up = a * (1 - r)
+        d = mix(base_pose(t, bob=0.02), ribbons_pose(t, trail=-0.3 * b * (1 - r) + 0.2 * a * (1 - b), amp=0.1))
+        rx = lerp(0.12, 2.5, up) - 1.5 * b * (1 - r)
+        ab = lerp(0.22, 0.75, up) - 0.4 * b * (1 - r)
+        d.update(arms((rx, 0), (rx, 0), lerp(0.25, 0.4, up), lerp(0.25, 0.4, up), out=ab))
+        d['Spine'] = (-0.25 * a * (1 - b) + 0.35 * b * (1 - r), 0, 0)
+        d['Hips'] = ((-0.15 * a * (1 - b) + 0.25 * b * (1 - r), 0, 0), (0, 0, 0))
+        d['Root'] = ((0, 0, 0), (0, -0.25 * b * (1 - r), 0.08 * a * (1 - b)))
+        d['Head'] = (-0.2 * a * (1 - b) + 0.3 * b * (1 - r), 0, 0)
+        return d
+    clips.append(bake_clip(rig, 'heavy', 1.4, heavy, loop=False))
+
+    def attack(t, u):
+        a = sm(u / 0.3); b = sm((u - 0.3) / 0.25); r = sm((u - 0.6) / 0.4)
+        d = mix(base_pose(t, bob=0.0), ribbons_pose(t, trail=1.0 * b * (1 - r) + 0.2, amp=0.08, spd=3))
+        d['Root'] = ((0, 0, 0), (0, -0.5 * b * (1 - r), -0.05 * a))
+        d['Hips'] = ((0.45 * b * (1 - r) - 0.1 * a * (1 - b), 0, 0), (0, 0, 0))
+        rx = lerp(0.12, 2.0, a) - 1.2 * b * (1 - r)
+        d.update(arms((rx, 0), (rx, 0), 0.4 * b + 0.25, 0.4 * b + 0.25, out=0.42 + 0.3 * a * (1 - b)))
+        return d
+    clips.append(bake_clip(rig, 'attack', 0.9, attack, loop=False))
+
+    def hit(t, u):
+        k = math.sin(math.pi * min(1, u * 1.4)) * (1 - u * 0.3)
+        d = mix(base_pose(t), ribbons_pose(t, trail=-0.8 * k, amp=0.2, spd=3))
+        d['Hips'] = ((-0.4 * k, 0, 0), (0, 0, 0))
+        d['Root'] = ((0, 0, 0), (0, 0.18 * k, 0.04 * k))
+        d['Head'] = (-0.5 * k, 0.2 * k, 0)
+        d.update(arms((0.12 - 0.5 * k, 0), (0.12 - 0.5 * k, 0), out=0.22 + 0.45 * k))
+        return d
+    clips.append(bake_clip(rig, 'hit', 0.45, hit, loop=False))
+
+    def die(t, u):
+        a = sm(u / 0.55); b = sm((u - 0.35) / 0.65)
+        d = mix(base_pose(t * (1 - a), bob=0.02 * (1 - a)), ribbons_pose(t, amp=0.15 * (1 - b), spread=1.3 * b))
+        d['Root'] = ((0, 0, 0), (0, 0.05 * a, -0.85 * b - 0.1 * a))
+        d['Hips'] = ((-0.3 * a, 0, 0), (0, 0, 0), (1, 1, lerp(1, 0.55, b)))
+        d['Spine'] = (0.7 * b, 0, 0)
+        d['Head'] = (0.9 * b, 0, 0.3 * b)
+        d.update(arms((0.12 + 0.6 * a, 0), (0.12 + 0.6 * a, 0), out=0.22 + 0.7 * b))
+        return d
+    clips.append(bake_clip(rig, 'die', 1.8, die, loop=False))
+    return rig, clips
+
+
+BUILDERS = {'espectro_lanterna': espectro_lanterna, 'fiapo_nevoa': fiapo_nevoa}
 rig, clips = BUILDERS[NAME]()
 mesh = [o for o in sc.objects if o.type == 'MESH']
 tris = sum(len(p.vertices) - 2 for o in mesh for p in o.data.polygons)
