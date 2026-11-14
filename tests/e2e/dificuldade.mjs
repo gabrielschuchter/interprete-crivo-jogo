@@ -2,9 +2,9 @@
  * Campanha por dificuldade, com medida de mortes.
  *
  * Uso (com `npm run dev` no ar):
- *   E2E_DIFICULDADE=padrao E2E_PERFIL=completo npm run e2e:dificuldade
+ *   E2E_DIFICULDADE=medio E2E_PERFIL=completo npm run e2e:dificuldade
  *
- * E2E_DIFICULDADE: historia | padrao | rigor (padrão: padrao). A dificuldade é escolhida na tela de criação,
+ * E2E_DIFICULDADE: historia | facil | medio | dificil (padrão: medio). A dificuldade é escolhida na tela de criação,
  *   clicando no botão, como uma pessoa faria.
  * E2E_PERFIL: completo | direto.
  *   completo faz as missões paralelas (Lia, vento, encomenda, passeio dos mestres, obras), gasta os pontos de
@@ -30,7 +30,7 @@ try {
 } catch {
   ({ chromium } = createRequire('/')('playwright'));
 }
-const DIF = process.env.E2E_DIFICULDADE ?? 'padrao';
+const DIF = process.env.E2E_DIFICULDADE ?? 'medio';
 const PERFIL = process.env.E2E_PERFIL ?? 'completo';
 const ESPERA = process.env.E2E_ESPERA ?? (PERFIL === 'completo' ? 'vence' : 'mede');
 const TENTATIVAS = Number(process.env.E2E_TENTATIVAS ?? 8);
@@ -61,6 +61,7 @@ const step = (q) => E((q) => { const s = __game.state.quests[q]; return s ? (s.s
 
 /** relatório: uma linha por luta */
 const lutas = [];
+const porTipo = {};
 class Travou extends Error {}
 const fight = async (group, tries = TENTATIVAS) => {
   let mortes = 0;
@@ -77,6 +78,7 @@ const fight = async (group, tries = TENTATIVAS) => {
     }
     if (r.mortes) {
       mortes++;
+      { const k = (await E(() => __game.lastFoe)) ?? '?'; porTipo[k] = (porTipo[k] ?? 0) + 1; }
       await p.waitForTimeout(200);
       await E(() => __game.respawn());
       await waitMode('play');
@@ -189,7 +191,8 @@ try {
 } catch { /* página indisponível */ }
 await b.close();
 const mortes = lutas.reduce((a, l) => a + l.mortes, 0);
-console.log('\nResumo', JSON.stringify({ dificuldade: DIF, perfil: PERFIL, bloqueio, mortes, lutas, ...resumo }));
+console.log('\nResumo', JSON.stringify({ dificuldade: DIF, perfil: PERFIL, bloqueio, mortes, mortesPorTipo: porTipo, lutas, ...resumo }));
+console.log('Mortes por tipo de inimigo:', JSON.stringify(porTipo));
 if (ESPERA === 'vence') ok(!bloqueio, `a campanha é vencível no perfil ${PERFIL} em ${DIF}`);
 if (resumo) ok(resumo.erros.length === 0, 'nenhum erro de execução registrado');
 console.log(fails.length ? `\n${fails.length} falha(s)` : `\n${DIF}/${PERFIL}: ${bloqueio ? 'travou em ' + bloqueio : 'campanha vencida'} com ${mortes} derrota(s)`);

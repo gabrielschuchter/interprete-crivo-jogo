@@ -25,7 +25,7 @@ describe('ajustes antigos migram em silêncio', () => {
     const s = sanitizeSettings(old) as unknown as Record<string, unknown>;
     for (const k of ['aparencia', 'quality', 'fov', 'grain', 'vignette', 'sensY', 'camDist', 'hud', 'hudScale', 'hudNumbers', 'touchEasyRun', 'padDeadzone', 'noticeTime', 'volAmbiente'])
       expect(s[k]).toBeUndefined();
-    expect([s.volGeral, s.sens, s.invertY, s.textScale, s.difficulty, s.brilho]).toEqual([0.5, 1.4, true, 1.3, 'rigor', DEFAULT_SETTINGS.brilho]);
+    expect([s.volGeral, s.sens, s.invertY, s.textScale, s.difficulty, s.brilho]).toEqual([0.5, 1.4, true, 1.3, 'dificil', DEFAULT_SETTINGS.brilho]);
   });
   it('quem só tinha aumentado a interface em jogo passa a texto Maior', () => {
     expect(sanitizeSettings({ hudScale: 1.3 }).textScale).toBe(1.15);

@@ -107,9 +107,10 @@ describe('habilidades', () => {
 describe('dano', () => {
   it('nunca é menor que 1 e cada dificuldade tem o seu fator', () => {
     const st = D.computeStats(novo());
-    expect(D.damageTaken(20, st, 'padrao')).toBe(27);
+    expect(D.damageTaken(20, st, 'medio')).toBe(27);
+    expect(D.damageTaken(20, st, 'facil')).toBe(16);
     expect(D.damageTaken(20, st, 'historia')).toBe(10);
-    expect(D.damageTaken(20, st, 'rigor')).toBe(34);
+    expect(D.damageTaken(20, st, 'dificil')).toBe(34);
     expect(D.damageTaken(0.1, st, 'historia')).toBe(1);
   });
 });

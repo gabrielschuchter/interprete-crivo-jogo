@@ -6,7 +6,7 @@ import { resolveCircle } from '../world/region';
 import { getGltf, instanceSkinned, loadGltf } from '../core/assets';
 import { Rig, Spring, applyPose, approach, forceMixerWrite, measureGait, mix, smooth, span, type GaitInfo, type Pose } from './motion';
 import { ESTILOS, RECITA, TONTO, URRO, type Estilo } from './estilos';
-import { scaleEnemyHp, type DifficultyDef } from '../domain/difficulty';
+import { foeTier, scaleEnemyHp, type DifficultyDef } from '../domain/difficulty';
 
 /** Corpo de captura de movimento dos espectros maiores (MakeHuman + CMU, ver REGISTRO_DE_ASSETS). */
 const BODY_PATH = 'models/personagens/vulto.glb';
@@ -132,6 +132,8 @@ export class Enemy {
   /** ajustes de dificuldade: intervalo entre ataques à distância, folga depois do golpe e vida em que o mini-chefe muda de fase */
   private gap = 1;
   private cool = 1;
+  /** chance de emendar um segundo golpe (só criaturas comuns, conforme a dificuldade) */
+  private chain = 0;
   private phaseAt = 0.5;
   private poise = 0;
   private flash = 0;
@@ -183,10 +185,11 @@ export class Enemy {
     diff?: DifficultyDef,
   ) {
     const c = (this.cfg = ENEMY_CFG[kind]);
-    this.maxHp = this.hp = diff ? scaleEnemyHp(c.hp * hpScale, !!c.boss, diff) : Math.round(c.hp * hpScale);
+    this.maxHp = this.hp = diff ? scaleEnemyHp(c.hp * hpScale, foeTier(c), diff) : Math.round(c.hp * hpScale);
     if (diff) {
       // o aviso nunca cai abaixo de 0,3 s: abaixo disso deixa de ser leitura e vira sorte
-      this.cfg = { ...c, speed: c.speed * diff.foeSpeed, windup: Math.max(0.3, c.windup * diff.foeWindup), recover: c.recover * diff.foeRecover, sight: c.sight * diff.foeSight };
+      this.cfg = { ...c, speed: c.speed * diff.foeSpeed, windup: Math.max(0.3, c.windup * diff.foeWindup), recover: c.recover * diff.foeRecover, sight: c.sight * diff.foeSight, dmg: c.boss ? c.dmg : c.dmg * diff.mobDmg };
+      this.chain = c.boss ? 0 : diff.mobChain;
       this.gap = diff.foeGap;
       this.cool = diff.foeRecover;
       this.phaseAt = diff.phaseAt;
@@ -969,6 +972,15 @@ export class Enemy {
             this.combo++;
             this.set('windup');
             this.t = cfg.windup * 0.45;
+            this.strikeDir.copy(dir);
+            c.sfx('fiapoAviso');
+            break;
+          }
+          // comum no Difícil (e às vezes no Médio): emenda um segundo golpe, com aviso curto, se o jogador ficou ao alcance
+          if (!cfg.boss && this.combo === 0 && this.chain > 0 && dist < cfg.meleeRange * 1.5 && Math.random() < this.chain) {
+            this.combo = 1;
+            this.set('windup');
+            this.t = cfg.windup - Math.max(0.32, cfg.windup * 0.6);
             this.strikeDir.copy(dir);
             c.sfx('fiapoAviso');
             break;

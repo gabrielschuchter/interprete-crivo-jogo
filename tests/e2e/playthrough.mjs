@@ -80,7 +80,7 @@ try {
   await waitMode('play');
   await E(fs.readFileSync(path.join(here, 'page-helpers.js'), 'utf8'));
   ok((await step('chegada')) === 0, 'a abertura inicia a chegada ao Pátio');
-  ok((await E(() => __game.state.difficulty)) === 'padrao', 'a partida nova nasce no Padrão, a dificuldade difícil');
+  ok((await E(() => __game.state.difficulty)) === 'medio', 'a partida nova nasce no Médio, o jogo difícil');
 
   console.log('Pátio e Bosque');
   await E(async () => { await T.talk('heloisa'); await T.talk('iris'); });
@@ -205,10 +205,10 @@ try {
   await E(() => { __game.pauseGame(); });
   await p.locator('#pause [data-a=config]').click({ force: true, noWaitAfter: true });
   ok((await mode()) === 'book', 'Configurações abrem pela pausa');
-  await p.selectOption('#cfg-difficulty', 'rigor');
-  ok((await E(() => __game.state.difficulty)) === 'rigor' && (await E(() => JSON.parse(localStorage.getItem('interprete-rpg-config-v1')).difficulty)) === 'rigor', 'Configurações trocam a dificuldade da partida e da preferência');
-  await p.selectOption('#cfg-difficulty', 'padrao');
-  ok((await E(() => __game.state.difficulty)) === 'padrao', 'a dificuldade volta ao Padrão');
+  await p.selectOption('#cfg-difficulty', 'dificil');
+  ok((await E(() => __game.state.difficulty)) === 'dificil' && (await E(() => JSON.parse(localStorage.getItem('interprete-rpg-config-v1')).difficulty)) === 'dificil', 'Configurações trocam a dificuldade da partida e da preferência');
+  await p.selectOption('#cfg-difficulty', 'medio');
+  ok((await E(() => __game.state.difficulty)) === 'medio', 'a dificuldade volta ao Médio');
   await E(() => __game.closeOverlay());
   ok((await mode()) === 'pause', 'fechar Configurações volta à pausa');
   await E(() => __game.closeOverlay());
@@ -225,7 +225,7 @@ try {
   await waitMode('play');
   await E(fs.readFileSync(path.join(here, 'page-helpers.js'), 'utf8'));
   ok((await E(() => JSON.stringify(__game.state.quests))) === before, 'recarregar a página preserva o progresso');
-  ok((await E(() => __game.state.difficulty)) === 'padrao' && (await E(() => JSON.parse(localStorage.getItem('interprete-rpg-registro-v1')).difficulty)) === 'padrao', 'a dificuldade está no registro e volta ao carregar');
+  ok((await E(() => __game.state.difficulty)) === 'medio' && (await E(() => JSON.parse(localStorage.getItem('interprete-rpg-registro-v1')).difficulty)) === 'medio', 'a dificuldade está no registro e volta ao carregar');
 
   console.log('Observatório e final');
   await travel('observatorio', 'de_atrio');

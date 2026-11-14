@@ -6,7 +6,7 @@ Documento completo da direção (identidade "Luz de estudo", leis visuais, palet
 
 Ler `DESIGN.md` antes de tocar em interface e `docs/game/DECISOES_TECNICAS.md` antes de tocar em arquitetura.
 
-Dificuldade: três níveis (História, Padrão, Rigor), todos os valores em `src/domain/difficulty.ts`, escolhidos na criação e em Configurações e gravados no registro (versão 3). O Padrão é o jogo difícil. Ler `docs/game/DIFICULDADE.md` antes de mexer em vida e dano de criaturas, XP, moedas, preços, curas ou janelas de desvio; `npm run e2e:dificuldade` mede mortes por nível.
+Dificuldade: quatro níveis (História, Fácil, Médio, Difícil), com números por classe de inimigo (comuns, mini-chefes, chefes), todos em `src/domain/difficulty.ts`, escolhidos na criação e em Configurações e gravados no registro (versão 4; ids antigos `padrao` e `rigor` viram `medio` e `dificil`). O Médio é o jogo difícil de antes e vem marcado; o Difícil endurece também os comuns. Ler `docs/game/DIFICULDADE.md` antes de mexer em vida e dano de criaturas, XP, moedas, preços, curas ou janelas de desvio; `npm run e2e:dificuldade` mede mortes por nível.
 
 Comandos: `npm run dev`, `npm run build`, `npm run test`, `npm run e2e` (com o servidor de desenvolvimento no ar).
 

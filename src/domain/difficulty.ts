@@ -1,18 +1,27 @@
 /**
  * Níveis de dificuldade: números puros, sem Three.js nem DOM.
  *
- * Cada nível é uma tabela de multiplicadores aplicada sobre os valores-base de `ENEMY_CFG`, de `computeStats`
- * e da economia. O padrão (Padrão) é o jogo pensado para ser difícil: pede que a pessoa explore, faça as missões
- * paralelas, troque de equipamento e gaste os pontos de habilidade antes de cada seção. História existe para
- * quem quer ler o mundo sem tropeçar nos encontros. Rigor é o Padrão com margem de erro curta.
+ * Quatro níveis: História, Fácil, Médio e Difícil. Cada um é uma tabela aplicada sobre os valores-base de
+ * `ENEMY_CFG`, de `computeStats` e da economia. Os inimigos têm três classes (comuns, mini-chefes e chefes) e
+ * cada classe tem os seus números, porque um único multiplicador deixava os comuns fáceis no nível mais alto
+ * enquanto chefes e mini-chefes já estavam no ponto. No Difícil os comuns também ganham agressividade: golpes
+ * encadeados, grupos maiores e dano próprio. O Médio é o jogo difícil de antes dos níveis serem quatro (o antigo
+ * Padrão) e é o que vem marcado; o Difícil é o antigo Rigor com os comuns endurecidos.
  *
  * A dificuldade vive no registro (`GameState.difficulty`) e muda em Configurações; a preferência para novas partidas
- * fica em `Settings.difficulty`. Valores de 1 reproduzem o jogo de antes dos níveis.
+ * fica em `Settings.difficulty`. Registros e preferências de antes dos quatro níveis usam os ids `padrao` e `rigor`,
+ * que `normalizeDifficulty` traduz para `medio` e `dificil`.
  */
 
-export type DifficultyId = 'historia' | 'padrao' | 'rigor';
-export const DIFFICULTY_IDS: readonly DifficultyId[] = ['historia', 'padrao', 'rigor'];
-export const DEFAULT_DIFFICULTY: DifficultyId = 'padrao';
+export type DifficultyId = 'historia' | 'facil' | 'medio' | 'dificil';
+export const DIFFICULTY_IDS: readonly DifficultyId[] = ['historia', 'facil', 'medio', 'dificil'];
+export const DEFAULT_DIFFICULTY: DifficultyId = 'medio';
+
+/** classe do inimigo para efeito de vida: comuns, mini-chefes e chefes (Eco e Veredito) */
+export type FoeTier = 'comum' | 'mini' | 'chefe';
+export function foeTier(c: { boss?: boolean; mini?: boolean }): FoeTier {
+  return !c.boss ? 'comum' : c.mini ? 'mini' : 'chefe';
+}
 
 export interface DifficultyDef {
   id: DifficultyId;
@@ -25,10 +34,18 @@ export interface DifficultyDef {
   // criaturas comuns e chefes
   /** vida das criaturas comuns */
   foeHp: number;
-  /** vida de chefes e mini-chefes */
+  /** vida dos mini-chefes */
+  miniHp: number;
+  /** vida dos chefes (O Eco e O Veredito) */
   bossHp: number;
-  /** dano recebido pelo jogador, depois da defesa */
+  /** dano recebido pelo jogador, de qualquer criatura, depois da defesa */
   foeDmg: number;
+  /** dano a mais só das criaturas comuns (multiplica o golpe delas antes da defesa) */
+  mobDmg: number;
+  /** chance de a criatura comum emendar um segundo golpe, com aviso curto, quando o jogador ainda está ao alcance */
+  mobChain: number;
+  /** grupos maiores: fração de criaturas comuns que ganham uma companheira ao nascer (0,5 = uma a cada duas) */
+  mobPack: number;
   /** velocidade de perseguição */
   foeSpeed: number;
   /** tempo de aviso antes do golpe: abaixo de 1 dá menos tempo para reagir */
@@ -71,29 +88,49 @@ export const DIFFICULTIES: Record<DifficultyId, DifficultyDef> = {
     name: 'História',
     line: 'Para ler o mundo sem pressa. Criaturas mais fracas, avisos longos e curas generosas.',
     detail: 'Criaturas com 20% menos vida, metade do dano, avisos mais longos, janelas de desvio maiores, mais cura, moedas e peças. Cair não custa moedas.',
-    foeHp: 0.8, bossHp: 0.8, foeDmg: 0.5, foeSpeed: 0.92, foeWindup: 1.25, foeRecover: 1.15, foeSight: 0.85, foeGap: 1.25, phaseAt: 0.4,
+    foeHp: 0.8, miniHp: 0.8, bossHp: 0.8, foeDmg: 0.5, mobDmg: 1, mobChain: 0, mobPack: 0,
+    foeSpeed: 0.92, foeWindup: 1.25, foeRecover: 1.15, foeSight: 0.85, foeGap: 1.25, phaseAt: 0.4,
     deflect: 1.4, perfect: 1.35, vigorRegen: 1.15,
     xp: 1.25, coins: 1.25, drops: 1.4, price: 0.85, heal: 1.3, deathCoins: 0,
   },
-  padrao: {
-    id: 'padrao',
-    name: 'Padrão',
-    line: 'Difícil. Pede explorar, fazer as missões paralelas e se equipar antes de cada seção.',
-    detail: 'Criaturas com 20% mais vida (chefes, 30%) e 35% mais dano, avisos mais curtos, janelas de desvio menores, menos experiência, moedas e peças, banca mais cara, cura menor. Cair custa 10% das moedas.',
-    foeHp: 1.2, bossHp: 1.3, foeDmg: 1.35, foeSpeed: 1.06, foeWindup: 0.88, foeRecover: 0.85, foeSight: 1.15, foeGap: 0.85, phaseAt: 0.55,
+  facil: {
+    id: 'facil',
+    name: 'Fácil',
+    line: 'Um jogo de ação tranquilo. Os encontros pedem atenção, mas perdoam erros.',
+    detail: 'Vida das criaturas como no jogo-base, 20% menos dano, avisos um pouco mais longos, janelas de desvio e esquiva maiores, cura e peças um pouco acima do normal. Cair custa 5% das moedas.',
+    foeHp: 1.0, miniHp: 1.0, bossHp: 1.0, foeDmg: 0.8, mobDmg: 1, mobChain: 0, mobPack: 0,
+    foeSpeed: 1.0, foeWindup: 1.08, foeRecover: 1.0, foeSight: 1.0, foeGap: 1.0, phaseAt: 0.5,
+    deflect: 1.15, perfect: 1.15, vigorRegen: 1.05,
+    xp: 1.1, coins: 1.1, drops: 1.15, price: 1.0, heal: 1.1, deathCoins: 0.05,
+  },
+  medio: {
+    id: 'medio',
+    name: 'Médio',
+    line: 'Pede esforço. Explorar, fazer as missões paralelas e se equipar antes de cada seção faz diferença.',
+    detail: 'Criaturas com 20% mais vida (mini-chefes e chefes, 30%) e 35% mais dano, avisos mais curtos, algumas criaturas comuns emendam um segundo golpe, janelas de desvio menores, menos experiência, moedas e peças, banca mais cara, cura menor. Cair custa 10% das moedas.',
+    foeHp: 1.2, miniHp: 1.3, bossHp: 1.3, foeDmg: 1.35, mobDmg: 1, mobChain: 0.15, mobPack: 0,
+    foeSpeed: 1.06, foeWindup: 0.88, foeRecover: 0.85, foeSight: 1.15, foeGap: 0.85, phaseAt: 0.55,
     deflect: 0.85, perfect: 0.85, vigorRegen: 0.92,
     xp: 0.9, coins: 0.8, drops: 0.85, price: 1.2, heal: 0.9, deathCoins: 0.1,
   },
-  rigor: {
-    id: 'rigor',
-    name: 'Rigor',
-    line: 'Extremo. Pouca margem de erro e pouco que sobra. Para quem já domina a esgrima.',
-    detail: 'Criaturas com 45% mais vida (chefes, 70%) e 70% mais dano, avisos curtos, janelas de desvio 30% menores, pouca experiência, moeda e peça, banca 40% mais cara, cura menor. Cair custa 25% das moedas.',
-    foeHp: 1.45, bossHp: 1.7, foeDmg: 1.7, foeSpeed: 1.12, foeWindup: 0.78, foeRecover: 0.7, foeSight: 1.3, foeGap: 0.7, phaseAt: 0.65,
+  dificil: {
+    id: 'dificil',
+    name: 'Difícil',
+    line: 'Pouca margem de erro. Até as criaturas comuns ameaçam: atacam em dupla, emendam golpes e mordem forte. Para quem domina a esgrima.',
+    detail: 'Criaturas comuns com 70% mais vida e 20% a mais de dano (além dos 70% gerais), metade delas com companheira, golpes emendados em metade dos ataques; mini-chefes e chefes com 70% mais vida. Avisos curtos, janelas de desvio 30% menores, pouca experiência, moeda e peça, banca 40% mais cara, cura menor. Cair custa 25% das moedas.',
+    foeHp: 1.7, miniHp: 1.7, bossHp: 1.7, foeDmg: 1.7, mobDmg: 1.2, mobChain: 0.5, mobPack: 0.5,
+    foeSpeed: 1.12, foeWindup: 0.78, foeRecover: 0.7, foeSight: 1.3, foeGap: 0.7, phaseAt: 0.65,
     deflect: 0.7, perfect: 0.7, vigorRegen: 0.85,
     xp: 0.8, coins: 0.65, drops: 0.7, price: 1.4, heal: 0.8, deathCoins: 0.25,
   },
 };
+
+/** Traduz ids de registros e preferências de antes dos quatro níveis (padrao e rigor) e valida o resto; null se desconhecido. */
+export function normalizeDifficulty(v: unknown): DifficultyId | null {
+  if (v === 'padrao') return 'medio';
+  if (v === 'rigor') return 'dificil';
+  return isDifficulty(v) ? v : null;
+}
 
 export function isDifficulty(v: unknown): v is DifficultyId {
   return typeof v === 'string' && (DIFFICULTY_IDS as readonly string[]).includes(v);
@@ -130,6 +167,6 @@ export function coinsLostOnDeath(coins: number, d: DifficultyDef): number {
 }
 
 /** Vida de uma criatura ao nascer, a partir da vida-base. */
-export function scaleEnemyHp(base: number, boss: boolean, d: DifficultyDef): number {
-  return Math.round(base * (boss ? d.bossHp : d.foeHp));
+export function scaleEnemyHp(base: number, tier: FoeTier, d: DifficultyDef): number {
+  return Math.round(base * (tier === 'chefe' ? d.bossHp : tier === 'mini' ? d.miniHp : d.foeHp));
 }

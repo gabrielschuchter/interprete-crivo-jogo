@@ -1,5 +1,5 @@
 import { DEFAULT_KEYS, type ActionName } from './input';
-import { DEFAULT_DIFFICULTY, isDifficulty, type DifficultyId } from '../domain/difficulty';
+import { DEFAULT_DIFFICULTY, normalizeDifficulty, type DifficultyId } from '../domain/difficulty';
 
 /**
  * Ajustes do jogador. A lista é curta de propósito (docs/game/AJUSTES.md): só entra o que muda a jogabilidade
@@ -73,7 +73,7 @@ export function sanitizeSettings(raw: unknown): Settings {
   const bool = (k: keyof Settings) => {
     if (typeof d[k] === 'boolean') (s as unknown as Record<string, unknown>)[k] = d[k];
   };
-  if (isDifficulty(d.difficulty)) s.difficulty = d.difficulty;
+  s.difficulty = normalizeDifficulty(d.difficulty) ?? s.difficulty;
   num('volGeral', 0, 1); num('volMusica', 0, 1); num('volEfeitos', 0, 1);
   // a escala própria da interface em jogo saiu: quem tinha aumentado só ela passa a "Maior" no tamanho do texto
   if (typeof d.hudScale === 'number' && d.hudScale >= 1.15 && (d.textScale === undefined || d.textScale === 1)) s.textScale = 1.15;

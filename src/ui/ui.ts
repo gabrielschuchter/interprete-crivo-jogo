@@ -88,7 +88,7 @@ export class UI {
   private skillTab: 'jogador' | 'crivo' = 'jogador';
   private rebinding: ActionName | null = null;
   private cache: Record<string, string> = {};
-  private create = { prof: 'nutricao' as ProfessionId, body: 'fem' as 'fem' | 'masc', skin: 1, hair: 1, style: 1, coat: 0, name: '', diff: 'padrao' as DifficultyId };
+  private create = { prof: 'nutricao' as ProfessionId, body: 'fem' as 'fem' | 'masc', skin: 1, hair: 1, style: 1, coat: 0, name: '', diff: 'medio' as DifficultyId };
   private hintTimer = 0;
   private bannerTimer = 0;
   private titleTimer = 0;
