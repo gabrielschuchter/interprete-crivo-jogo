@@ -8,10 +8,11 @@ OUT=${1:-public/models/personagens/ps2}; shift || true
 TMP=${FORJA_TMP:-/tmp/forja}
 mkdir -p "$OUT" "$TMP"
 python3 tools/chars/elenco.py >/dev/null
-KEYS=${*:-"$(python3 -c "import json;print(' '.join(json.load(open('tools/chars/elenco.json'))['elenco']))") mob_02_espectro"}
+KEYS=${*:-"$(python3 -c "import json;print(' '.join(json.load(open('tools/chars/elenco.json'))['elenco']))") mob_02_espectro mob_00_fiapo"}
 build() {
   k=$1
   if [ "$k" = mob_02_espectro ]; then cmd="python3 tools/chars/criatura.py espectro_lanterna $TMP/$k.glb"
+  elif [ "$k" = mob_00_fiapo ]; then cmd="python3 tools/chars/criatura.py fiapo_nevoa $TMP/$k.glb"
   else cmd="python3 tools/chars/build.py tools/chars/elenco.json $TMP/$k.glb $k"; fi
   if $cmd > "$TMP/$k.log" 2>&1 && node tools/pipeline/ps2_post.cjs "$TMP/$k.glb" "$OUT/$k.glb" >> "$TMP/$k.log" 2>&1; then
     echo "ok $k $(du -k "$OUT/$k.glb" | cut -f1) KB"
