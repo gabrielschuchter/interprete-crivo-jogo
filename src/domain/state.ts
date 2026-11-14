@@ -5,9 +5,9 @@
  */
 
 import { GEAR, STARTING_WEAPON, type WeaponEffect } from './gear';
-import { DEFAULT_DIFFICULTY, difficultyDef, isDifficulty, scaleXp, type DifficultyDef, type DifficultyId } from './difficulty';
+import { DEFAULT_DIFFICULTY, difficultyDef, isDifficulty, normalizeDifficulty, scaleXp, type DifficultyDef, type DifficultyId } from './difficulty';
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 export type ProfessionId = 'nutricao' | 'medicina' | 'enfermagem' | 'psicologia' | 'fisioterapia' | 'aprendiz';
 export type EquipSlot = 'arma' | 'ferramenta' | 'traje' | 'calcado' | 'amuleto';
@@ -467,8 +467,9 @@ export function migrate(raw: unknown, legacyDifficulty: DifficultyId = DEFAULT_D
   if (d.version > SAVE_VERSION) return null;
   const base = newGame(String(d.name), (d.profession as ProfessionId) ?? 'aprendiz', (d.look as Look) ?? { skin: 1, hair: 0, coat: 0 });
   const out = { ...base, ...(d as Partial<GameState>) } as GameState;
-  // versão 3: a dificuldade passou a morar no registro; os anteriores seguem a preferência que a pessoa tinha
-  out.difficulty = isDifficulty(d.difficulty) ? d.difficulty : isDifficulty(legacyDifficulty) ? legacyDifficulty : DEFAULT_DIFFICULTY;
+  // versão 3: a dificuldade passou a morar no registro; os anteriores seguem a preferência que a pessoa tinha.
+  // versão 4: quatro níveis; os ids antigos padrao e rigor viram medio e dificil (História continua)
+  out.difficulty = normalizeDifficulty(d.difficulty) ?? normalizeDifficulty(legacyDifficulty) ?? DEFAULT_DIFFICULTY;
   if (d.version < 2) {
     out.crivoLook = base.crivoLook;
     out.cases = [];
@@ -536,7 +537,7 @@ export function deserialize(text: string | null, legacyDifficulty?: DifficultyId
 export function hasDifficulty(text: string | null): boolean {
   if (!text) return false;
   try {
-    return isDifficulty((JSON.parse(text) as { difficulty?: unknown })?.difficulty);
+    return normalizeDifficulty((JSON.parse(text) as { difficulty?: unknown })?.difficulty) !== null;
   } catch {
     return false;
   }

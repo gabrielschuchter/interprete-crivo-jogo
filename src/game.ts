@@ -107,6 +107,8 @@ export class Game {
   crivo = new Crivo();
   npcs: Npc[] = [];
   enemies: Enemy[] = [];
+  /** quem deu o último dano ao jogador (tipo de criatura ou 'projetil'): lido pelo e2e de dificuldade para contar mortes por tipo */
+  lastFoe: EnemyKind | 'projetil' | null = null;
   projectiles: Projectile[] = [];
   props: PropRt[] = [];
   mode: Mode = 'boot';
@@ -423,6 +425,12 @@ export class Game {
     this.busy = true;
     this.state = s;
     const legacy = !D.hasDifficulty(raw);
+    let renamed = '';
+    try {
+      const rd = (JSON.parse(raw ?? '{}') as { difficulty?: unknown }).difficulty;
+      if (rd === 'padrao') renamed = 'O nível Padrão agora se chama Médio, com os mesmos números de antes. O antigo Rigor virou o Difícil, mais duro com as criaturas comuns.';
+      else if (rd === 'rigor') renamed = 'O nível Rigor agora se chama Difícil, e as criaturas comuns ficaram mais duras. A troca fica em Configurações.';
+    } catch { /* registro ilegível já foi tratado acima */ }
     this.mode = 'transition';
     await this.ui.fade(true);
     this.ui.closeAll();
@@ -435,7 +443,10 @@ export class Game {
     await this.ui.fade(false);
     this.busy = false;
     this.ui.regionTitle(this.region.name, this.region.subtitle);
-    if (legacy) {
+    if (renamed) {
+      this.ui.toast(renamed, 'Dificuldade', 10);
+      this.save();
+    } else if (legacy) {
       this.ui.toast(`Este registro é anterior aos níveis de dificuldade. Ele segue em ${DIFFICULTIES[s.difficulty].name}; a troca fica em Configurações.`, 'Dificuldade', 10);
       this.save();
     }
@@ -601,11 +612,25 @@ export class Game {
     const r = this.region;
     for (const e of this.enemies) this.engine.scene.remove(e.root);
     this.enemies = [];
+    let pack = 0;
     for (const pl of r.enemies) {
       if (s.flags.includes(`limpo:${r.id}:${pl.group}`)) continue;
       if (pl.ifFlag && !s.flags.includes(pl.ifFlag)) continue;
       if (pl.unlessFlag && s.flags.includes(pl.unlessFlag)) continue;
       this.spawnEnemy(pl.kind, pl.x, pl.z, pl.group, pl.y);
+      // grupos maiores: nos níveis altos, uma fração das criaturas comuns nasce com uma companheira ao lado
+      if (!ENEMY_CFG[pl.kind].boss && this.diff.mobPack > 0) {
+        pack += this.diff.mobPack;
+        if (pack >= 1) {
+          pack -= 1;
+          const gy = pl.y ?? groundAt(r, pl.x, pl.z, 50) ?? 0;
+          const at = [[1.7, 0], [-1.7, 0], [0, 1.7], [0, -1.7]].find(([dx, dz]) => {
+            const g = groundAt(r, pl.x + dx, pl.z + dz, gy + 0.6);
+            return g !== null && Math.abs(g - gy) < 0.5;
+          });
+          if (at) this.spawnEnemy(pl.kind, pl.x + at[0], pl.z + at[1], pl.group, pl.y);
+        }
+      }
     }
   }
 
@@ -1253,7 +1278,7 @@ export class Game {
       return;
     }
     if (p.iframes > 0) return;
-    let d = D.damageTaken(dmg, this.stats, this.settings.difficulty);
+    let d = D.damageTaken(dmg, this.stats, this.diff);
     if (s.hp - d <= 0 && s.crivoSkills.includes('abrigo') && this.abrigoCd <= 0) {
       this.abrigoCd = 90;
       this.crivo.pulse();
@@ -1265,6 +1290,7 @@ export class Game {
       return;
     }
     s.hp = Math.max(0, s.hp - d);
+    this.lastFoe = this.enemies.find((e) => e.pos === from)?.kind ?? 'projetil';
     p.hurt(from, Math.min(1.6, 0.6 + d / 20));
     p.iframes = 0.55;
     const kx = p.pos.x - from.x;

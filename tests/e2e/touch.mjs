@@ -59,12 +59,12 @@ async function session(W, H, full) {
   await p.click('#menu [data-a=new]');
   await waitMode('create');
   await p.fill('#create input', 'Marina');
-  // dificuldade por toque: escolhe Rigor, confere, volta ao Padrão e confere que o botão cabe na tela
-  await tapEl('#create [data-diff=rigor]');
-  ok((await p.getAttribute('#create [data-diff=rigor]', 'aria-pressed')) === 'true', 'tocar em Rigor na criação seleciona Rigor');
-  await tapEl('#create [data-diff=padrao]');
-  ok((await p.getAttribute('#create [data-diff=padrao]', 'aria-pressed')) === 'true', 'tocar em Padrão volta ao Padrão');
-  const chipBox = await p.locator('#create [data-diff=rigor]').boundingBox();
+  // dificuldade por toque: escolhe Difícil, confere, volta ao Médio e confere que o botão cabe na tela
+  await tapEl('#create [data-diff=dificil]');
+  ok((await p.getAttribute('#create [data-diff=dificil]', 'aria-pressed')) === 'true', 'tocar em Difícil na criação seleciona Difícil');
+  await tapEl('#create [data-diff=medio]');
+  ok((await p.getAttribute('#create [data-diff=medio]', 'aria-pressed')) === 'true', 'tocar em Médio volta ao Médio');
+  const chipBox = await p.locator('#create [data-diff=dificil]').boundingBox();
   ok(chipBox.x >= 0 && chipBox.x + chipBox.width <= W + 0.5 && chipBox.height >= 30, `botões de dificuldade cabem na tela e são tocáveis (${Math.round(chipBox.width)}x${Math.round(chipBox.height)})`);
   await p.click('#create [data-a=go]');
   await waitMode('play');
@@ -149,8 +149,8 @@ async function session(W, H, full) {
   await tapEl('#book nav [data-tab=config]'); await sleep(300);
   await p.selectOption('#cfg-difficulty', 'historia'); await sleep(200);
   ok((await E(() => __game.state.difficulty)) === 'historia', 'Configurações trocam a dificuldade da partida em curso');
-  await p.selectOption('#cfg-difficulty', 'padrao'); await sleep(200);
-  ok((await E(() => __game.state.difficulty)) === 'padrao', 'e a devolvem ao Padrão');
+  await p.selectOption('#cfg-difficulty', 'medio'); await sleep(200);
+  ok((await E(() => __game.state.difficulty)) === 'medio', 'e a devolvem ao Médio');
   await tapEl('#book nav [data-a=close]'); await sleep(400);
   ok((await mode()) === 'play', 'fechar o caderno por toque');
   await btn('pausa'); await sleep(400);
