@@ -1,0 +1,14 @@
+{
+  "name": "scavenging-testes",
+  "private": true,
+  "type": "module",
+  "description": "Testes isolados do relatório de scavenging. Não faz parte do build do jogo.",
+  "dependencies": {
+    "@recast-navigation/core": "0.44.0",
+    "@recast-navigation/three": "0.44.0",
+    "inkjs": "2.4.0",
+    "navcat": "^0.4.1",
+    "three": "0.170.0",
+    "three.quarks": "^0.17.1"
+  }
+}
