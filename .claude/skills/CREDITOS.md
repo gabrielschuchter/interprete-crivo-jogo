@@ -42,3 +42,23 @@ Algumas skills citam skills de outros motores (`godot-tilemap`, `pixijs-renderin
 ## Atualização
 
 Reimportar a partir do repositório de origem, comparar o diff e atualizar o commit acima. Rever qualquer script antes de copiar.
+
+# Créditos das skills de escrita de histórias (story-skills)
+
+Estas skills orientam agentes que escrevem e mantêm a narrativa do jogo (arquivos em `/mnt/project-files/narrativa`). Não são assets do jogo e não entram em `docs/game/REGISTRO_DE_ASSETS.md`.
+
+## Origem
+
+- Repositório: https://github.com/danjdewhurst/story-skills
+- Commit importado: `33085ccc3ceb94a6ff9362cf499091123cdfb30d` (14/11/2026; importado em 16/11/2026)
+- Autoria: Daniel Dewhurst
+- Licença: MIT. O texto está em `LICENSE-story-skills`
+- Alterações: nenhuma. Foi copiada a pasta `skills/` inteira (24 skills), incluindo `story-maintenance/scripts/story.js`, o CLI de fallback em Node empacotado pelo projeto de origem. Revisão antes de instalar: as 24 SKILL.md e as referências foram varridas atrás de instruções estranhas, e o `story.js` (42 mil linhas, legível) só chama `git` e, na geração de PDF, um motor de PDF local; não abre conexão de rede
+
+## Skills instaladas (24 de 24)
+
+`premise-workshop`, `story-init`, `plot-structure`, `scene-craft`, `chapter-writing`, `discovery-drafting`, `character-management`, `worldbuilding`, `theme-craft`, `genre-craft`, `voice-style`, `line-editing`, `revision-continuity`, `series-continuity`, `research`, `interactive-fiction`, `verse-craft`, `reader-panel`, `feedback-triage`, `editorial-review`, `story-maintenance`, `adaptation`, `publishing` e `submission`. As seis primeiras e `theme-craft`, `character-management`, `worldbuilding`, `revision-continuity` e `interactive-fiction` são as relevantes para a reescrita da história; `publishing`, `submission` e `adaptation` (livro, query, audiolivro) não se aplicam a um jogo.
+
+## Como estas skills convivem com as regras do projeto
+
+Escritas em inglês e pensadas para romance: onde sugerirem criar pastas `story.md`, `characters/` e afins, faça isso fora do repositório do jogo, em `/mnt/project-files/narrativa`. O idioma do projeto é português do Brasil (tag `pt-BR`). Valem `CLAUDE.md` e `DESIGN.md`: texto de jogo sem emoji e sem "jornada", todo caso clínico fictício e marcado como simulação, PBE não vira quiz, nenhuma pessoa real como NPC. A skill `chapter-writing` sugere instalar a `better-writing` de terceiros; não instalar sem pedido do Gabriel. `dialogue-systems` (gamedev) continua sendo a skill para o código de diálogo em `src/story.ts`.
