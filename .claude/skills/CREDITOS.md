@@ -62,3 +62,27 @@ Estas skills orientam agentes que escrevem e mantêm a narrativa do jogo (arquiv
 ## Como estas skills convivem com as regras do projeto
 
 Escritas em inglês e pensadas para romance: onde sugerirem criar pastas `story.md`, `characters/` e afins, faça isso fora do repositório do jogo, em `/mnt/project-files/narrativa`. O idioma do projeto é português do Brasil (tag `pt-BR`). Valem `CLAUDE.md` e `DESIGN.md`: texto de jogo sem emoji e sem "jornada", todo caso clínico fictício e marcado como simulação, PBE não vira quiz, nenhuma pessoa real como NPC. A skill `chapter-writing` sugere instalar a `better-writing` de terceiros; não instalar sem pedido do Gabriel. `dialogue-systems` (gamedev) continua sendo a skill para o código de diálogo em `src/story.ts`.
+
+# Créditos das skills de revisão de estilo (stop-slop e humanizer)
+
+Duas skills que ajudam a tirar padrões de texto gerado por IA da prosa, úteis na reescrita da narrativa e nos textos de jogo. Não são assets do jogo e não entram em `docs/game/REGISTRO_DE_ASSETS.md`.
+
+## stop-slop
+
+- Repositório: https://github.com/hardikpandya/stop-slop
+- Commit importado: `8da1f030185bdfe8471220585162991eaeb970e9` (18/03/2026; importado em 16/11/2026)
+- Autoria: Hardik Pandya
+- Licença: MIT, em `LICENSE-stop-slop`
+- Alterações: nenhuma em `SKILL.md` e `references/`. Ficaram de fora `README.md` e `CHANGELOG.md`
+
+## humanizer
+
+- Repositório: https://github.com/blader/humanizer
+- Commit importado: `b48c832f0f809c1b5658edbb838c2521b72f2413` (09/11/2026; importado em 16/11/2026), versão 4.0.0
+- Autoria: Siqi Chen
+- Licença: MIT, em `LICENSE-humanizer`
+- Alterações: nenhuma em `SKILL.md`. Ficaram de fora os metadados de outros agentes e de plugin (`agents/`, `.claude-plugin/`, `.cursor-plugin/`, `package.json`), os arquivos do GitHub e `scripts/validate-package.py`
+
+## Como convivem com as regras do projeto
+
+As duas foram escritas em inglês e têm listas de palavras e construções do inglês. Em português do Brasil valem os padrões estruturais (contraste "não é X, é Y", fecho de uma linha, tríades, inflação de importância), não as listas de vocabulário. O `humanizer` trabalha em cima de texto que o Gabriel já escreveu ou aprovou e deve preservar fatos, nomes e números; ele manda copiar o estilo de uma amostra quando houver uma, então use trechos do próprio Gabriel como amostra. Valem `CLAUDE.md` e `DESIGN.md`: sem emoji, sem "jornada" e afins, texto de jogo em português do Brasil. A regra de "sem travessão" do `stop-slop` e do `humanizer` já coincide com a preferência de escrita do Gabriel.
