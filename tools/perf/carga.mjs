@@ -41,13 +41,11 @@ const waitMode = async (m, ms = 400000) => {
 };
 const t0 = Date.now();
 await p.goto(URL0);
-await waitMode('splash');
+await waitMode('menu');
 const tMenu = Date.now() - t0;
 const atSplash = { n: net.menu.n, bytes: net.menu.bytes };
 await E(() => { const eng = __game.engine; const r0 = eng.render.bind(eng); window.__slow = []; eng.render = (dt, f) => { const t = performance.now(); const tx0 = eng.renderer.info.memory.textures, pg0 = eng.renderer.info.programs.length; r0(dt, f); const ms = performance.now() - t; if (ms > 400) window.__slow.push({ ms: Math.round(ms), mode: __game.mode, tris: eng.renderer.info.render.triangles, texNovas: eng.renderer.info.memory.textures - tx0, progNovos: eng.renderer.info.programs.length - pg0 }); }; });
 await E(() => localStorage.clear());
-await p.keyboard.press('Enter');
-await waitMode('menu');
 // quem lê o menu por alguns segundos: espera os shaders pendentes da abertura terminarem (até 90 s)
 const td0 = Date.now();
 for (let i = 0; i < 900; i++) { if (!(await E(() => __game.engine.pendingLinks ?? 0))) break; await p.waitForTimeout(100); }

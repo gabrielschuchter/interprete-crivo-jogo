@@ -50,11 +50,9 @@ async function session(W, H, full) {
     await tap(bb.x + bb.width / 2, bb.y + bb.height / 2);
   };
   await p.goto(URL0 + '?teste');
-  await waitMode('splash');
-  await E(() => localStorage.clear());
-  await tap(W / 2, H / 2);
   await waitMode('menu');
-  ok(true, 'tocar na abertura leva ao menu sem acionar botão sob o dedo');
+  await E(() => localStorage.clear());
+  ok(await E(() => document.body.classList.contains('palco-preto') && !!document.querySelector('#menu [data-a=continue][disabled]')), 'o menu abre direto, em fundo preto, com Continuar apagado sem registro');
   await sleep(700);
   await p.click('#menu [data-a=new]');
   await waitMode('create');

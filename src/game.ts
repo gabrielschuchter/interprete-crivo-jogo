@@ -13,6 +13,7 @@ import { Player, type AttackEvent } from './entities/player';
 import { loadExternalModel, preloadModels, playerModelKey, HAIRS, type Action } from './entities/figure';
 import { DEFAULT_PAD } from './core/input';
 import { loadGltf, preloadProps, PROPS_FIRST } from './core/assets';
+import { problems } from './core/diag';
 import { Crivo } from './entities/crivo';
 import { Enemy, Projectile, ENEMY_CFG, enemyModelPath, type EnemyCtx, type EnemyKind } from './entities/enemy';
 import { Npc, NPCS } from './entities/npc';
@@ -29,6 +30,8 @@ import * as Story from './story';
 import { GEAR, RARITY_COLOR, RARITY_LABEL, rollDrop } from './domain/gear';
 import { DIFFICULTIES, DIFFICULTY_IDS, coinsLostOnDeath, difficultyDef, scaleCoins, scaleHeal, scalePrice, type DifficultyDef, type DifficultyId } from './domain/difficulty';
 import { buildWeapon, WEAPON_LOOKS } from './entities/weapons';
+import { ENV } from './world/envs';
+import { SLOTS, clearSlot, latestSlot, playtimeLabel, recoverSlot, slotAdapter, slotInfo, type SlotId } from './core/registros';
 
 /** Piso e laços gravados de cada região. */
 const REGION_SOUND: Record<RegionId, { surface: Surface; loops: Partial<Record<AmbienceLoop, number>> }> = {
@@ -39,42 +42,14 @@ const REGION_SOUND: Record<RegionId, { surface: Surface; loops: Partial<Record<A
   observatorio: { surface: 'entulho', loops: { poca: 0.3 } },
 };
 
-export type Mode = 'boot' | 'splash' | 'menu' | 'create' | 'play' | 'dialogue' | 'book' | 'shop' | 'case' | 'pause' | 'dead' | 'transition' | 'ending';
+export type Mode = 'boot' | 'menu' | 'create' | 'play' | 'dialogue' | 'book' | 'shop' | 'case' | 'pause' | 'dead' | 'transition' | 'ending';
 
-const SAVE_KEY = 'interprete-rpg-registro-v1';
-const localAdapter: SaveAdapter = {
-  load: () => {
-    try {
-      return localStorage.getItem(SAVE_KEY);
-    } catch {
-      return null;
-    }
-  },
-  save: (d) => {
-    try {
-      // a gravação anterior fica como cópia: se a nova sair truncada, ainda há de onde retomar
-      const prev = localStorage.getItem(SAVE_KEY);
-      localStorage.setItem(SAVE_KEY, d);
-      if (prev) {
-        try {
-          localStorage.setItem(SAVE_KEY + '-anterior', prev);
-        } catch {
-          /* a cópia é opcional */
-        }
-      }
-      return true;
-    } catch {
-      return false;
-    }
-  },
-  clear: () => {
-    try {
-      localStorage.removeItem(SAVE_KEY);
-    } catch {
-      /* idem */
-    }
-  },
-};
+const REGION_IDS: readonly RegionId[] = ['atrio', 'bosque', 'arquivo', 'observatorio'];
+const asRegion = (r: string): RegionId => (REGION_IDS.includes(r as RegionId) ? (r as RegionId) : 'atrio');
+/** região e marcas com que ela foi montada: duas montagens com a mesma chave são a mesma cena */
+const regionKey = (id: RegionId, flags: Iterable<string>): string => `${id}|${[...flags].sort().join(',')}`;
+/** aparência que a criação mostra primeiro (feminino, coque) */
+const CREATE_LOOK: Look = { skin: 1, hair: 1 + HAIRS.length, coat: 0, body: 'fem' };
 
 interface PropRt {
   def: PropPlacement;
@@ -113,7 +88,11 @@ export class Game {
   props: PropRt[] = [];
   mode: Mode = 'boot';
   private prevMode: Mode = 'play';
-  private adapter: SaveAdapter = localAdapter;
+  /** espaço de registro da partida em curso (ou da próxima, durante a criação) */
+  slot: SlotId = 1;
+  private get adapter(): SaveAdapter {
+    return slotAdapter(this.slot);
+  }
   private last = performance.now();
   private hitstop = 0;
   /** câmera lenta curta (esquiva perfeita, golpe resoluto), em segundos reais */
@@ -133,7 +112,6 @@ export class Game {
   private secret: { pos: THREE.Vector3; t: number } | null = null;
   private interestId = '';
   private interestTick = 0;
-  private menuAngle = 0.4;
   private preview: Player | null = null;
   private wasLocked = false;
   private focus = new THREE.Vector3();
@@ -170,17 +148,13 @@ export class Game {
     canvas.addEventListener('click', () => {
       if (this.mode === 'play' && !this.input.locked) this.input.requestLock();
     });
+    // o navegador só libera som depois de um gesto: o menu abre em silêncio e a música entra no primeiro toque ou tecla
     const wake = () => {
       this.audio.start();
       this.applyAudio();
-      if (this.mode === 'splash') this.openMenu();
     };
     window.addEventListener('keydown', wake);
-    window.addEventListener('pointerdown', () => {
-      // o toque que abre o menu não pode virar clique no botão que surge sob o dedo
-      if (this.mode === 'splash') this.ui.swallowClicks(450);
-      wake();
-    });
+    window.addEventListener('pointerdown', wake);
     this.input.onAnyKey = wake;
     window.addEventListener('error', (e) => this.errors.push(String(e.message)));
     window.addEventListener('unhandledrejection', (e) => this.errors.push(String(e.reason)));
@@ -199,39 +173,254 @@ export class Game {
   }
 
   // ---------- inicialização ----------
+  /*
+   * Carga em camadas (docs/game/CARGA_E_MENU.md):
+   * 1. tela de carga: efeitos curtos, o corpo da criação e o do registro mais recente, e o catálogo de figuras
+   *    (protagonista, Crivo) compilado sob a mesma luz, névoa e ambiente das regiões;
+   * 2. com o menu na tela: a região do registro mais recente (ou o Pátio, para a criação e o começo), os corpos
+   *    dela e os seus programas de shader; Novo jogo e Continuar esperam por ela, com a linha embaixo do botão;
+   * 3. ainda no menu ou na criação: as outras regiões são montadas fora da cena só para compilar os programas
+   *    delas uma vez, e a troca de região no jogo não cria programa novo.
+   */
   private booting = false;
+  /** marcos da carga em ms desde o início da página (diagnóstico e tools/perf/carga-menu.mjs) */
+  bootTimes: Record<string, number> = {};
+  private mark(k: string): void {
+    this.bootTimes[k] = Math.round(performance.now());
+    try {
+      performance.mark('interprete:' + k);
+    } catch {
+      /* navegador sem User Timing */
+    }
+  }
   async boot(): Promise<void> {
     this.booting = true;
-    this.ui.loading(true, 0.1);
+    this.mark('carga');
+    this.ui.loading(true, 0);
     await this.nextPaint();
-    const saved = D.deserialize(this.adapter.load());
-    const flags = new Set<string>(saved?.flags ?? []);
-    // antes do menu, só o corpo que a criação mostra primeiro (feminino, coque) e o do jogo salvo;
-    // os outros seis protagonistas descem depois que o menu aparece
-    const firstBodies = [...new Set(['player_fem_coque', ...(saved ? [playerModelKey(saved.look)] : [])])];
-    // props, personagens e texturas de alta resolução vêm antes da primeira região
-    // antes do menu vem só o que o Pátio usa; o resto dos props desce em segundo plano,
-    // e uma troca de região espera por ele se o jogador chegar antes
-    await Promise.all([
-      preloadProps((f) => this.ui.loading(true, 0.1 + f * 0.6), PROPS_FIRST),
-      preloadModels(firstBodies),
-      this.audio.preload(),
-    ]);
-    await this.loadRegion('atrio', flags, (p) => this.ui.loading(true, 0.7 + p * 0.3));
-    // o boneco da criação (corpo padrão) e o Crivo compilam aqui, atrás da barra: a tela de criação abria com
-    // vinte e tantos shaders novos de uma vez
-    this.previewAvatar({ skin: 1, hair: 1 + HAIRS.length, coat: 0, body: 'fem' }, 'nutricao');
-    await this.warmScene();
-    this.clearPreview();
+    try {
+      const saved = this.latestSaved();
+      // camada 1
+      const firstBodies = [...new Set([playerModelKey(CREATE_LOOK), ...(saved ? [playerModelKey(saved.look)] : [])])];
+      let fa = 0;
+      let fb = 0;
+      const prog = () => this.ui.loading(true, 0.05 + 0.6 * (fa * 0.3 + fb * 0.7));
+      await Promise.all([
+        this.audio.preload().then(() => ((fa = 1), prog())),
+        preloadModels(firstBodies).then(() => ((fb = 1), prog())),
+      ]);
+      this.mark('rede');
+      const target = saved ? asRegion(saved.region) : 'atrio';
+      this.engine.applyEnv(ENV[target] ?? ENV.atrioNoiteChuva);
+      this.ui.loading(true, 0.7);
+      await this.warmFigures(saved ? [saved.look, CREATE_LOOK] : [CREATE_LOOK], true);
+      this.mark('catalogo');
+      this.ui.loading(true, 1);
+    } catch (err) {
+      this.errors.push(String((err as Error)?.stack ?? err));
+      console.error(err);
+      this.ui.loadingFailed();
+      return;
+    }
+    // contra o piscar: a tela de carga fica pelo menos 400 ms
+    const held = performance.now() - this.bootTimes.carga;
+    if (held < 400 && !this.ui.instant) await new Promise((r) => setTimeout(r, 400 - held));
     this.booting = false;
     this.ui.loading(false);
-    this.mode = 'splash';
-    this.ui.splash(true);
+    this.openMenu();
+    this.mark('menu');
     this.audio.setMood('menu');
     requestAnimationFrame((t) => this.frame(t));
-    // o resto dos props e os outros protagonistas descem com o menu já na tela, sem disputar a banda da abertura
-    this.restProps = preloadProps();
-    void this.restProps.then(() => preloadModels());
+    console.info('[carga]', JSON.stringify({ rede: this.bootTimes.rede - this.bootTimes.carga, catalogo: this.bootTimes.catalogo - this.bootTimes.rede, menu: this.bootTimes.menu - this.bootTimes.carga, programas: this.engine.renderer.info.programs?.length ?? 0 }));
+    void this.prepare();
+  }
+
+  /** registro legível mais recente, se houver */
+  private latestSaved(): GameState | null {
+    const n = latestSlot();
+    return n ? D.deserialize(slotAdapter(n).load(), this.settings.difficulty) : null;
+  }
+
+  /**
+   * Figuras fora da cena visível: monta protagonistas com cada aparência pedida e o Crivo, compila sob a luz
+   * atual e tira de novo. Os programas ficam no cache do renderizador; a figura de verdade reaproveita.
+   */
+  private async warmFigures(looks: Look[], upload: boolean, extra: THREE.Object3D[] = []): Promise<void> {
+    const sc = this.engine.scene;
+    for (const o of extra) sc.add(o);
+    const crivoWas = this.crivo.model.root.visible;
+    this.crivo.model.root.visible = true;
+    // um protagonista por vez: ele leva duas luzes (tocha e lanterna), e o número de luzes entra no programa
+    for (const l of looks.length ? looks : [CREATE_LOOK]) {
+      const p = new Player(l, 'nutricao');
+      p.addTo(sc);
+      p.teleport(0, -200, 0, 0);
+      // os corpos glTF já estão em cache; a troca do boneco provisório pelo modelo acontece em microtarefas
+      await new Promise((r) => setTimeout(r, 0));
+      await this.engine.precompile(sc, !this.booting, 15000, upload);
+      p.removeFrom(sc);
+    }
+    for (const o of extra) sc.remove(o);
+    this.crivo.model.root.visible = crivoWas;
+  }
+
+  /**
+   * Compila com a mesma conta de luzes do jogo. O three.js gera um programa por número de luzes: as seis lâmpadas
+   * fixas do motor mais as duas do protagonista. Sem protagonista na cena (troca de região, preparo, aquecimento),
+   * um substituto fora da vista empresta as duas luzes, senão tudo seria compilado de novo quando ele entrasse.
+   */
+  private async compileLit(obj: THREE.Object3D, link: boolean, upload = true, lights?: THREE.Scene, after?: () => Promise<void>): Promise<void> {
+    const sc = this.engine.scene;
+    let stand: Player | null = null;
+    if (!this.player && !this.preview) {
+      stand = new Player(this.state?.look ?? CREATE_LOOK, 'nutricao');
+      stand.addTo(sc);
+      stand.teleport(0, -200, 0, 0);
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    // o que começa escondido (vidros de prop, peças que só aparecem com uma marca) também tem programa
+    const hidden: THREE.Object3D[] = [];
+    obj.traverse((o) => {
+      if (!o.visible && !(o as THREE.Light).isLight) {
+        hidden.push(o);
+        o.visible = true;
+      }
+    });
+    try {
+      await this.engine.precompile(obj, link, 15000, upload, lights);
+    } finally {
+      for (const o of hidden) o.visible = false;
+    }
+    try {
+      await after?.();
+    } finally {
+      stand?.removeFrom(sc);
+    }
+  }
+
+  // ---------- camada 2 e 3: preparo com o menu na tela ----------
+  /** região montada agora e as marcas dela; vazia depois que o jogo mexeu na cena */
+  private builtKey = '';
+  private preparing: Promise<void> | null = null;
+  /** progresso do preparo, de 0 a 1 (a linha embaixo do botão pressionado) */
+  prepProgress = 1;
+  /** as outras regiões param de compilar assim que o jogo começa */
+  private warmStop = false;
+  /** regiões já compiladas fora da cena */
+  readonly warmed = new Set<RegionId>();
+
+  /** Monta, em segundo plano, a região que o próximo clique vai pedir. Pode ser chamado de novo: reaproveita. */
+  prepare(): Promise<void> {
+    if (this.preparing) return this.preparing;
+    const saved = this.latestSaved();
+    const id = saved ? asRegion(saved.region) : 'atrio';
+    const flags = new Set(saved?.flags ?? []);
+    const key = regionKey(id, flags);
+    if (this.builtKey === key) return Promise.resolve();
+    this.prepProgress = 0;
+    this.warmStop = false;
+    const run = async () => {
+      this.mark('preparo');
+      await preloadProps((f) => (this.prepProgress = f * 0.4), id === 'atrio' ? PROPS_FIRST : undefined);
+      this.restProps = preloadProps();
+      await this.loadRegion(id, flags, (p) => (this.prepProgress = 0.4 + p * 0.4));
+      this.builtKey = key;
+      // quem mora ou ronda a região, e o protagonista: compilados agora, para Continuar e Novo jogo não esperarem
+      await this.warmFigures(saved ? [saved.look, CREATE_LOOK] : [CREATE_LOOK], true, this.regionFigures(this.region, flags));
+      // um quadro escondido com o protagonista onde ele vai aparecer: compila também as sombras (programas de
+      // profundidade só nascem no passe de sombra) e o que só entra no enquadramento real
+      const at = saved?.pos ?? { x: 0, y: 0, z: 13.4, yaw: 0.35 };
+      const stand = new Player(saved?.look ?? CREATE_LOOK, 'nutricao');
+      stand.addTo(this.engine.scene);
+      stand.teleport(at.x, at.y, at.z, at.yaw);
+      await new Promise((r) => setTimeout(r, 0));
+      const cam = this.engine.camera;
+      cam.position.set(at.x + 0.55, at.y + 1.45, at.z + 2.3);
+      cam.lookAt(at.x - 1.05, at.y + 1, at.z);
+      this.focus.set(at.x, at.y, at.z);
+      this.engine.render(0.016, this.focus);
+      stand.removeFrom(this.engine.scene);
+      this.warmed.add(id);
+      this.prepProgress = 1;
+      this.mark('preparado');
+      console.info('[preparo]', JSON.stringify({ regiao: id, ms: this.bootTimes.preparado - this.bootTimes.preparo, programas: this.engine.renderer.info.programs?.length ?? 0 }));
+      void this.restProps.then(() => preloadModels());
+      if (!saved) await Story.prepararAbertura(this);
+      void this.warmOthers();
+    };
+    const pr = run()
+      .catch((err) => {
+        this.errors.push(String((err as Error)?.stack ?? err));
+        console.error(err);
+        this.prepProgress = 1;
+      })
+      .finally(() => {
+        if (this.preparing === pr) this.preparing = null;
+      });
+    this.preparing = pr;
+    return pr;
+  }
+
+  /** moradores e criaturas de uma região, montados fora do lugar só para compilar */
+  private regionFigures(r: BuiltRegion, flags: Set<string>): THREE.Object3D[] {
+    const out: THREE.Object3D[] = [];
+    const kinds = new Set<EnemyKind>();
+    for (const e of r.enemies) if (!e.ifFlag || flags.has(e.ifFlag)) kinds.add(e.kind);
+    for (const k of kinds) out.push(new Enemy(k, 'aquecer', 0, -200, 0, 1, this.diff).root);
+    for (const n of r.npcs) {
+      const def = NPCS[n.id];
+      if (def) out.push(new Npc(def, 0, -200, 0, 0).fig.root);
+    }
+    // baús, folhas e peças no chão nascem com o jogador; makeProp lê a região corrente e põe o objeto na cena
+    const prev = this.region;
+    this.region = r;
+    try {
+      for (const d of r.props) {
+        const rt = this.makeProp(d);
+        if (rt.own && rt.obj) {
+          this.engine.scene.remove(rt.obj);
+          out.push(rt.obj);
+        }
+      }
+    } finally {
+      this.region = prev;
+    }
+    return out;
+  }
+
+  /** O menu parado é a hora de compilar as outras regiões. Celular com pouca memória não faz. */
+  private async warmOthers(): Promise<void> {
+    const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+    const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+    if (touch && !(mem && mem > 4)) return;
+    await this.restProps;
+    for (const id of REGION_IDS) {
+      if (this.warmed.has(id)) continue;
+      if (this.warmStop || this.state) return;
+      await this.nextPaint();
+      if (this.warmStop || this.state) return;
+      const t0 = performance.now();
+      const r = buildRegion(id, { flags: new Set(), quality: this.engine.quality });
+      const bodies = new Set<string>();
+      for (const e of r.enemies) {
+        const m = enemyModelPath(e.kind);
+        if (m) bodies.add(m);
+      }
+      await Promise.all([...[...bodies].map((m) => loadGltf(m)), ...r.npcs.map((n) => loadExternalModel(NPCS[n.id]?.model ?? n.id))]);
+      if (this.warmStop || this.state) return;
+      const holder = new THREE.Group();
+      holder.add(r.root, ...this.regionFigures(r, new Set()));
+      holder.position.y = -400;
+      // compila contra as luzes da cena (as seis lâmpadas fixas); texturas só sobem quando a região for vista
+      await this.compileLit(holder, false, false, this.engine.scene);
+      r.root.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (m.geometry && !m.geometry.userData.shared) m.geometry.dispose();
+      });
+      this.warmed.add(id);
+      console.info('[aquecer]', JSON.stringify({ regiao: id, ms: Math.round(performance.now() - t0), programas: this.engine.renderer.info.programs?.length ?? 0 }));
+    }
+    this.mark('aquecido');
   }
 
   private restProps: Promise<void> = Promise.resolve();
@@ -311,13 +500,13 @@ export class Game {
 
   // ---------- registro ----------
   hasSave(): boolean {
-    return !!D.deserialize(this.adapter.load());
+    return latestSlot() !== null;
   }
-  saveSummary(): string {
-    const s = D.deserialize(this.adapter.load());
-    if (!s) return '';
-    const min = Math.round(s.playtime / 60);
-    return `${s.name}, nível ${s.level} · ${min < 60 ? min + ' min' : Math.floor(min / 60) + ' h ' + (min % 60) + ' min'}`;
+  /** "Lia, nível 4 · 3 h 12 min" do registro de um espaço (o mais recente, sem argumento) */
+  saveSummary(n: SlotId | null = latestSlot()): string {
+    if (!n) return '';
+    const i = slotInfo(n);
+    return i.ok ? `${i.name}, nível ${i.level} · ${playtimeLabel(i.playtime)}` : '';
   }
   /** verdadeiro enquanto a última tentativa de gravar falhou */
   saveFailed = false;
@@ -328,30 +517,29 @@ export class Game {
     if (ok && this.saveFailed) this.ui.toast('A gravação voltou a funcionar.', 'Registro');
     this.saveFailed = !ok;
   }
-  /** Registro atual em texto, para cópia de segurança fora do navegador. */
-  exportSave(): string | null {
-    return this.state ? D.serialize(this.state) : this.adapter.load();
+  /** Registro em texto, para cópia de segurança fora do navegador: o da partida em curso, ou o de um espaço. */
+  exportSave(n?: SlotId): string | null {
+    if (n === undefined && this.state) return D.serialize(this.state);
+    return slotAdapter(n ?? latestSlot() ?? this.slot).load();
   }
-  /** Substitui o registro por um arquivo exportado. Devolve falso se o conteúdo não for um registro válido. */
-  importSave(text: string): boolean {
+  /** Grava um arquivo exportado num espaço. Devolve falso se o conteúdo não for um registro válido. */
+  importSave(text: string, n: SlotId): boolean {
     if (!D.deserialize(text)) return false;
-    return this.adapter.save(text) !== false;
+    return slotAdapter(n).save(text) !== false;
   }
-  /** Há dado gravado que não pôde ser lido? Tenta a cópia anterior antes de desistir. */
+  /** Apaga um espaço de registro (com a cópia anterior). A região pronta passa a ser a do próximo mais recente. */
+  deleteSlot(n: SlotId): void {
+    clearSlot(n);
+    void this.prepare();
+  }
+  /** Registros gravados que não puderam ser lidos: tenta a cópia anterior de cada espaço antes de desistir. */
   recoverSave(): 'ok' | 'recuperado' | 'ilegivel' {
-    const raw = this.adapter.load();
-    if (!raw || D.deserialize(raw)) return 'ok';
-    try {
-      localStorage.setItem(SAVE_KEY + '-ilegivel', raw);
-      const prev = localStorage.getItem(SAVE_KEY + '-anterior');
-      if (prev && D.deserialize(prev)) {
-        localStorage.setItem(SAVE_KEY, prev);
-        return 'recuperado';
-      }
-    } catch {
-      /* sem armazenamento */
+    let worst: 'ok' | 'recuperado' | 'ilegivel' = 'ok';
+    for (const n of SLOTS) {
+      const r = recoverSlot(n);
+      if (r === 'ilegivel' || (r === 'recuperado' && worst === 'ok')) worst = r;
     }
-    return 'ilegivel';
+    return worst;
   }
   /** grava também a posição, se for seguro retomar dali */
   checkpoint(): void {
@@ -372,11 +560,33 @@ export class Game {
     this.mode = 'menu';
     this.ui.menu(true);
   }
-  openCreate(): void {
-    this.ui.closeAll();
-    this.mode = 'create';
-    this.snapCreateCam = true;
-    this.ui.createScreen(true);
+  /** espaço que o Novo jogo vai ocupar */
+  private newSlot: SlotId = 1;
+  /** Criação de personagem, no Pátio. Espera o preparo; se a região pronta for outra, monta o Pátio atrás do véu. */
+  async openCreate(slot: SlotId = this.newSlot): Promise<void> {
+    if (this.busy) return;
+    this.busy = true;
+    this.newSlot = slot;
+    try {
+      await this.prepare();
+      if (this.builtKey !== regionKey('atrio', [])) {
+        this.mode = 'transition';
+        await this.ui.fade(true);
+        this.ui.closeAll();
+        await preloadProps(undefined, PROPS_FIRST);
+        await this.loadRegion('atrio', new Set());
+        this.builtKey = regionKey('atrio', []);
+      }
+      this.ui.closeAll();
+      this.mode = 'create';
+      this.snapCreateCam = true;
+      this.ui.createScreen(true);
+      // a criação já aceita clique enquanto o véu abre
+      this.busy = false;
+      await this.ui.fade(false);
+    } finally {
+      this.busy = false;
+    }
   }
   private snapCreateCam = false;
   private clearPreview(): void {
@@ -394,11 +604,17 @@ export class Game {
     this.crivo.yaw = 0.2;
   }
 
+  /**
+   * Novo jogo: cria o registro no espaço escolhido e começa a campanha. A abertura entra pelo gancho
+   * `Story.abertura` (ver iniciarCampanha); o resto do caminho é o de sempre.
+   */
   async startNew(name: string, prof: ProfessionId, look: Look, difficulty: DifficultyId = this.settings.difficulty): Promise<void> {
     if (this.busy) return;
     this.busy = true;
+    this.warmStop = true;
     this.settings.difficulty = difficulty;
     storeSettings(this.settings);
+    this.slot = this.newSlot;
     this.state = D.newGame(name, prof, look, difficulty);
     this.tracked = null;
     this.mode = 'transition';
@@ -407,22 +623,49 @@ export class Game {
     await loadExternalModel(playerModelKey(look));
     this.ui.closeAll();
     this.clearPreview();
-    await this.loadRegion('atrio', new Set());
-    this.spawnPlayer('inicio');
+    this.save();
+    await this.iniciarCampanha();
+  }
+
+  /**
+   * Gancho da nova campanha. Chamado com o registro já criado e gravado, o véu preto fechado e o modo em
+   * 'transition'. Toca a abertura (`Story.abertura`, hoje um stub que devolve na hora) e então entra na primeira
+   * região jogável, no ponto que a abertura devolver (padrão: Pátio, 'inicio'), com a conversa de chegada.
+   * Contrato completo em docs/game/CARGA_E_MENU.md.
+   */
+  async iniciarCampanha(): Promise<void> {
+    let fim: Story.FimDaAbertura | void = undefined;
+    try {
+      fim = await Story.abertura(this);
+    } catch (err) {
+      // uma abertura quebrada não pode impedir o jogo de começar
+      this.errors.push(String((err as Error)?.stack ?? err));
+      console.error(err);
+    }
+    const id = fim?.regiao ?? 'atrio';
+    const flags = new Set(this.state!.flags);
+    if (this.builtKey !== regionKey(id, flags)) await this.loadRegion(id, flags);
+    this.spawnPlayer(fim?.spawn ?? 'inicio');
     await this.warmScene();
     this.save();
     this.enterPlay();
+    this.mark('jogo');
     await this.ui.fade(false);
     this.busy = false;
     this.ui.regionTitle(this.region.name, this.region.subtitle);
-    this.runScript(() => Story.opening(this), null, true);
+    if (fim?.conversa !== false) this.runScript(() => Story.opening(this), null, true);
   }
 
-  async continueGame(): Promise<void> {
-    const raw = this.adapter.load();
+  /** Continua o registro de um espaço (sem argumento, o mais recente). */
+  async continueGame(slot: SlotId | null = latestSlot()): Promise<void> {
+    if (!slot || this.busy) return;
+    const raw = slotAdapter(slot).load();
     const s = D.deserialize(raw, this.settings.difficulty);
-    if (!s || this.busy) return;
+    if (!s) return;
     this.busy = true;
+    this.warmStop = true;
+    await this.prepare();
+    this.slot = slot;
     this.state = s;
     const legacy = !D.hasDifficulty(raw);
     let renamed = '';
@@ -435,11 +678,14 @@ export class Game {
     await this.ui.fade(true);
     this.ui.closeAll();
     this.clearPreview();
-    const id = (['atrio', 'bosque', 'arquivo', 'observatorio'].includes(s.region) ? s.region : 'atrio') as RegionId;
-    await this.loadRegion(id, new Set(s.flags));
+    const id = asRegion(s.region);
+    const flags = new Set(s.flags);
+    if (this.builtKey !== regionKey(id, flags)) await this.loadRegion(id, flags);
+    await loadExternalModel(playerModelKey(s.look));
     this.spawnPlayer(null);
     await this.warmScene();
     this.enterPlay();
+    this.mark('jogo');
     await this.ui.fade(false);
     this.busy = false;
     this.ui.regionTitle(this.region.name, this.region.subtitle);
@@ -459,17 +705,19 @@ export class Game {
     this.ui.closeAll();
     this.ui.hudVisible(false);
     this.ui.endDialogue();
-    const flags = new Set(this.state?.flags ?? []);
     this.despawn();
     this.state = null;
-    await this.loadRegion('atrio', flags);
     this.audio.setMood('menu');
     this.audio.setCombat(0);
     this.openMenu();
     await this.ui.fade(false);
+    void this.prepare();
   }
 
   private enterPlay(): void {
+    // daqui em diante o jogo mexe na cena (portas, peças, criaturas): ela deixa de valer como região pronta
+    this.builtKey = '';
+    this.warmStop = true;
     this.mode = 'play';
     this.ui.hudVisible(true);
     this.audio.setMood(this.region.music);
@@ -500,6 +748,7 @@ export class Game {
   private async loadRegion(id: RegionId, flags: Set<string>, progress?: (p: number) => void): Promise<void> {
     const sc = this.engine.scene;
     this.despawn();
+    this.builtKey = '';
     if (this.region) {
       sc.remove(this.region.root);
       this.region.root.traverse((o) => {
@@ -532,14 +781,17 @@ export class Game {
     progress?.(0.8);
     const t2b = performance.now();
     const progs0 = this.engine.renderer.info.programs?.length ?? 0;
-    // na abertura o menu aparece antes: o que a câmera do menu não vê termina de compilar nos quadros do menu
-    await this.engine.precompile(sc, !this.booting);
-    const t2c = performance.now();
-    await this.nextPaint();
-    // compila os materiais antes de revelar a cena
-    const t3 = performance.now();
-    this.engine.render(0.016, this.focus);
-    const t4 = performance.now();
+    let t3 = 0;
+    let t4 = 0;
+    // o primeiro quadro (sombras, transmissão de vidro) também sai com a conta de luzes do jogo
+    await this.compileLit(sc, !this.booting, true, undefined, async () => {
+      await this.nextPaint();
+      t3 = performance.now();
+      this.engine.render(0.016, this.focus);
+      t4 = performance.now();
+    });
+    const t2c = t3;
+    this.builtKey = regionKey(id, flags);
     this.loadTimes = { region: id, props: Math.round(t1 - t0), build: Math.round(t2 - t1), env: Math.round(t2b - t2), compile: Math.round(t2c - t2b), paint: Math.round(t3 - t2c), firstFrame: Math.round(t4 - t3), programs: `${progs0}>${this.engine.renderer.info.programs?.length ?? 0}` };
     console.info('[carga]', JSON.stringify(this.loadTimes));
     progress?.(1);
@@ -1558,7 +1810,7 @@ export class Game {
       this.fpsAcc = this.fpsN = 0;
     }
     // menu parado: termina, um a um, os shaders que a abertura deixou pendentes (ver Engine.linkPending)
-    if (this.mode === 'splash' || this.mode === 'menu' || this.mode === 'create') this.engine.linkPending(12);
+    if (this.mode === 'menu' || this.mode === 'create' || (this.mode === 'book' && !this.state)) this.engine.linkPending(12);
     // só o jogo em curso mede o quadro; nos testes (?teste) o render por software é lento de propósito e não conta
     if (this.mode === 'play' && !this.ui.instant) {
       const q = this.qualityGov.frame(raw);
@@ -1595,7 +1847,13 @@ export class Game {
     this.audio.update();
     this.padMenus(m);
 
-    if (m === 'splash' || m === 'menu' || m === 'create' || (m === 'book' && !this.state)) {
+    // menu e Configurações fora do jogo: fundo preto, sem cena (o canvas fica escondido e não desenha)
+    const black = !this.state && m !== 'create';
+    if (black !== this.blackStage) {
+      this.blackStage = black;
+      document.body.classList.toggle('palco-preto', black);
+    }
+    if (m === 'create') {
       this.updateTitle(dt, m);
     } else if (this.state && this.player) {
       if (m === 'play') {
@@ -1630,18 +1888,21 @@ export class Game {
         this.updateWorld(wdt, this.mode === 'play');
       }
     }
+    if (!this.region) return;
     for (const u of this.region.updaters) u(dt, this.engine.time);
     this.updateLids(dt);
     this.updateSparks(dt);
     // telas paradas (pausa, caderno, loja, dossiê) redesenham a 15 quadros por segundo: poupa bateria e GPU
     const still = this.mode === 'pause' || this.mode === 'shop' || this.mode === 'case' || (this.mode === 'book' && !!this.state);
     this.renderAcc += dt;
-    if (!still || this.renderAcc >= 1 / 15) {
+    if (black) this.renderAcc = 0;
+    else if (!still || this.renderAcc >= 1 / 15) {
       this.engine.render(still ? this.renderAcc : dt, this.focus);
       this.renderAcc = 0;
     }
   }
   private renderAcc = 0;
+  private blackStage = false;
   private padNavPrev = { x: 0, y: 0 };
   private padNavRepeat = 0;
   /** Menus pelo controle, do título ao epílogo: direcional ou analógico percorrem, A aciona, B volta. */
@@ -1722,12 +1983,6 @@ export class Game {
       this.focus.set(0, 0, 13.4);
       return;
     }
-    if (!this.settings.reduceMotion) this.menuAngle += dt * 0.025;
-    const a = this.menuAngle;
-    const t = new THREE.Vector3(-7 + Math.sin(a) * 6, 4.2 + Math.sin(a * 2) * 0.5, 15 + Math.cos(a) * 2);
-    cam.position.lerp(t, Math.min(1, dt * 1.5));
-    cam.lookAt(m === 'splash' ? 0 : 5, 7.5, -22);
-    this.focus.set(0, 0, 4);
   }
 
   private interactBuffer = 0;

@@ -6,7 +6,7 @@
  */
 import type { Game } from './game';
 import type { Npc } from './entities/npc';
-import type { PropPlacement } from './world/region';
+import type { PropPlacement, RegionId } from './world/region';
 import { CODEX, MESTRES_IDS, OBRAS_IDS, PAGES, PROFESSIONS, QUESTS } from './content/data';
 import * as D from './domain/state';
 import { MORADORES } from './content/moradores';
@@ -33,6 +33,40 @@ async function ask(g: G, opts: Array<{ text: string; tag?: string; if?: boolean;
 }
 
 // ---------- abertura ----------
+// ---------- abertura da campanha (gancho) ----------
+
+/** Onde a abertura entrega o controle. Tudo opcional: sem nada, o jogo começa no Pátio, em 'inicio', com a conversa de chegada. */
+export interface FimDaAbertura {
+  regiao?: RegionId;
+  /** chave de `spawns` da região */
+  spawn?: string;
+  /** falso pula `opening` (a conversa de chegada no Pátio), para a abertura que já termina com controle na mão */
+  conversa?: boolean;
+}
+
+/**
+ * Abertura da nova campanha. Chamada por `Game.iniciarCampanha` logo depois da criação, com `g.state` já criado e
+ * gravado no espaço escolhido, o véu preto fechado (`g.ui.fade(true)` já esperado), o modo em 'transition' e
+ * nenhuma figura na cena. Pode usar câmera, cena, áudio e interface à vontade enquanto roda; quando a promessa
+ * resolve, o jogo monta a região devolvida (ou reaproveita a que já estiver pronta), põe o jogador e abre o véu.
+ * Se lançar erro, o jogo registra e segue direto para o Pátio.
+ *
+ * STUB: ainda não há abertura; devolve na hora e o jogo começa como antes. A thread da cutscene substitui o corpo
+ * desta função (e, se quiser, `prepararAbertura`) sem mexer em game.ts. Nos testes (`g.ui.instant`) a abertura
+ * deve resolver na hora, para o e2e não esperar doze minutos.
+ */
+export async function abertura(_g: G): Promise<FimDaAbertura | void> {
+  return;
+}
+
+/**
+ * Chamada com o menu na tela quando não há registro (o próximo clique provável é Novo jogo), depois que o Pátio
+ * da criação ficou pronto. Lugar para baixar e compilar o primeiro bloco da abertura em segundo plano. STUB.
+ */
+export async function prepararAbertura(_g: G): Promise<void> {
+  return;
+}
+
 export async function opening(g: G): Promise<void> {
   await g.say('', 'Chove no Pátio dos Caminhos. Você chegou tarde, com a carta de admissão dobrada no bolso e a impressão de que esqueceram de avisar que você vinha.');
   await g.say('', 'Algo pequeno, cor de vinho, saltita entre as poças na sua direção. Tem um olho só, e olha para você como quem confere uma soma.');

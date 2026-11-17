@@ -50,12 +50,11 @@ const press = (i) =>
 
 try {
   await p.goto(URL0);
-  await waitMode('splash');
+  await waitMode('menu');
 
   console.log('Controle desde o primeiro acesso');
   await E(() => { __pad.connected = true; __game.tick(0.016); __game.input.endFrame(); });
-  await press(0);
-  ok(await waitMode('menu', 20000), 'um botão do controle sai da tela de abertura');
+  ok((await mode()) === 'menu', 'o menu aparece direto depois da carga, sem tela de "pressione"');
   await p.waitForTimeout(800);
   const f0 = await focusInfo();
   await press(13);
@@ -64,7 +63,7 @@ try {
   await press(12);
   ok((await focusInfo()) === f0, 'direcional para cima volta ao primeiro item');
   await press(0);
-  ok(await waitMode('create', 20000), 'A aciona "Novo caminho" e abre a criação');
+  ok(await waitMode('create', 20000), 'A aciona "Novo jogo" e abre a criação');
   await press(1);
   ok(await waitMode('menu', 20000), 'B volta da criação para o menu');
   ok(await E(() => __game.input.usingPad), 'entrada ativa: controle');
