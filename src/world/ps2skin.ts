@@ -41,6 +41,12 @@ const SKINS: Record<RegionId, Record<string, Skin>> = {
     flag: { file: 'piso_madeira', tile: 2 },
     wood: { file: 'piso_madeira', tile: 1.6, tint: 0xd8c8b8 },
   },
+  estrada: {
+    ground: { file: 'terra_musgo', tile: 3, tint: 0xa89a80 },
+    road: { file: 'piso_estrada_ardosia', tile: 3, tint: 0xb8a890 },
+    stone: { file: 'parede_ardosia', tile: 3.2 },
+    stoneDark: { file: 'parede_ardosia', tile: 2.8, tint: 0x8a8890 },
+  },
   observatorio: {
     flag: { file: 'piso_ardosia', tile: 3 },
     cobble: { file: 'piso_estrada_ardosia', tile: 2.4 },

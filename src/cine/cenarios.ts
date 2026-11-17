@@ -125,6 +125,10 @@ export const ENV_CENA: Record<string, EnvPreset> = {
   casaNoite: { ...base, fog: 0x0c0a0a, fogDensity: 0.035, hemiSky: 0x4a5670, hemiGround: 0x1a120e, hemiIntensity: 0.34, sun: 0x8090b0, sunIntensity: 0.1, exposure: 1.3, interior: true, envIntensity: 0.2 },
   casaDia: { ...base, fog: 0x3a3634, fogDensity: 0.018, hemiSky: 0x9aa2b0, hemiGround: 0x30261c, hemiIntensity: 0.7, sun: 0xd8d4c8, sunIntensity: 0.9, sunDir: [0.7, 0.4, 0.5], exposure: 1.0, interior: true, envIntensity: 0.4 },
   serra: { ...base, skyTop: 0x3a4658, skyHorizon: 0x9a9a98, cloud: 0x8a8c90, cloudAmount: 0.95, fog: 0x6c727c, fogDensity: 0.016, hemiSky: 0xa0a8b8, hemiGround: 0x2c2a22, hemiIntensity: 0.8, sun: 0xd8d0c0, sunIntensity: 1.1, sunDir: [0.3, 0.5, -0.8], exposure: 0.95, envIntensity: 0.7 },
+  /** enfermaria da Academia no fim da tarde: cinza frio nas janelas, velas no corredor */
+  enfermariaTarde: { ...base, fog: 0x1a1a20, fogDensity: 0.02, hemiSky: 0x7a8298, hemiGround: 0x221a14, hemiIntensity: 0.55, sun: 0xb0b4c4, sunIntensity: 0.45, sunDir: [0.2, 0.5, 0.85], exposure: 1.1, interior: true, envIntensity: 0.3 },
+  /** salões da Academia (refeitório, anfiteatro) à luz de velas, com o resto do dia nas janelas */
+  salaoTarde: { ...base, fog: 0x140e0c, fogDensity: 0.022, hemiSky: 0x6a5a50, hemiGround: 0x1a120c, hemiIntensity: 0.5, sun: 0x9098b0, sunIntensity: 0.35, sunDir: [0.1, 0.5, -0.85], exposure: 1.15, interior: true, envIntensity: 0.3 },
   oficina: { ...base, fog: 0x100c0a, fogDensity: 0.03, hemiSky: 0x6a5a48, hemiGround: 0x1a120c, hemiIntensity: 0.4, sun: 0xffd0a0, sunIntensity: 0.5, exposure: 1.1, interior: true, envIntensity: 0.3 },
 };
 
@@ -357,7 +361,7 @@ export function vila(dia: boolean): Cenario {
 }
 
 /** carroça de duas rodas (parada) */
-function carroca(b: RegionBuilder, x: number, z: number, rot: number, lencois: boolean): void {
+export function carroca(b: RegionBuilder, x: number, z: number, rot: number, lencois: boolean): void {
   const c = Math.cos(rot);
   const s = Math.sin(rot);
   const at = (lx: number, lz: number): [number, number] => [x + lx * c + lz * s, z - lx * s + lz * c];
@@ -573,4 +577,268 @@ export function serra(): Cenario {
       feixe.rotation.y = Math.sin(t * 0.18) * 0.55;
     },
   };
+}
+
+// =====================================================================================================
+// Capítulo 1 · A Academia (docs/game/CAPITULO_1.md). Mesmo princípio de teatro: só o que entra em quadro.
+// =====================================================================================================
+
+/** pessoa sentada em volume (plateia, refeitório): tronco, ombros e cabeça; `ve` vira a cabeça para x, z */
+function sentado(b: RegionBuilder, x: number, y: number, z: number, rot: number, seed: number): void {
+  const capas = [0x2a1a22, 0x1c2430, 0x2a2a1c, 0x301c14, 0x1a1a1e, 0x3a2e24, 0x24181c];
+  const peles = [0xd1a487, 0xa48066, 0x7b5a47, 0x523525, 0xb08a6e];
+  const cabelos = [0x1a1210, 0x3d2416, 0x6b3f22, 0x2a1a12, 0x8a8078];
+  const capa = pano('capa' + (seed % capas.length), capas[seed % capas.length]);
+  b.add(new THREE.CapsuleGeometry(0.2, 0.36, 2, 7), capa, trs(x, y + 0.72, z, rot, 0.08, 0, 1.15, 1, 0.7));
+  b.add(new THREE.BoxGeometry(0.36, 0.16, 0.42), capa, trs(x, y + 0.42, z + Math.cos(rot) * 0.16, rot));
+  b.add(new THREE.SphereGeometry(0.11, 7, 5), liso('pele' + peles[seed % 5], peles[seed % 5], 0.7), trs(x, y + 1.17, z, rot));
+  // cabelo: o topo e a nuca inteira (de costas, ninguém fica careca)
+  const cab = liso('cabelo' + (seed % 5), cabelos[seed % 5], 0.9);
+  b.add(new THREE.SphereGeometry(0.118, 7, 5, 0, Math.PI * 2, 0, Math.PI / 2), cab, trs(x, y + 1.19, z, rot));
+  b.add(new THREE.SphereGeometry(0.12, 7, 5, Math.PI, Math.PI, 0, Math.PI * 0.74), cab, trs(x, y + 1.17, z, rot));
+}
+
+/** banco corrido de madeira, comprimento em x */
+function bancoCorrido(b: RegionBuilder, x: number, y: number, z: number, len: number): void {
+  b.box(M.wood, len, 0.06, 0.34, x, y + 0.42, z);
+  for (const sx of [-1, 1]) b.box(M.woodDark, 0.08, 0.42, 0.3, x + sx * (len / 2 - 0.2), y, z);
+}
+
+/** prato fundo com uma concha de comida */
+function prato(b: RegionBuilder, x: number, y: number, z: number, cheio: boolean): void {
+  b.add(new THREE.CylinderGeometry(0.12, 0.08, 0.04, 10), liso('loica', 0xc8c0b0, 0.5), trs(x, y + 0.02, z));
+  if (cheio) b.add(new THREE.CylinderGeometry(0.09, 0.09, 0.02, 8), liso('sopa', 0x7a5a30, 0.6), trs(x, y + 0.04, z));
+}
+
+/** janela alta de pedra com o fim de tarde lá fora (cartão) */
+function janelaAlta(b: RegionBuilder, x: number, y: number, z: number, rot: number, w: number, h: number, cor: number): void {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), basico('tarde' + cor, cor));
+  m.position.set(x, y + h / 2, z);
+  m.rotation.y = rot;
+  b.dynamic(m);
+  const c = Math.cos(rot);
+  const s = Math.sin(rot);
+  for (const sx of [-1, 1]) b.box(M.carved, 0.14, h + 0.2, 0.3, x + sx * (w / 2 + 0.07) * c, y - 0.1, z - sx * (w / 2 + 0.07) * s, rot);
+  b.box(M.carved, w + 0.4, 0.14, 0.34, x, y - 0.14, z, rot);
+  b.box(M.iron, 0.05, h, 0.05, x, y, z, rot);
+}
+
+// ---------- A. Enfermaria da Academia ----------
+/**
+ * Salão de pedra de 16 por 10 m (x de -8 a 8, z de -5 a 5), duas fileiras de camas de ferro com as cabeceiras
+ * para o norte, três janelas altas na parede sul e a mesa de Celeste na ponta leste, com o caderno aberto. A porta
+ * fica no oeste. A cama sete, a do Caio, é a do meio da fileira norte.
+ */
+export const ENF_ACAD = {
+  porta: [-7.6, 0] as [number, number],
+  cama7: [0.6, -3.3] as [number, number],
+  mesa: [6.4, 0.4] as [number, number],
+};
+export function enfermariaAcademia(): Cenario {
+  const b = new RegionBuilder();
+  paredes(b, -8, 8, -5, 5, 6, M.stone, M.flag, M.woodDark, [
+    { lado: 'o', de: -0.7, ate: 0.7, y0: 0, y1: 2.6 },
+  ]);
+  for (let x = -7; x <= 7; x += 2.33) b.box(M.woodDark, 0.26, 0.34, 10, x, 5.6, 0);
+  for (const x of [-4.5, 0, 4.5]) janelaAlta(b, x, 1.6, 4.86, Math.PI, 1.2, 3.0, 0x6a6470);
+  let seed = 2;
+  for (let i = 0; i < 6; i++) {
+    const x = -5.2 + i * 1.95;
+    seed++;
+    if (i !== 3) cama(b, x, -3.3, i !== 1, seed, [0xd1a487, 0xa48066, 0x7b5a47, 0x523525][seed % 4]);
+    else cama(b, x, -3.3, false, seed);
+    cama(b, x, 2.4, i % 2 === 0, seed + 7, [0xb08a6e, 0x7b5a47, 0xd1a487][seed % 3]);
+    if (i % 2 === 0) banco(b, x + 0.72, -2.4, true, i === 2);
+  }
+  // mesa de Celeste: caderno grande aberto, tinteiro, a vela
+  const [mx, mz] = ENF_ACAD.mesa;
+  table(b, mx, mz, Math.PI / 2, 1.6, 0.8);
+  b.box(M.parchment, 0.5, 0.012, 0.36, mx, 0.92, mz);
+  b.box(M.woodDark, 0.02, 0.03, 0.38, mx, 0.92, mz);
+  b.add(new THREE.CylinderGeometry(0.03, 0.035, 0.06, 8), liso('tinta', 0x0a0a10, 0.3), trs(mx + 0.1, 0.95, mz - 0.5));
+  candle(b, mx - 0.15, 0.92, mz + 0.55, true);
+  b.box(M.wood, 0.42, 0.45, 0.42, mx + 0.7, 0, mz);
+  // estante de vidros e panos
+  b.box(M.woodDark, 2.2, 2.2, 0.45, 5.4, 0, -4.7);
+  for (const yy of [0.7, 1.3, 1.9]) b.box(M.wood, 2.2, 0.04, 0.5, 5.4, yy, -4.68);
+  for (let i = 0; i < 8; i++) b.add(new THREE.CylinderGeometry(0.05, 0.05, 0.16, 6), liso('vidro', 0x4a5a50, 0.2), trs(4.6 + i * 0.22, 1.42, -4.62));
+  // velas no corredor e a luz cinza das janelas
+  for (const [x, z] of [[-6, -0.4], [-2, 0.4], [2.4, -0.4]] as Array<[number, number]>) banco(b, x, z, true, true);
+  b.lamp(0, 3.0, 4.0, 0x8a90a8, 0.5, 12, 0);
+  b.box(basico('escuro', 0x020203), 0.05, 2.6, 1.4, -8.2, 0, 0);
+  b.finalize();
+  return { root: b.root, lamps: b.lamps, env: ENV_CENA.enfermariaTarde, h: {} };
+}
+
+// ---------- B. Refeitório ----------
+/**
+ * Salão comprido de 18 por 8 m (x de -9 a 9, z de -4 a 4): duas mesas corridas, o balcão da cozinha na ponta leste e,
+ * na parede leste, a gravura do Menino da Janela emoldurada, com uma vela embaixo, como num altar de casa.
+ */
+export const REF = {
+  porta: [-8.6, 0] as [number, number],
+  gravura: [8.85, 0] as [number, number],
+  balcao: [7.3, 0] as [number, number],
+  lugar: [-1.2, 1.9] as [number, number],
+};
+export function refeitorio(): Cenario {
+  const b = new RegionBuilder();
+  paredes(b, -9, 9, -4, 4, 5, M.stone, M.flag, M.woodDark, [{ lado: 'o', de: -0.7, ate: 0.7, y0: 0, y1: 2.6 }]);
+  for (let x = -8; x <= 8; x += 2) b.box(M.woodDark, 0.24, 0.3, 8, x, 4.7, 0);
+  for (const x of [-6, -2, 2]) janelaAlta(b, x, 1.8, -3.86, 0, 1.0, 2.4, 0x5a5466);
+  for (const z of [-1.3, 1.3]) {
+    b.box(M.wood, 12, 0.07, 1.0, -1.5, 0.78, z);
+    for (const sx of [-1, 1]) b.box(M.woodDark, 0.12, 0.78, 0.8, -1.5 + sx * 5.6, 0, z);
+    bancoCorrido(b, -1.5, 0, z - 0.75, 12);
+    bancoCorrido(b, -1.5, 0, z + 0.75, 12);
+  }
+  // estudantes nas mesas; o lugar do protagonista e os do lado ficam vazios
+  let seed = 4;
+  for (const z of [-1.3, 1.3]) for (const lado of [-1, 1]) for (let i = 0; i < 9; i++) {
+    const x = -6.8 + i * 1.3;
+    seed++;
+    if (z > 0 && lado > 0 && Math.abs(x - REF.lugar[0]) < 1.6) continue;
+    if (seed % 5 === 0) continue;
+    sentado(b, x, 0.04, z + lado * 0.78, lado > 0 ? Math.PI : 0, seed);
+    prato(b, x, 0.82, z + lado * 0.3, true);
+  }
+  // balcão, panelas e a gravura
+  const [bx, bz] = REF.balcao;
+  b.box(M.woodDark, 1.0, 0.95, 4.2, bx, 0, bz, 0, true);
+  b.add(new THREE.CylinderGeometry(0.3, 0.26, 0.4, 10), M.iron, trs(bx, 1.15, bz - 1.2));
+  b.add(new THREE.CylinderGeometry(0.22, 0.2, 0.3, 10), M.iron, trs(bx, 1.1, bz + 0.9));
+  const gm = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 1.0), new THREE.MeshStandardMaterial({ map: gravura(), roughness: 0.95 }));
+  gm.position.set(REF.gravura[0], 2.6, REF.gravura[1]);
+  gm.rotation.y = -Math.PI / 2;
+  b.dynamic(gm);
+  b.box(M.carved, 0.08, 1.2, 1.0, REF.gravura[0] + 0.06, 2.0, REF.gravura[1], 0);
+  b.box(M.woodDark, 0.28, 0.06, 0.8, 8.7, 1.85, 0);
+  candle(b, 8.62, 1.91, 0.18, true);
+  candle(b, 8.62, 1.91, -0.2, false);
+  for (const x of [-6, -1.5, 3]) b.lamp(x, 3.6, 0, 0xffb070, 0.6, 10, 0.08);
+  b.box(basico('escuro', 0x020203), 0.05, 2.6, 1.4, -9.2, 0, 0);
+  b.finalize();
+  return { root: b.root, lamps: b.lamps, env: ENV_CENA.salaoTarde, h: {} };
+}
+
+// ---------- C. Anfiteatro ----------
+/**
+ * Anfiteatro da aula inaugural: estrado na frente (z = 0), seis fileiras de bancos subindo para o sul (z de 3 a
+ * 10,5, 0,45 m por degrau), de x -9 a 9. Janelas altas atrás do estrado, lustre de velas e a porta do alto, a
+ * oeste, por onde o homem do casaco gasto sai.
+ */
+export const ANF = {
+  estrado: [0, 0.2] as [number, number],
+  altura: 0.6,
+  tribuna: [-1.6, 0.4] as [number, number],
+  lugar: [3.4, 3.0] as [number, number],
+  portaAlto: [-8.4, 11.2] as [number, number],
+  fileira: (i: number) => ({ z: 3 + i * 1.5, y: i * 0.45 }),
+};
+export function anfiteatro(): Cenario {
+  const b = new RegionBuilder();
+  paredes(b, -10, 10, -3.5, 12.5, 9, M.stoneDark, M.flag, M.woodDark, [{ lado: 'o', de: 10.5, ate: 11.9, y0: 2.7, y1: 5.3 }]);
+  // estrado e tribuna
+  b.box(M.woodDark, 8, ANF.altura, 3.2, 0, 0, ANF.estrado[1]);
+  b.box(M.wood, 0.7, 1.15, 0.5, ANF.tribuna[0], ANF.altura, ANF.tribuna[1]);
+  b.box(M.carved, 0.8, 0.06, 0.6, ANF.tribuna[0], ANF.altura + 1.15, ANF.tribuna[1]);
+  for (const x of [-6, -2, 2, 6]) janelaAlta(b, x, 3, -3.36, 0, 1.3, 4.4, 0x4a4658);
+  K_banner(b);
+  // fileiras
+  let seed = 11;
+  for (let i = 0; i < 6; i++) {
+    const { z, y } = ANF.fileira(i);
+    b.box(M.woodDark, 18, y + 0.02, 1.5, 0, 0, z + 0.2);
+    bancoCorrido(b, 0, y, z, 17);
+    b.box(M.wood, 17, 0.06, 0.3, 0, y + 0.95, z - 0.6);
+    for (let k = 0; k < 14; k++) {
+      const x = -7.8 + k * 1.2;
+      seed++;
+      if (i === 0 && Math.abs(x - ANF.lugar[0]) < 0.7) continue;
+      if (i === 0 && k < 4) continue; // os atores da primeira fila
+      if (seed % 7 === 0) continue;
+      sentado(b, x, y + 0.04, z + 0.1, Math.PI, seed);
+    }
+  }
+  // lustre de velas e as luzes da sala
+  b.add(new THREE.TorusGeometry(1.4, 0.05, 4, 12), M.iron, trs(0, 6.2, 4.5, 0, Math.PI / 2));
+  for (let k = 0; k < 8; k++) {
+    const a = (k / 8) * Math.PI * 2;
+    candle(b, Math.cos(a) * 1.4, 6.22, 4.5 + Math.sin(a) * 1.4, false);
+  }
+  b.lamp(0, 5.6, 4.5, 0xffb070, 1.0, 16, 0.06);
+  b.lamp(0, 3.2, 0.4, 0xffc890, 1.7, 10, 0.04);
+  b.lamp(6, 3.4, 5.5, 0xffa860, 0.6, 10, 0.08);
+  b.lamp(-7, 4, 9, 0xffa050, 0.4, 10, 0.1);
+  b.box(basico('escuro', 0x020203), 0.05, 2.6, 1.4, -10.2, 2.7, 11.2);
+  b.finalize();
+  return { root: b.root, lamps: b.lamps, env: ENV_CENA.salaoTarde, h: {} };
+}
+/** estandarte vinho atrás do estrado, com o brasão bordado em ouro gasto (só tecido e um losango) */
+function K_banner(b: RegionBuilder): void {
+  b.box(pano('estandarte', 0x3d1420), 1.6, 3.4, 0.05, 0, 3.4, -3.3);
+  b.add(new THREE.OctahedronGeometry(0.3, 0), liso('ouroGasto', 0x8f7438, 0.6), trs(0, 5.6, -3.26, 0, 0, 0, 1, 1.4, 0.2));
+}
+
+// ---------- D. Dormitório ----------
+/**
+ * Quarto de calouro, 5 por 4 m (x de -2,5 a 2,5, z de -2 a 2): catre na parede norte, a mala em cima, mesa e
+ * cadeira, e a janela na parede leste, a mesma janela de folhas de madeira da casa de Remanso.
+ */
+export const DORM = {
+  porta: [-2.3, 1.2] as [number, number],
+  cama: [0.2, -1.35] as [number, number],
+  mala: [0.4, -1.3] as [number, number],
+  janela: [2.45, 0.1] as [number, number],
+  mesa: [1.6, 1.4] as [number, number],
+};
+export function dormitorio(): Cenario {
+  const b = new RegionBuilder();
+  const fora = basico('foraDorm', 0x141824);
+  paredes(b, -2.5, 2.5, -2, 2, 3.1, M.plaster, M.wood, M.woodDark, [
+    { lado: 'l', de: DORM.janela[1] - 0.55, ate: DORM.janela[1] + 0.55, y0: 0.95, y1: 2.35 },
+    { lado: 'o', de: DORM.porta[1] - 0.5, ate: DORM.porta[1] + 0.5, y0: 0, y1: 2.1 },
+  ]);
+  const [cx, cz] = DORM.cama;
+  b.box(M.woodDark, 1.9, 0.4, 0.86, cx, 0, cz);
+  b.box(pano('colchaoAdulto', 0x5a4c3e), 1.84, 0.12, 0.8, cx, 0.4, cz);
+  b.box(pano('cobertorCinza', 0x3a3a40), 0.9, 0.04, 0.82, cx - 0.4, 0.52, cz);
+  const [ex, ez] = DORM.mesa;
+  table(b, ex, ez, 0, 1.0, 0.55);
+  b.box(M.wood, 0.4, 0.45, 0.4, ex - 0.1, 0, ez - 0.6);
+  candle(b, ex + 0.3, 0.88, ez, true);
+  b.box(M.books, 0.24, 0.24, 0.5, ex - 0.25, 0.88, ez + 0.05);
+  b.lamp(DORM.janela[0] - 0.5, 1.7, DORM.janela[1], 0x3a4660, 0.25, 7, 0);
+  const j = janela(b, DORM.janela[0] + 0.12, 0.95, DORM.janela[1], -Math.PI / 2, 1.1, 1.4, fora);
+  // mala aberta em cima do catre: a tampa é dinâmica, o embrulho do pote também
+  const mala = new THREE.Group();
+  const corpo = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.22, 0.45), liso('couro', 0x3a2214, 0.6));
+  corpo.position.y = 0.11;
+  const roupa = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.1, 0.36), pano('roupaDobrada', 0x2a2630));
+  roupa.position.y = 0.2;
+  roupa.name = 'roupa';
+  const embrulho = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.13, 8), pano('panoPote', 0x8f7c5e));
+  embrulho.position.set(0.18, 0.12, 0.05);
+  embrulho.name = 'embrulho';
+  const tampa = new THREE.Group();
+  tampa.position.set(0, 0.22, -0.225);
+  const tp = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.05, 0.45), liso('couro', 0x3a2214, 0.6));
+  tp.position.set(0, 0, 0.225);
+  tampa.add(tp);
+  tampa.rotation.x = -1.7;
+  mala.add(corpo, roupa, embrulho, tampa);
+  mala.position.set(DORM.mala[0], 0.52, DORM.mala[1]);
+  mala.rotation.y = 0.1;
+  b.dynamic(mala);
+  // pote destampado, para a mão (aparece quando ele desembrulha)
+  const pt = new THREE.Group();
+  const barro = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.12, 8), liso('barro', 0x7a4a2c, 0.9));
+  const tecido = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.02, 8), pano('panoPote', 0x8f7c5e));
+  tecido.position.y = 0.065;
+  pt.add(barro, tecido);
+  pt.visible = false;
+  b.dynamic(pt);
+  b.box(basico('escuro', 0x020203), 0.05, 2.1, 1.0, -2.7, 0, DORM.porta[1]);
+  b.finalize();
+  return { root: b.root, lamps: b.lamps, env: ENV_CENA.casaNoite, h: { mala, pote: pt, folhaEsq: j.esq, folhaDir: j.dir, fora: j.luz } };
 }

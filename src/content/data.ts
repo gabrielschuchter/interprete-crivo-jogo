@@ -141,6 +141,11 @@ export const ITEMS: Record<string, ItemDef> = {
     desc: '"Resumo do Registro do Sino, com acréscimos do copista." Carimbo: cópia de cópia.',
     effect: 'Peça do enigma do Arquivo.',
   },
+  pote_unguento: {
+    id: 'pote_unguento', name: 'Pote de unguento', type: 'missao', glyph: 'oleo',
+    desc: 'Barro, tampa de pano amarrada com barbante. Estava no fundo da mala, embrulhado, com um bilhete na letra da sua mãe: "Pra você nunca precisar. Coma direito."',
+    effect: 'Nenhum, por enquanto. Você não abriu.',
+  },
   oleo_lamparina: {
     id: 'oleo_lamparina', name: 'Frasco de óleo de lamparina', type: 'missao', glyph: 'oleo',
     desc: 'Um frasco. Dá para um braseiro, não para dois.',
@@ -203,6 +208,14 @@ export interface CodexEntry {
 }
 
 export const CODEX: Record<string, CodexEntry> = {
+  iolanda: {
+    id: 'iolanda', title: 'Mestra Iolanda Ferro', group: 'Pessoas',
+    body: [
+      'A estátua do pátio da Academia. Morreu há cento e quarenta anos. Segura duas bacias iguais, uma em cada mão, à mesma altura.',
+      'As famílias acendem velas aos pés dela pedindo cura. A cera cobriu a placa, e hoje só se lê o nome.',
+    ],
+    note: 'Personagem fictícia do jogo.',
+  },
   crivo: {
     id: 'crivo', title: 'O Crivo', group: 'Mundo',
     body: [
@@ -516,6 +529,16 @@ export interface QuestDef {
 }
 
 export const QUESTS: Record<string, QuestDef> = {
+  capitulo1: {
+    id: 'capitulo1', title: 'A estrada', kind: 'principal',
+    summary: 'Na subida da serra, um menino desmaiou na beira da estrada. A mãe dele pediu ajuda, e você desceu da carroça.',
+    steps: [
+      { text: 'Leve o menino até o portão de Pedra Alta', region: 'estrada', target: 'npc:guarda', hint: 'É estrada acima, sempre para o norte. Com ele nas costas não dá para correr.' },
+      { text: 'Vá à aula inaugural, no anfiteatro da Academia', region: 'atrio', target: 'prop:cap1_anfiteatro', hint: 'O anfiteatro fica no alto da escadaria, atrás do portal grande. Dá tempo de olhar o pátio antes.' },
+      { text: 'Desfaça a mala no dormitório', region: 'atrio', target: 'prop:cap1_dormitorio', hint: 'O dormitório fica no beco ao sul do pátio, na porta da direita.' },
+    ],
+    done: 'Você chegou a Pedra Alta e é querido lá. Na enfermaria há um menino que veio de longe por sua causa.',
+  },
   chegada: {
     id: 'chegada', title: 'Chegada ao Pátio', kind: 'principal',
     summary: 'Você chegou sob chuva, e um Crivo escolheu acompanhar você. A guardiã do Pátio espera junto à fonte.',

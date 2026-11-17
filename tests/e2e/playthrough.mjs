@@ -77,7 +77,19 @@ try {
   await p.click('#create [data-a=go]');
   await waitMode('play');
   await E(fs.readFileSync(path.join(here, 'page-helpers.js'), 'utf8'));
-  ok((await step('chegada')) === 0, 'a abertura inicia a chegada ao Pátio');
+  console.log('Capítulo 1 · A estrada');
+  ok((await E(() => __game.region.id)) === 'estrada' && (await step('capitulo1')) === 0, 'a partida nova começa na Estrada da Serra, no capítulo 1');
+  ok(await E(() => __game.crivo.model.root.visible === false || __game.semCrivo), 'no capítulo 1 o Crivo ainda não apareceu');
+  const c1 = await E(() => T.capitulo1(1));
+  ok(c1.carga && c1.marta, 'o menino vai nas costas e a mãe ao lado');
+  ok(c1.velocidade > 0.8 && c1.velocidade <= 1.6, `com o menino nas costas não se corre (${c1.velocidade} m/s)`);
+  ok(c1.martaPerto > 0 && c1.martaPerto < 3, `Marta acompanha o passo (${c1.martaPerto} m)`);
+  ok(c1.falasEstrada >= 1, 'Marta conversa na estrada');
+  ok(/portao/.test(c1.cenas[0]) && /enfermaria/.test(c1.cenas[0]) && c1.passoDepoisDoPortao === 1, 'portão e enfermaria levam ao pátio da Academia');
+  ok(c1.estudantes === 5 && c1.iolanda, 'estudantes no pátio e a estátua de Iolanda examinável');
+  ok(/refeitorio/.test(c1.cenas[1]) && /aula/.test(c1.cenas[2]) && /fala 2/.test(c1.cenas[2]) && c1.fala === 2, 'refeitório e aula inaugural, com a fala escolhida gravada');
+  ok(/dormitorio/.test(c1.cenas[3]) && c1.pote && c1.concluido, 'no dormitório o pote entra no inventário e o capítulo fecha');
+  ok((await step('chegada')) === 0, 'depois do capítulo 1, a chegada ao Pátio abre a campanha');
   ok((await E(() => __game.state.difficulty)) === 'medio', 'a partida nova nasce no Médio, o jogo difícil');
 
   console.log('Pátio e Bosque');

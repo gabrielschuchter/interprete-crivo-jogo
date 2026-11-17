@@ -75,3 +75,17 @@ body.touch #cine .pausar { display: flex; }
 @media (orientation: portrait) { #cine .legenda { font-size: calc(17px * var(--ui-scale, 1)); } }
 #cine .silhueta { position: absolute; left: 50%; top: 50%; width: min(28vh, 40vw); height: min(28vh, 40vw); transform: translate(-50%, -30%); opacity: 0; }
 #cine .silhueta.on { opacity: 0.9; }
+
+/* escolha de fala: sobe da barra de baixo, opções empilhadas, número à esquerda */
+#cine .escolha {
+  position: absolute; left: 50%; bottom: calc(max(var(--bar), 56px) + 10px); transform: translateX(-50%); z-index: 4;
+  width: min(760px, 92vw); display: flex; flex-direction: column; gap: 6px; pointer-events: auto;
+}
+#cine .escolha button {
+  display: flex; gap: 12px; align-items: baseline; text-align: left; padding: 10px 14px; cursor: pointer;
+  background: rgba(10, 6, 8, 0.88); border: 1px solid var(--ouro-1, #3a2e15); color: var(--osso-4, #c2ad86);
+  font: 400 calc(16px * var(--ui-scale, 1)) / 1.4 var(--ps2-font-texto, Georgia, serif);
+}
+#cine .escolha button .n { font: 400 calc(11px * var(--ui-scale, 1)) / 1 var(--ps2-font-dado, monospace); color: var(--ouro-3, #8f7438); }
+#cine .escolha button:focus-visible, #cine .escolha button:hover { border-color: var(--ouro-3, #8f7438); color: var(--osso-5, #e3d5b3); outline: none; }
+#cine.escolhendo .legenda { opacity: 0; }

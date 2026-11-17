@@ -32,7 +32,7 @@ Resolvido em 17/11/2026: a forja rodou no computador do Gabriel e a abertura gan
 
 A cantiga é cantarolada por síntese de formantes. Uma voz gravada (a melodia e a letra estão em `src/cine/som.ts`) melhora muito a cena 1.6 e o trecho da janela, e é decisão do Gabriel quem grava. O tema da partida também é sintetizado.
 
-O capítulo 1 (a Estrada da Serra) não existe ainda. Hoje a abertura entrega o jogo no Átrio, como o Novo jogo fazia antes, e a conversa de abertura antiga ainda roda em seguida. Quando o capítulo 1 entrar, a troca é uma linha em `Game.startNew`: a região carregada depois da abertura.
+O capítulo 1 (a Estrada da Serra) entrou em 17/11/2026: a abertura entrega o controle na estrada, com o menino nas costas (`docs/game/CAPITULO_1.md`).
 
 O menu novo de três botões é de outra frente. A abertura entrou no `startNew` atual, então qualquer Novo jogo passa por ela; quando o menu novo chegar, ele chama o mesmo `startNew`.
 

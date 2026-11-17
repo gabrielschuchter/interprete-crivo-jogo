@@ -21,6 +21,19 @@ export const NPCS: Record<string, NpcDef> = {
   noemia: { id: 'noemia', name: 'Noêmia', role: 'Vigia do terraço', fig: { skin: SKINS[0], hair: HAIRS[2], hairStyle: 'longo', coat: 0x3a2a4a, cape: 0x201a2a, height: 1.7 } },
   tome: { id: 'tome', name: 'Tomé', role: 'Acendedor de lampiões', fig: { skin: SKINS[2], hair: HAIRS[1], hairStyle: 'curto', hat: true, beard: true, coat: 0x2f2a22, height: 1.76, build: 1.04 } },
 };
+// capítulo 1 (docs/game/CAPITULO_1.md): gente da estrada e da Academia, sobre os corpos do elenco PS2
+const cap1 = (id: string, name: string, role: string, model: string, height: number, coat: number, hair?: number): NpcDef => ({
+  id, name, role, model, fig: { skin: SKINS[1], hair: HAIRS[1], hairStyle: 'curto', coat, height, tintCoat: coat, tintHair: hair },
+});
+Object.assign(NPCS, {
+  marta: cap1('marta', 'Marta', 'Lavadeira, romeira', 'npc_02_acendedora', 1.62, 0x3a2e24),
+  guarda: cap1('guarda', 'O guarda do portão', 'Pedra Alta', 'npc_03_vigia', 1.84, 0x2a2a26),
+  estudante_a: cap1('estudante_a', 'Estudante', 'Primeiro ano', 'npc_06_novico', 1.72, 0x2a1a22),
+  estudante_b: cap1('estudante_b', 'Estudante', 'Primeiro ano', 'npc_12_acolita', 1.64, 0x1c2430),
+  estudante_c: cap1('estudante_c', 'Estudante', 'Segundo ano', 'npc_06_novico', 1.78, 0x24181c, 0x3d2416),
+  estudante_d: cap1('estudante_d', 'Estudante', 'Segundo ano', 'npc_07_herbalista', 1.66, 0x2a2a1c),
+  estudante_e: cap1('estudante_e', 'Estudante', 'Primeiro ano', 'npc_08_cartografo', 1.76, 0x1a1a1e),
+} satisfies Record<string, NpcDef>);
 // moradores do elenco PS2: o corpo procedural só aparece se o modelo faltar
 for (const m of Object.values(MORADORES)) {
   NPCS[m.id] = { id: m.id, name: m.nome, role: m.papel, model: m.modelo, fig: { skin: SKINS[1], hair: HAIRS[1], hairStyle: 'curto', coat: 0x2a2226, height: m.altura } };
@@ -65,8 +78,45 @@ export class Npc {
   private lookP = new THREE.Vector3();
   private turning = false;
 
+  /** para onde a pessoa anda (acompanhar o jogador na estrada); null = fica onde está */
+  goal: THREE.Vector3 | null = null;
+  goalSpeed = 1.6;
+  /** altura do chão, para quem anda */
+  ground: ((x: number, z: number, y: number) => number | null) | null = null;
+  private walkV = 0;
+
   update(dt: number, playerPos: THREE.Vector3): void {
     this.t += dt;
+    if (this.goal && !this.talking) {
+      const gx = this.goal.x - this.pos.x;
+      const gz = this.goal.z - this.pos.z;
+      const gd = Math.hypot(gx, gz);
+      // anda, aperta o passo se ficou para trás e para devagar perto do ponto
+      const want = gd < 0.3 ? 0 : Math.min(this.goalSpeed * (gd > 3 ? 1.35 : 1), gd * 2.2);
+      this.walkV += (want - this.walkV) * (1 - Math.exp(-6 * dt));
+      if (this.walkV > 0.02 && gd > 1e-3) {
+        const st = Math.min(gd, this.walkV * dt);
+        this.pos.x += (gx / gd) * st;
+        this.pos.z += (gz / gd) * st;
+        let dy = Math.atan2(gx, gz) - this.yaw;
+        while (dy > Math.PI) dy -= Math.PI * 2;
+        while (dy < -Math.PI) dy += Math.PI * 2;
+        this.yaw += dy * (1 - Math.exp(-7 * dt));
+        this.homeYaw = this.yaw;
+      }
+      const y = this.ground?.(this.pos.x, this.pos.z, this.pos.y + 0.5);
+      if (y !== null && y !== undefined) this.pos.y += (y - this.pos.y) * Math.min(1, dt * 12);
+      this.fig.root.position.copy(this.pos);
+      this.fig.root.rotation.y = this.yaw;
+      this.lookP.set(playerPos.x, playerPos.y + 1.55, playerPos.z);
+      this.fig.lookAt = Math.hypot(playerPos.x - this.pos.x, playerPos.z - this.pos.z) < 4 ? this.lookP : null;
+      this.fig.speaking = this.speaking;
+      this.fig.speed = this.walkV;
+      this.fig.update(dt);
+      this.marker.visible = false;
+      return;
+    }
+    this.walkV = 0;
     const dx = playerPos.x - this.pos.x;
     const dz = playerPos.z - this.pos.z;
     const d = Math.hypot(dx, dz);

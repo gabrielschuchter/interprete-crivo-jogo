@@ -136,6 +136,7 @@ input[type='text']:focus { outline: none; border-color: var(--g-text); box-shado
 #hurt { position: absolute; inset: 0; border: 0 solid rgba(214, 40, 57, 0.55); opacity: 0; transition: opacity 0.4s linear; }
 #hint { position: absolute; left: 50%; bottom: 7%; transform: translateX(-50%); max-width: 56ch; text-align: center; background: var(--g-panel); border: 1px solid var(--g-line); padding: 10px 16px; font: italic 400 16px/1.45 var(--font-serif); color: var(--g-paper); }
 #hint .label { display: block; margin-bottom: 6px; font-style: normal; }
+#subtitle .quem { display: block; font: 400 calc(11px * var(--ui-scale)) / 1.4 var(--font-mono); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--g-gold); margin-bottom: 2px; }
 #subtitle { position: absolute; left: 50%; bottom: 12%; transform: translateX(-50%); max-width: 70ch; text-align: center; background: rgba(18,9,16,0.75); padding: 8px 16px; font: 400 calc(17px * var(--ui-scale)) / 1.45 var(--font-sans); }
 
 /* diálogo (Atlas I-06) */

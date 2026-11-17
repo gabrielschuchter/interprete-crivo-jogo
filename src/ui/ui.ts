@@ -30,6 +30,8 @@ function el(html: string): HTMLElement {
 const hex = (n: number) => '#' + n.toString(16).padStart(6, '0');
 
 export interface HudData {
+  /** capítulo 1: o Crivo ainda não apareceu */
+  semCrivo?: boolean;
   name: string;
   level: number;
   hp: number;
@@ -385,8 +387,27 @@ export class UI {
     }
   }
   subtitle(text: string | null): void {
+    clearTimeout(this.barkTimer);
     this.show('subtitle', !!text);
     if (text) this.$.subtitle.textContent = text;
+  }
+  private barkTimer = 0;
+  /** dica ou fala solta na tela: a próxima fala solta espera (as duas ocupam o mesmo lugar) */
+  get legendaOcupada(): boolean {
+    return !this.$.hint.classList.contains('hidden') || !this.$.subtitle.classList.contains('hidden');
+  }
+  /**
+   * Fala solta enquanto se anda (capítulo 1, na estrada): legenda curta com quem fala, sem caixa de diálogo e sem
+   * tirar o controle. Some sozinha no tempo de leitura (1,8 s mais 65 ms por caractere) ou com `null`.
+   */
+  bark(quem: string | null, texto = '', s?: number): void {
+    clearTimeout(this.barkTimer);
+    if (quem === null) return this.show('subtitle', false);
+    this.remember(quem || 'Fala', texto);
+    this.$.subtitle.innerHTML = `${quem ? `<span class="quem">${esc(quem)}</span>` : ''}${esc(texto)}`;
+    this.show('subtitle', true);
+    const dur = s ?? 1.8 + texto.length * 0.065;
+    this.barkTimer = window.setTimeout(() => this.show('subtitle', false), dur * 1000);
   }
   hurt(amount: number): void {
     const h = this.$.hurt;
@@ -456,6 +477,8 @@ export class UI {
     this.set('kCrivo', this.key('crivo'));
     this.set('ability', d.ability === 'pulso' ? 'Pulso' : 'Lupa');
     this.set('iCrivo', icon(d.ability), 'html');
+    // capítulo 1: o Crivo ainda não entrou na história, e o botão dele também não
+    this.$['k:iCrivo'].parentElement!.style.visibility = d.semCrivo ? 'hidden' : '';
     this.set('cd', `${(d.abilityCd * 100).toFixed(0)}%`, 'height');
     this.show('boss', !!d.boss);
     if (d.boss) {

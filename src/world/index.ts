@@ -3,6 +3,7 @@ import { buildAtrio } from './atrio';
 import { buildBosque } from './bosque';
 import { buildArquivo } from './arquivo';
 import { buildObservatorio } from './observatorio';
+import { buildEstrada } from './estrada';
 import { applyPs2Skin } from './ps2skin';
 
 export function buildRegion(id: RegionId, ctx: RegionCtx): BuiltRegion {
@@ -19,6 +20,8 @@ function build(id: RegionId, ctx: RegionCtx): BuiltRegion {
       return buildArquivo(ctx);
     case 'observatorio':
       return buildObservatorio(ctx);
+    case 'estrada':
+      return buildEstrada(ctx);
     default:
       return buildAtrio(ctx);
   }

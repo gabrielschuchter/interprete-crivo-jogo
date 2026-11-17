@@ -103,3 +103,15 @@ A abertura (`docs/game/ABERTURA.md`) mostra e toca código escrito para este pro
 | Tosse, rangido, sinos, passarinho, choro distante, respiração, pano, batida, porta, prensa, passos, queda, carroça e o tema da partida | `src/cine/som.ts` | Síntese em WebAudio escrita para este projeto | Autoral, do projeto |
 | Elenco da abertura (o rapaz da mesa, Seu Cândido, Marta, carroceiro, romeiros e moradores) | `src/cine/elenco.ts` | Uso novo dos GLB de `personagens/ps2/` já registrados (moradores e protagonistas), com tinta de roupa e cabelo, escala e poses impostas por código | Os mesmos dos GLB de origem |
 | Corpos próprios da abertura: a criança aos doze anos nos dois corpos e três penteados (`crianca_<fem\|masc>_<curto\|coque\|longo>`), Odila (`cine_odila`), Caio (`cine_caio`) e Dra. Helena Avelar jovem e aos 53 (`cine_helena_jovem`, `cine_helena_velha`), dez GLB de 3,4 a 4 mil triângulos e 11 clipes | `public/models/personagens/ps2/` | Forja `tools/chars/build.py` (receitas da abertura em `tools/chars/elenco.py`, 17/11/2026), rodada no computador do Gabriel com bpy 5.3, MPFB2 2.0.18 (extensions.blender.org, sha256 c075b3e9…2dad) e os assets de sistema do MakeHuman (`makehuman_system_assets_cc0.zip`); corpo MakeHuman com idade de criança, figurino e atlas procedurais, clipes CMU (`una-dinosauria/cmu-mocap`, os mesmos 19 BVH do resto do elenco) | Corpo e pele CC0 (MakeHuman), figurino e atlas autorais, clipes CMU com o agradecimento acima |
+
+## Capítulo 1 · A estrada (17/11/2026)
+
+O capítulo 1 (`docs/game/CAPITULO_1.md`) também não traz arquivo novo para o repositório.
+
+| Asset | Onde | Origem | Licença |
+| --- | --- | --- | --- |
+| Estrada da Serra (estrada, paredões, carroça, oratório, muro e porta dos professores, Pedra Alta ao fundo) | `src/world/estrada.ts` | Geometria paramétrica escrita para este projeto, com o kit e as texturas de cenário já registrados | Autoral, do projeto |
+| Estátua de Iolanda Ferro, portas do refeitório e do dormitório | `src/world/atrio.ts` | Geometria paramétrica escrita para este projeto | Autoral, do projeto |
+| Cenários das cenas (enfermaria da Academia, refeitório, anfiteatro, dormitório) e os estudantes sentados | `src/cine/cenarios.ts` | Geometria paramétrica escrita para este projeto | Autoral, do projeto |
+| Aplauso | `src/cine/som.ts`, `Som.aplauso` | Síntese em WebAudio escrita para este projeto | Autoral, do projeto |
+| Elenco do capítulo (Marta, Caio, o guarda, Celeste, a cozinheira, o Reitor Varga, o homem de casaco gasto, cinco estudantes) | `src/entities/npc.ts`, `src/cap1.ts` | Uso novo dos GLB de personagens já registrados acima, com tinta e escala | As dos modelos de origem |

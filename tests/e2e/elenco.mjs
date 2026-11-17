@@ -62,6 +62,8 @@ try {
   await p.click('#create [data-a=go]');
   await waitMode('play');
   await E(fs.readFileSync(path.join(here, 'page-helpers.js'), 'utf8'));
+  // o capítulo 1 vem antes da campanha do Pátio
+  await E(() => T.capitulo1());
   ok(await E(() => !!__game.player.fig.ext), 'o protagonista usa o modelo do elenco PS2');
   ok(await E(() => __game.player.fig.ext.clips.has('torch_idle') && __game.player.fig.ext.clips.has('jump')), 'o protagonista traz clipes de tocha e de pulo');
   const EXPR = ['piscar', 'sobrancelha_erguer', 'sobrancelha_franzir', 'boca_abrir', 'sorriso', 'tristeza'];

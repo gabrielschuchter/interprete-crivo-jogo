@@ -85,6 +85,9 @@ async function session(W, H, full) {
   if (!full) return ctx.close();
 
   await E(fs0);
+  // o capítulo 1 vem antes: o resto do teste anda pelo Pátio de sempre
+  await E(() => T.capitulo1());
+  await waitMode('play');
   const st = () => E(() => { const p = __game.player; return { v: p.speed, yaw: p.camYaw, run: __game.input.touchRun, mx: __game.input.touchMove.x, my: __game.input.touchMove.y }; });
   const sx = 110, sy = H - 110;
   await send('touchStart', [[sx, sy, 1]]);
@@ -129,7 +132,8 @@ async function session(W, H, full) {
 
   // conversa real (sem modo de teste), avançando só por toque
   await E(() => { __game.ui.instant = false; const g = __game; const n = g.npcs.find((x) => x.def.id === 'anselmo'); g.player.teleport(n.pos.x + Math.sin(n.yaw) * 1.4, n.pos.y, n.pos.z + Math.cos(n.yaw) * 1.4, n.yaw + Math.PI); });
-  await sleep(2000);
+  // o rótulo muda no quadro seguinte; depois do capítulo 1 o Pátio pesa mais no render por software
+  await p.waitForFunction(() => document.querySelector('#touch [data-b=interagir] .l')?.textContent === 'Falar', null, { timeout: 20000 }).catch(() => {});
   ok((await E(() => document.querySelector('#touch [data-b=interagir] .l').textContent)) === 'Falar', 'botão de interação mostra o verbo do alvo');
   await btn('interagir'); await sleep(900);
   ok((await mode()) === 'dialogue', 'Interagir abre a conversa');

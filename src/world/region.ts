@@ -3,7 +3,7 @@ import type { Collider, LampSpec, Platform } from './builder';
 import { RegionBuilder } from './builder';
 import type { EnvPreset } from '../core/engine';
 
-export type RegionId = 'atrio' | 'bosque' | 'arquivo' | 'observatorio';
+export type RegionId = 'atrio' | 'bosque' | 'arquivo' | 'observatorio' | 'estrada';
 
 export interface Spawn {
   x: number;
@@ -70,6 +70,8 @@ export interface BuiltRegion {
   music: 'atrio' | 'bosque' | 'arquivo' | 'observatorio';
   /** animações e mudanças de estado próprias da região (ponte, portas, braseiros) */
   actions: Record<string, () => void>;
+  /** corpos que a história põe na região sem serem moradores fixos (Caio e Marta na estrada): baixam na carga */
+  extraModels?: string[];
 }
 
 export interface RegionCtx {

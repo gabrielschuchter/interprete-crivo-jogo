@@ -235,9 +235,10 @@ export class TouchControls {
     (b.querySelector('.l') as HTMLElement).textContent = text ? text.split(' ')[0].slice(0, 10) : 'Agir';
   }
 
-  setHud(d: { abilityCd: number; ability: string; caldo: number; limao: number }): void {
+  setHud(d: { abilityCd: number; ability: string; caldo: number; limao: number; semCrivo?: boolean }): void {
     const c = this.btnEls.get('crivo');
     if (c) {
+      c.style.visibility = d.semCrivo ? 'hidden' : '';
       (c.querySelector('.cd') as HTMLElement).style.height = `${(d.abilityCd * 100).toFixed(0)}%`;
       (c.querySelector('.l') as HTMLElement).textContent = d.ability === 'pulso' ? 'Pulso' : 'Lupa';
     }
