@@ -878,9 +878,12 @@ export async function abertura(c: Cine, som: Som, look: D.Look): Promise<void> {
     S(() => som.tempo(0.9, 0.25));
     const balde = figurante('homem do balde', 'npc_08_cartografo', { coat: 0x2a2420 });
     c.ator(balde).em(-2.2, 0, -2.5, Math.PI);
-    c.corte(P([0, 16, 16], [0, 2, -8], 1));
-    // preto com som: a carga ganha esse tempo
-    await c.espera(5);
+    // a vila da serra, de longe, num empurrão lento até a pose do plano 1.2; o véu preto só segura os 3 primeiros
+    // segundos (som sozinho) e abre em 5 s: preto por meio minuto parecia jogo travado (PR da tela preta, 17/11/2026)
+    c.corte(P([0, 17.5, 18], [0, 2, -8], 36, { para: [0, 15, 15], alvoPara: [0, 2.2, -8], curva: 'linear' }));
+    await c.espera(3);
+    void c.preto(false, 5);
+    await c.espera(2);
     S(() => som.tosse(0.9));
     await c.espera(7);
     S(() => som.tosse(0.4));
@@ -896,7 +899,6 @@ export async function abertura(c: Cine, som: Som, look: D.Look): Promise<void> {
     sincronizarMudo();
     S(() => som.sino(false, 0.22));
     c.corte(P([0, 15, 15], [0, 2.2, -8], 25, { para: [0.6, 2.4, 3.5], alvoPara: [0, 1.8, -8], curva: 'sai' }));
-    void c.preto(false, 2.5);
     void balde.andar([[-1.2, -5.5], [0, -7.6]], 0.9).then(() => balde.ver(false));
     await c.espera(4);
     void c.letreiro('Remanso');
