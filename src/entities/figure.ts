@@ -656,6 +656,8 @@ export class Figure {
   lookAt: THREE.Vector3 | null = null;
   /** fala em curso (boca e gesto) */
   speaking = false;
+  /** expressão imposta pela cena (canais de Face.want); vale por cima da persona */
+  faceOverride: Record<string, number> | null = null;
   /** passos no lugar ao virar parado, em rad/s (moradores que se voltam para o jogador) */
   turnRate = 0;
   private flX = new Spring(140, 12);
@@ -1032,6 +1034,7 @@ export class Figure {
     fw.sorriso = (bf.sorriso ?? 0) + (act === 'wave' || act === 'cheer' ? 0.6 : 0);
     fw.tristeza = bf.tristeza ?? 0;
     fw.boca_abrir = act === 'hit' ? 0.5 : act === 'heavy' ? 0.3 * this.progress : act === 'die' ? 0.4 : 0;
+    if (this.faceOverride) Object.assign(fw, this.faceOverride);
     e.face.speaking = this.speaking;
   }
 

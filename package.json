@@ -13,7 +13,8 @@
     "e2e:touch": "node tests/e2e/touch.mjs",
     "e2e:dificuldade": "node tests/e2e/dificuldade.mjs",
     "e2e:controles": "node tests/e2e/controles.mjs",
-    "e2e:elenco": "node tests/e2e/elenco.mjs"
+    "e2e:elenco": "node tests/e2e/elenco.mjs",
+    "e2e:abertura": "node tests/e2e/abertura.mjs"
   },
   "dependencies": {
     "three": "^0.170.0"
