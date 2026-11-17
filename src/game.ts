@@ -27,11 +27,13 @@ import * as D from './domain/state';
 import type { GameState, Look, ProfessionId, Reward, SaveAdapter, SkillDef, Stats } from './domain/state';
 import type { CaseFeedback, ClinicalCase } from './domain/clinical';
 import * as Story from './story';
+import { Cine } from './cine/cine';
+import { Som } from './cine/som';
 import { GEAR, RARITY_COLOR, RARITY_LABEL, rollDrop } from './domain/gear';
 import { DIFFICULTIES, DIFFICULTY_IDS, coinsLostOnDeath, difficultyDef, scaleCoins, scaleHeal, scalePrice, type DifficultyDef, type DifficultyId } from './domain/difficulty';
 import { buildWeapon, WEAPON_LOOKS } from './entities/weapons';
 import { ENV } from './world/envs';
-import { SLOTS, clearSlot, latestSlot, playtimeLabel, recoverSlot, slotAdapter, slotInfo, type SlotId } from './core/registros';
+import { SLOTS, clearSlot, freeSlot, latestSlot, playtimeLabel, recoverSlot, slotAdapter, slotInfo, type SlotId } from './core/registros';
 
 /** Piso e laços gravados de cada região. */
 const REGION_SOUND: Record<RegionId, { surface: Surface; loops: Partial<Record<AmbienceLoop, number>> }> = {
@@ -42,13 +44,14 @@ const REGION_SOUND: Record<RegionId, { surface: Surface; loops: Partial<Record<A
   observatorio: { surface: 'entulho', loops: { poca: 0.3 } },
 };
 
-export type Mode = 'boot' | 'menu' | 'create' | 'play' | 'dialogue' | 'book' | 'shop' | 'case' | 'pause' | 'dead' | 'transition' | 'ending';
+export type Mode = 'boot' | 'menu' | 'create' | 'play' | 'dialogue' | 'book' | 'shop' | 'case' | 'pause' | 'dead' | 'transition' | 'ending' | 'cine';
 
 const REGION_IDS: readonly RegionId[] = ['atrio', 'bosque', 'arquivo', 'observatorio'];
 const asRegion = (r: string): RegionId => (REGION_IDS.includes(r as RegionId) ? (r as RegionId) : 'atrio');
 /** região e marcas com que ela foi montada: duas montagens com a mesma chave são a mesma cena */
 const regionKey = (id: RegionId, flags: Iterable<string>): string => `${id}|${[...flags].sort().join(',')}`;
 /** aparência que a criação mostra primeiro (feminino, coque) */
+const freeSlotOr1 = (): SlotId => freeSlot() ?? 1;
 const CREATE_LOOK: Look = { skin: 1, hair: 1 + HAIRS.length, coat: 0, body: 'fem' };
 
 interface PropRt {
@@ -231,6 +234,14 @@ export class Game {
     this.mark('menu');
     this.audio.setMood('menu');
     requestAnimationFrame((t) => this.frame(t));
+    // entrada de desenvolvimento: ?cena=2.4 abre a abertura direto naquele plano, com um corpo padrão
+    const cenaQ = new URLSearchParams(location.search);
+    if (cenaQ.get('cena') !== null) {
+      this.newSlot = freeSlotOr1();
+      // a abertura tira a região da cena: espera o preparo montar uma
+      await this.prepare();
+      void this.startNew('Teste', 'nutricao', { ...CREATE_LOOK, body: cenaQ.get('corpo') === 'masc' ? 'masc' : 'fem' });
+    }
     console.info('[carga]', JSON.stringify({ rede: this.bootTimes.rede - this.bootTimes.carga, catalogo: this.bootTimes.catalogo - this.bootTimes.rede, menu: this.bootTimes.menu - this.bootTimes.carga, programas: this.engine.renderer.info.programs?.length ?? 0 }));
     void this.prepare();
   }
@@ -345,7 +356,6 @@ export class Game {
       this.mark('preparado');
       console.info('[preparo]', JSON.stringify({ regiao: id, ms: this.bootTimes.preparado - this.bootTimes.preparo, programas: this.engine.renderer.info.programs?.length ?? 0 }));
       void this.restProps.then(() => preloadModels());
-      if (!saved) await Story.prepararAbertura(this);
       void this.warmOthers();
     };
     const pr = run()
@@ -629,23 +639,19 @@ export class Game {
 
   /**
    * Gancho da nova campanha. Chamado com o registro já criado e gravado, o véu preto fechado e o modo em
-   * 'transition'. Toca a abertura (`Story.abertura`, hoje um stub que devolve na hora) e então entra na primeira
-   * região jogável, no ponto que a abertura devolver (padrão: Pátio, 'inicio'), com a conversa de chegada.
-   * Contrato completo em docs/game/CARGA_E_MENU.md.
+   * 'transition'. Toca a abertura (`Game.abertura` com `Story.abertura`, docs/game/ABERTURA.md; os testes com
+   * ?teste pulam, salvo ?abertura) e então entra no Pátio, em 'inicio', com a conversa de chegada.
+   * A região que o menu deixou pronta é reaproveitada se a abertura não a tirou da cena.
    */
   async iniciarCampanha(): Promise<void> {
-    let fim: Story.FimDaAbertura | void = undefined;
-    try {
-      fim = await Story.abertura(this);
-    } catch (err) {
-      // uma abertura quebrada não pode impedir o jogo de começar
-      this.errors.push(String((err as Error)?.stack ?? err));
-      console.error(err);
+    if (this.querAbertura()) {
+      // a abertura tira a região da cena para montar os cenários dela
+      this.builtKey = '';
+      await this.abertura(this.state!.look);
     }
-    const id = fim?.regiao ?? 'atrio';
     const flags = new Set(this.state!.flags);
-    if (this.builtKey !== regionKey(id, flags)) await this.loadRegion(id, flags);
-    this.spawnPlayer(fim?.spawn ?? 'inicio');
+    if (this.builtKey !== regionKey('atrio', flags)) await this.loadRegion('atrio', flags);
+    this.spawnPlayer('inicio');
     await this.warmScene();
     this.save();
     this.enterPlay();
@@ -653,7 +659,7 @@ export class Game {
     await this.ui.fade(false);
     this.busy = false;
     this.ui.regionTitle(this.region.name, this.region.subtitle);
-    if (fim?.conversa !== false) this.runScript(() => Story.opening(this), null, true);
+    this.runScript(() => Story.opening(this), null, true);
   }
 
   /** Continua o registro de um espaço (sem argumento, o mais recente). */
@@ -712,6 +718,44 @@ export class Game {
     this.openMenu();
     await this.ui.fade(false);
     void this.prepare();
+  }
+
+  // ---------- abertura ----------
+  cine: Cine | null = null;
+  private querAbertura(): boolean {
+    const q = new URLSearchParams(location.search);
+    return !this.ui.instant || q.has('abertura') || q.has('cena');
+  }
+  /** Roda a abertura do Novo jogo com a cena da região fora; `ate` começa num plano (`?cena=2.4`). */
+  async abertura(look: Look, ate: string | null = new URLSearchParams(location.search).get('cena')): Promise<void> {
+    this.mode = 'cine';
+    this.ui.hudVisible(false);
+    this.input.releaseLock();
+    if (this.region) this.engine.scene.remove(this.region.root);
+    this.crivo.model.root.visible = false;
+    this.audio.hush(true);
+    const pausa = (on: boolean) => {
+      const ctx = this.audio.cena()?.ctx;
+      if (ctx) void (on ? ctx.suspend() : ctx.resume());
+    };
+    const c = (this.cine = new Cine({ engine: this.engine, input: this.input, reduceMotion: () => this.settings.reduceMotion, audioPause: pausa }, { ate }));
+    await this.ui.fade(false);
+    try {
+      await Story.abertura(c, new Som(this.audio), look);
+      c.fechar();
+      await c.preto(true, 1.2).catch(() => undefined);
+    } catch (err) {
+      // a abertura nunca prende o jogo: um erro vira registro e o jogo começa
+      console.error(err);
+      this.errors.push(String((err as Error)?.stack ?? err));
+    } finally {
+      pausa(false);
+      c.dispose();
+      this.cine = null;
+      this.audio.hush(false);
+      this.mode = 'transition';
+      await this.ui.fade(true);
+    }
   }
 
   private enterPlay(): void {
@@ -1852,6 +1896,11 @@ export class Game {
     if (black !== this.blackStage) {
       this.blackStage = black;
       document.body.classList.toggle('palco-preto', black);
+    }
+    if (m === 'cine' && this.cine) {
+      this.cine.update(dt);
+      this.engine.render(dt, this.cine.focus);
+      return;
     }
     if (m === 'create') {
       this.updateTitle(dt, m);

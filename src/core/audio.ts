@@ -146,7 +146,7 @@ export class AudioSys {
   }
 
   private startMusic(): void {
-    if (!this.ctx || this.musicEl?.mood === this.mood) return;
+    if (!this.ctx || this.hushed || this.musicEl?.mood === this.mood) return;
     if (this.musicEl) this.fadeOut(this.musicEl, 3);
     const m = this.stream(BASE + `musica/${this.mood}.mp3`, this.musicBus, true);
     if (!m) {
@@ -310,6 +310,24 @@ export class AudioSys {
     this.ambBus.gain.value = this.volumes.ambiente * 0.6;
   }
 
+  /** a cena de abertura tem trilha própria: cala a trilha gravada e a generativa enquanto roda */
+  private hushed = false;
+  hush(on: boolean): void {
+    this.hushed = on;
+    if (!this.ctx) return;
+    if (on && this.musicEl) {
+      this.fadeOut(this.musicEl, 1.5);
+      this.musicEl = null;
+      this.fileMusic = false;
+    }
+    if (!on) this.startMusic();
+  }
+  /** barramentos para a síntese da cena (null antes do primeiro gesto) */
+  cena(): { ctx: AudioContext; musica: GainNode; efeitos: GainNode; ambiente: GainNode; reverb: ConvolverNode; ruido: AudioBuffer } | null {
+    if (!this.ctx) return null;
+    return { ctx: this.ctx, musica: this.musicBus, efeitos: this.sfxBus, ambiente: this.ambBus, reverb: this.reverb, ruido: this.noiseBuf };
+  }
+
   setMood(m: MusicMood): void {
     if (m !== this.mood) {
       this.mood = m;
@@ -336,6 +354,10 @@ export class AudioSys {
     this.windGain.gain.setTargetAtTime(this.windTarget * 0.5, t, 1.2);
     this.combatGain.gain.setTargetAtTime(this.combat, t, 0.5);
     const sc = SCALES[this.mood];
+    if (this.hushed) {
+      this.nextChord = this.nextNote = this.nextBeat = t + 0.5;
+      return;
+    }
     if (this.fileMusic) {
       // trilha gravada no ar: o gerador só marca o tempo para a percussão de combate
       this.nextChord = this.nextNote = t + 0.5;

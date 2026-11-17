@@ -1,0 +1,77 @@
+/* Cena: letterbox 2,35:1 desenhado por cima do canvas, legendas na barra de baixo, pausa com segurar para pular.
+   Sem transição suave: barras, pretos e anel andam em degraus, como a interface PS2. */
+#cine {
+  --bar: min(max(0px, calc((100vh - 100vw / 2.35) / 2)), 14vh);
+  position: fixed; inset: 0; z-index: 40; pointer-events: none; color: var(--osso-4, #c2ad86);
+}
+#cine.toque { pointer-events: auto; touch-action: none; }
+#cine .barra { position: absolute; left: 0; right: 0; height: 0; background: #000; z-index: 2; transition: height 0.6s steps(4, end); }
+#cine.lb .barra { height: max(var(--bar), 56px); }
+#cine.lb-instante .barra { transition: none; }
+#cine .cima { top: 0; }
+#cine .baixo { bottom: 0; display: flex; align-items: center; justify-content: center; }
+#cine .legenda {
+  max-width: min(880px, 88vw); text-align: center; opacity: 0; padding: 0 16px;
+  font: 400 calc(20px * var(--ui-scale, 1)) / 1.35 var(--ps2-font-texto, Georgia, serif);
+  color: var(--osso-4, #c2ad86); text-shadow: 1px 1px 0 #000;
+}
+#cine .legenda.on { opacity: 1; }
+#cine .legenda.canto .txt { font-family: var(--ps2-font-manuscrito, Georgia, serif); font-style: italic; color: var(--osso-3, #8f7c5e); }
+#cine .legenda .quem {
+  display: block; margin-bottom: 2px;
+  font: 500 calc(12px * var(--ui-scale, 1)) / 1.2 var(--ps2-font-titulo, serif); letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ouro-3, #8f7438);
+}
+body.hc #cine .legenda.on { background: #000; outline: 6px solid #000; color: #f0e5d3; }
+#cine .letreiro {
+  position: absolute; left: max(16px, 4vw); bottom: calc(max(var(--bar), 56px) + 14px); opacity: 0;
+  font: 400 calc(12px * var(--ui-scale, 1)) / 1 var(--ps2-font-dado, monospace); letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--osso-3, #8f7c5e); text-shadow: 1px 1px 0 #000; transition: opacity 0.8s steps(4, end);
+}
+#cine .letreiro.on { opacity: 1; }
+#cine .titulo {
+  position: absolute; left: 0; right: 0; top: 38%; text-align: center; opacity: 0;
+  font: 500 calc(var(--ps2-size-regiao, 56px) * 0.7 * var(--ui-scale, 1)) / 1 var(--ps2-font-titulo, serif); letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--osso-5, #e3d5b3); text-shadow: 2px 2px 0 #000; transition: opacity 0.8s steps(4, end);
+}
+#cine .titulo.on { opacity: 1; }
+#cine .preto { position: absolute; inset: 0; z-index: 3; background: #000; opacity: 0; transition: opacity 1.2s steps(6, end); }
+#cine .preto.on { opacity: 1; }
+#cine .branco { position: absolute; inset: 0; background: #fff4dc; opacity: 0; mix-blend-mode: screen; transition: opacity 1.5s steps(8, end); }
+#cine .dica {
+  position: absolute; left: 0; right: 0; bottom: calc(max(var(--bar), 56px) + 18px); text-align: center; opacity: 0;
+  font: 400 calc(12px * var(--ui-scale, 1)) / 1 var(--ps2-font-dado, monospace); letter-spacing: 0.18em; text-transform: uppercase; color: var(--osso-3, #8f7c5e);
+  transition: opacity 0.6s steps(4, end);
+}
+#cine .dica.on { opacity: 0.85; }
+#cine .pausar {
+  position: absolute; z-index: 4; right: 12px; top: 10px; width: 40px; height: 40px; pointer-events: auto; display: none;
+  background: transparent; border: 1px solid var(--ouro-1, #3a2e15); padding: 0; cursor: pointer; gap: 6px; align-items: center; justify-content: center;
+}
+#cine .pausar i { display: block; width: 4px; height: 14px; background: var(--ouro-3, #8f7438); }
+body.touch #cine .pausar { display: flex; }
+#cine.fim .pausar, #cine.fim .pausa { display: none; }
+#cine .pausa { position: absolute; inset: 0; z-index: 5; display: none; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.72); pointer-events: auto; }
+#cine .pausa.on { display: flex; }
+#cine .pausa .caixa { display: flex; flex-direction: column; gap: 12px; width: min(360px, 90vw); }
+#cine .pausa .cab {
+  margin: 0 0 8px; text-align: center; color: var(--ouro-3, #8f7438);
+  font: 500 calc(13px * var(--ui-scale, 1)) / 1 var(--ps2-font-titulo, serif); letter-spacing: 0.18em; text-transform: uppercase;
+}
+#cine .pausa button {
+  position: relative; height: 52px; background: var(--breu-2, #120910); border: 1px solid var(--ouro-1, #3a2e15); color: var(--osso-4, #c2ad86); cursor: pointer;
+  font: 700 calc(15px * var(--ui-scale, 1)) / 1 var(--ps2-font-titulo, serif); letter-spacing: 0.1em; text-transform: uppercase;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+#cine .pausa button:focus-visible, #cine .pausa button:hover { border-color: var(--ouro-3, #8f7438); outline: none; }
+#cine .pausa button small { font: 400 calc(10px * var(--ui-scale, 1)) / 1 var(--ps2-font-dado, monospace); letter-spacing: 0.14em; color: var(--osso-2, #5a4b3a); }
+#cine .pausa .anel {
+  --p: 0; width: 18px; height: 18px; border-radius: 50%;
+  background: conic-gradient(var(--brasa-3, #e5a85f) calc(var(--p) * 360deg), var(--ouro-1, #3a2e15) 0);
+  -webkit-mask: radial-gradient(circle, transparent 5px, #000 6px); mask: radial-gradient(circle, transparent 5px, #000 6px);
+}
+#cine .pausa .segura { --p: 0; }
+#cine .pausa .segura .anel { --p: inherit; }
+@media (orientation: portrait) { #cine .legenda { font-size: calc(17px * var(--ui-scale, 1)); } }
+#cine .silhueta { position: absolute; left: 50%; top: 50%; width: min(28vh, 40vw); height: min(28vh, 40vw); transform: translate(-50%, -30%); opacity: 0; }
+#cine .silhueta.on { opacity: 0.9; }

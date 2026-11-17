@@ -51,10 +51,6 @@ O que falta medir: placa de vídeo real e rede limitada (`REDE=20`). Os números
 
 ## Gancho da abertura
 
-`Game.iniciarCampanha()` é a rota da nova campanha. `startNew` cria o registro no espaço escolhido, grava, fecha o véu preto e chama `iniciarCampanha`, que:
+A abertura (docs/game/ABERTURA.md, PR #36) entrou na main em paralelo. A rota da nova campanha é `Game.iniciarCampanha()`: `startNew` cria o registro no espaço escolhido, grava, fecha o véu e chama `iniciarCampanha`, que roda `Game.abertura(look)` (com `Story.abertura`, salvo nos testes com `?teste` sem `?abertura`), monta o Pátio, ou reaproveita o que o menu deixou pronto se a abertura não passou por ali, põe o jogador e abre o véu com a conversa de chegada. `?cena=2.4` continua abrindo direto num plano: a entrada passou do fim da tela "pressione" para o fim da carga.
 
-1. chama `await Story.abertura(g)` em `src/story.ts`, com `g.state` criado e gravado, o modo em `'transition'`, o véu fechado e nenhuma figura na cena. A abertura pode usar câmera, cena, áudio e interface enquanto roda. Hoje é um stub que devolve na hora;
-2. lê o retorno opcional `FimDaAbertura` (`regiao`, `spawn`, `conversa`): sem nada, o jogo começa no Pátio, em `'inicio'`, com a conversa de chegada (`Story.opening`);
-3. monta a região pedida (ou reaproveita a que o menu deixou pronta), põe o jogador, compila o que faltar, abre o véu.
-
-Se a abertura lançar erro, o jogo registra em `g.errors` e segue para o Pátio. `Story.prepararAbertura(g)` é chamado em segundo plano com o menu na tela quando não há registro, depois que o Pátio ficou pronto: é o lugar para baixar e compilar o primeiro bloco da cena. Nos testes (`g.ui.instant`) a abertura deve resolver na hora.
+Pendência para a abertura: os cenários dela (`src/cine/cenarios.ts`) ainda não entram no preparo em segundo plano. O lugar é `Game.prepare` quando não há registro, depois do Pátio, compilando os cenários com `compileLit` como as regiões.
