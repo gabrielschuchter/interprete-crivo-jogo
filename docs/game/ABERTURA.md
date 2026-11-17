@@ -22,7 +22,7 @@ Esc, Start ou o botão de pausa no toque param a cena. Na primeira vez, a pausa 
 
 ## Orçamento PS2
 
-Só um cenário fica na cena por vez; a região do jogo sai da cena durante a abertura e volta na entrega. Os cenários usam o kit e os materiais das regiões (texturas de até 512 px já carregadas), mesclados por material no `RegionBuilder`, e as seis lâmpadas fixas do motor, escolhidas pela distância ao alvo da câmera. O plano mais cheio (a enfermaria com 31 camas) fica perto de 140 malhas depois da mesclagem e oito figuras animadas. O elenco reaproveita os GLB já carregados; nenhum modelo novo desce da rede. O áudio do jogo fica calado (`AudioSys.hush`) e a cena toca só a própria síntese.
+Só um cenário fica na cena por vez; a região do jogo sai da cena durante a abertura e volta na entrega. Os cenários usam o kit e os materiais das regiões (texturas de até 512 px já carregadas), mesclados por material no `RegionBuilder`, e as seis lâmpadas fixas do motor, escolhidas pela distância ao alvo da câmera. Medido no render do teste, o quadro mais pesado é o travelling da enfermaria (1.3), com 122 chamadas de desenho, e o mais denso é o 2.4, com seis figuras e cerca de 91 mil triângulos; a garganta da serra fica em 58 chamadas e 77 mil triângulos. O elenco reaproveita os GLB já carregados; nenhum modelo novo desce da rede. O áudio do jogo fica calado (`AudioSys.hush`) e a cena toca só a própria síntese.
 
 Com Reduzir movimento ligado, a câmera na mão para, a luz da janela sobe em três segundos em vez de um e meio, e os dois quadros da silhueta viram um segundo em luz baixa. Com Alto contraste, a legenda ganha fundo preto opaco. Na tela em pé, o ângulo vertical abre para o quadro composto em 16:9 não virar uma fresta.
 
@@ -38,4 +38,4 @@ O menu novo de três botões é de outra frente. A abertura entrou no `startNew`
 
 A gravura dos planos 2.7 é uma só, com a criança sem marca de gênero. A decisão 2 pede duas versões ("o Menino" e "a Menina da Janela"); fica para quando a gravura sair da textura de canvas para uma ilustração.
 
-As capturas foram feitas com render por software. A taxa de quadros real precisa ser medida no computador do Gabriel e num celular, principalmente na enfermaria e na serra.
+As capturas (pasta `abertura/` do projeto) foram feitas com render por software. A taxa de quadros real precisa ser medida no computador do Gabriel e num celular, principalmente na enfermaria e na serra.
