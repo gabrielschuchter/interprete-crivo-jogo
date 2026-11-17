@@ -26,6 +26,8 @@ import * as D from './domain/state';
 import type { GameState, Look, ProfessionId, Reward, SaveAdapter, SkillDef, Stats } from './domain/state';
 import type { CaseFeedback, ClinicalCase } from './domain/clinical';
 import * as Story from './story';
+import { Cine } from './cine/cine';
+import { Som } from './cine/som';
 import { GEAR, RARITY_COLOR, RARITY_LABEL, rollDrop } from './domain/gear';
 import { DIFFICULTIES, DIFFICULTY_IDS, coinsLostOnDeath, difficultyDef, scaleCoins, scaleHeal, scalePrice, type DifficultyDef, type DifficultyId } from './domain/difficulty';
 import { buildWeapon, WEAPON_LOOKS } from './entities/weapons';
@@ -39,7 +41,7 @@ const REGION_SOUND: Record<RegionId, { surface: Surface; loops: Partial<Record<A
   observatorio: { surface: 'entulho', loops: { poca: 0.3 } },
 };
 
-export type Mode = 'boot' | 'splash' | 'menu' | 'create' | 'play' | 'dialogue' | 'book' | 'shop' | 'case' | 'pause' | 'dead' | 'transition' | 'ending';
+export type Mode = 'boot' | 'splash' | 'menu' | 'create' | 'play' | 'dialogue' | 'book' | 'shop' | 'case' | 'pause' | 'dead' | 'transition' | 'ending' | 'cine';
 
 const SAVE_KEY = 'interprete-rpg-registro-v1';
 const localAdapter: SaveAdapter = {
@@ -229,6 +231,12 @@ export class Game {
     this.ui.splash(true);
     this.audio.setMood('menu');
     requestAnimationFrame((t) => this.frame(t));
+    // entrada de desenvolvimento: ?cena=2.4 abre a abertura direto naquele plano, com um corpo padrão
+    const cena = new URLSearchParams(location.search).get('cena');
+    if (cena !== null) {
+      this.ui.splash(false);
+      void this.startNew('Teste', 'nutricao', { skin: 1, hair: 1 + HAIRS.length, coat: 0, body: new URLSearchParams(location.search).get('corpo') === 'masc' ? 'masc' : 'fem' });
+    }
     // o resto dos props e os outros protagonistas descem com o menu já na tela, sem disputar a banda da abertura
     this.restProps = preloadProps();
     void this.restProps.then(() => preloadModels());
@@ -407,6 +415,8 @@ export class Game {
     await loadExternalModel(playerModelKey(look));
     this.ui.closeAll();
     this.clearPreview();
+    // a abertura (docs/game/ABERTURA.md) vem entre a criação e o jogo; os testes (?teste) pulam, salvo ?abertura
+    if (this.querAbertura()) await this.abertura(look);
     await this.loadRegion('atrio', new Set());
     this.spawnPlayer('inicio');
     await this.warmScene();
@@ -467,6 +477,44 @@ export class Game {
     this.audio.setCombat(0);
     this.openMenu();
     await this.ui.fade(false);
+  }
+
+  // ---------- abertura ----------
+  cine: Cine | null = null;
+  private querAbertura(): boolean {
+    const q = new URLSearchParams(location.search);
+    return !this.ui.instant || q.has('abertura') || q.has('cena');
+  }
+  /** Roda a abertura do Novo jogo com a cena da região fora; `ate` começa num plano (`?cena=2.4`). */
+  async abertura(look: Look, ate: string | null = new URLSearchParams(location.search).get('cena')): Promise<void> {
+    this.mode = 'cine';
+    this.ui.hudVisible(false);
+    this.input.releaseLock();
+    this.engine.scene.remove(this.region.root);
+    this.crivo.model.root.visible = false;
+    this.audio.hush(true);
+    const pausa = (on: boolean) => {
+      const ctx = this.audio.cena()?.ctx;
+      if (ctx) void (on ? ctx.suspend() : ctx.resume());
+    };
+    const c = (this.cine = new Cine({ engine: this.engine, input: this.input, reduceMotion: () => this.settings.reduceMotion, audioPause: pausa }, { ate }));
+    await this.ui.fade(false);
+    try {
+      await Story.abertura(c, new Som(this.audio), look);
+      c.fechar();
+      await c.preto(true, 1.2).catch(() => undefined);
+    } catch (err) {
+      // a abertura nunca prende o jogo: um erro vira registro e o jogo começa
+      console.error(err);
+      this.errors.push(String((err as Error)?.stack ?? err));
+    } finally {
+      pausa(false);
+      c.dispose();
+      this.cine = null;
+      this.audio.hush(false);
+      this.mode = 'transition';
+      await this.ui.fade(true);
+    }
   }
 
   private enterPlay(): void {
@@ -1595,6 +1643,11 @@ export class Game {
     this.audio.update();
     this.padMenus(m);
 
+    if (m === 'cine' && this.cine) {
+      this.cine.update(dt);
+      this.engine.render(dt, this.cine.focus);
+      return;
+    }
     if (m === 'splash' || m === 'menu' || m === 'create' || (m === 'book' && !this.state)) {
       this.updateTitle(dt, m);
     } else if (this.state && this.player) {

@@ -10,6 +10,15 @@ import type { PropPlacement } from './world/region';
 import { CODEX, MESTRES_IDS, OBRAS_IDS, PAGES, PROFESSIONS, QUESTS } from './content/data';
 import * as D from './domain/state';
 import { MORADORES } from './content/moradores';
+import * as THREE from 'three';
+import { Cine, type Plano, type V3 } from './cine/cine';
+import type { Ator } from './cine/ator';
+import { CANTIGA, Som, type Toque } from './cine/som';
+import { CASA, ENF, casa, enfermaria, oficina, serra, vila } from './cine/cenarios';
+import {
+  ABRACO, AJOELHADA, AJOELHADA_RUA, BOLEIA, CHAPEU_NO_PEITO, DEITADO, ENCOLHIDO, ESTENDE, GOLA, NO_PARAPEITO, SEGURA, SEGURA_MANGA, SENTADO, TRINCO,
+  apoiar, chapeu, crianca, dobrar, escrever, figurante, folhaLacrada, helena, maosSemJeito, protagonista, rastejar, sentadaCochilo, torcer,
+} from './cine/elenco';
 
 type G = Game;
 
@@ -807,4 +816,706 @@ async function board(g: G): Promise<void> {
     return;
   }
   await ask(g, opts, 'Deixar o quadro');
+}
+
+// ---------- abertura do Novo jogo: O Menino da Janela ----------
+/*
+ * Roteiro da abertura (docs/game/ABERTURA.md; plano em redesenho/REDESENHO_PARTE_1.md, seção 3.3). Três blocos
+ * separados por pretos: a febre em Remanso, a janela, a partida. Cada `c.marca` é um plano da lista de planos;
+ * `?cena=2.4` começa direto nele. Nenhum conceito de PBE é nomeado: o que importa fica na imagem (nove potes,
+ * a cama treze, a folha fechada, a lanterna na rua) e só se lê no fim do jogo.
+ */
+export async function abertura(c: Cine, som: Som, look: D.Look): Promise<void> {
+  const P = (de: V3, alvo: V3, dur: number, x: Partial<Plano> = {}): Plano => ({ de, alvo, dur, fov: 52, ...x });
+  const fala = (t: string, o?: Parameters<Cine['fala']>[1]) => c.fala(t, o);
+  const esperaFala = (t: string, o?: Parameters<Cine['fala']>[1]) => c.fala(t, { ...o, espera: false });
+  const cantar = (verso: number) => esperaFala(CANTIGA[verso], { canto: true, dur: 3.6 });
+  const toques: Toque[] = [];
+  const toque = (t: Toque) => (toques.push(t), t);
+  const calar = () => {
+    for (const t of toques.splice(0)) t.parar(1.5);
+  };
+  /** anima um valor de 0 a 1 em `s` segundos de cena */
+  const animar = (s: number, f: (k: number) => void): void => {
+    if (c.ff) return f(1);
+    let t = 0;
+    const fn = (dt: number) => {
+      t += dt;
+      f(Math.min(1, t / s));
+      if (t >= s) c.extra.splice(c.extra.indexOf(fn), 1);
+    };
+    c.extra.push(fn);
+  };
+  /** som que só toca fora do avanço rápido */
+  const S = (fn: () => void) => {
+    if (!c.ff) fn();
+  };
+  som.mudo = c.ff;
+  const sincronizarMudo = () => (som.mudo = c.ff);
+  // concordância com o corpo escolhido na criação (decisão 2 do redesenho)
+  const fem = look.body === 'fem';
+  const moco = fem ? 'a moça' : 'o moço';
+  const ele = fem ? 'ela' : 'ele';
+  const agasalhado = fem ? 'agasalhada' : 'agasalhado';
+  const filho = fem ? 'minha filha' : 'meu filho';
+  let dtq = 1 / 60;
+
+  // ===================== Bloco 1 · A febre =====================
+  await c.bloco('1', async () => {
+    c.marca('1.1');
+    sincronizarMudo();
+    const vilaN = vila(false);
+    c.montar(vilaN);
+    S(() => som.tempo(0.9, 0.25));
+    const balde = figurante('homem do balde', 'npc_08_cartografo', { coat: 0x2a2420 });
+    c.ator(balde).em(-2.2, 0, -2.5, Math.PI);
+    c.corte(P([0, 16, 16], [0, 2, -8], 1));
+    // preto com som: a carga ganha esse tempo
+    await c.espera(5);
+    S(() => som.tosse(0.9));
+    await c.espera(7);
+    S(() => som.tosse(0.4));
+    await c.espera(5);
+    S(() => som.rangido(0.2));
+    await c.espera(6);
+    S(() => som.tosse(0.7));
+    await c.espera(4);
+    S(() => toque(som.cantiga({ perto: 0.05, ate: 10 })));
+    await c.espera(9);
+
+    c.marca('1.2');
+    sincronizarMudo();
+    S(() => som.sino(false, 0.22));
+    c.corte(P([0, 15, 15], [0, 2.2, -8], 25, { para: [0.6, 2.4, 3.5], alvoPara: [0, 1.8, -8], curva: 'sai' }));
+    void c.preto(false, 2.5);
+    void balde.andar([[-1.2, -5.5], [0, -7.6]], 0.9).then(() => balde.ver(false));
+    await c.espera(4);
+    void c.letreiro('Remanso');
+    await c.espera(21);
+
+    // dentro: a enfermaria
+    await c.preto(true, 0.6);
+    c.marca('1.3');
+    sincronizarMudo();
+    c.montar(enfermaria(false));
+    S(() => som.tempo(0.7, 0.1));
+    const hel = c.ator(helena(false)).em(-6.5, 0, 1.7, Math.PI / 2);
+    const mae = c.ator(figurante('uma mãe', 'npc_02_acendedora', { coat: 0x2e2420, altura: 1.62 })).em(-1.3, 0, 1.25, Math.PI);
+    mae.posar(AJOELHADA, 50);
+    const silv = c.ator(figurante('o moço', 'npc_11_detetive', { coat: 0x2a2a30, altura: 1.76 })).em(ENF.mesa[0] + 0.05, 0, ENF.mesa[1] + 0.62, Math.PI);
+    silv.poseFn = escrever;
+    const crian = c.ator(crianca(look)).em(ENF.cama12[0], 0.5, ENF.cama12[1], 0).deitar(1);
+    crian.posar(ENCOLHIDO, 50);
+    const odila = c.ator(figurante('menina da cama treze', 'npc_09_orfao', { altura: 1.4, coat: 0x8f7c5e, cabelo: 0x3a2014 })).em(ENF.cama13[0], 0.5, ENF.cama13[1], 0).deitar(-1);
+    odila.posar(ENCOLHIDO, 50);
+    c.corte(P([-8.4, 0.62, 2.0], [-5.6, 0.75, 1.2], 50, { para: [1.4, 0.62, 2.0], alvoPara: [4.4, 0.75, 1.2], curva: 'linear', fov: 50 }));
+    void c.preto(false, 1.2);
+    void hel.andar([[-1.5, 1.7], [5.5, 1.7]], 0.55);
+    S(() => som.tosse(0.3));
+    await c.espera(9);
+    mae.olharPara = hel;
+    await fala('Doutora, a minha não come desde ontem.', { ator: mae });
+    hel.olharPara = mae;
+    await fala('Põe água na boca dela. Pouquinho, de hora em hora.', { ator: hel });
+    hel.olharPara = null;
+    S(() => som.tosse(0.6));
+    await c.espera(14);
+    S(() => som.rangido(0.15));
+    await c.espera(12);
+
+    c.marca('1.4');
+    sincronizarMudo();
+    hel.parar();
+    hel.em(-5.6, 0, -1.6, -Math.PI / 2);
+    const [mx, mz] = ENF.mesa;
+    c.corte(P([mx + 1.0, 1.12, mz + 0.1], [mx + 0.05, 0.86, mz + 0.18], 35, { para: [mx + 0.92, 1.1, mz + 0.18], fov: 44, mao: 0.006 }));
+    await c.espera(8);
+    await fala('Vai dormir, moço.', { quem: 'A doutora' });
+    await c.espera(2);
+    await fala('Já vou. Falta a fileira do fundo.', { ator: silv });
+    await c.espera(14);
+
+    c.marca('1.5');
+    sincronizarMudo();
+    const [ax, az] = ENF.armario;
+    hel.em(ax - 0.75, 0, az, Math.PI / 2);
+    const pote = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.12, 8), new THREE.MeshStandardMaterial({ color: 0x7a4a2c, roughness: 0.9 }));
+    c.corte(P([ax - 2.6, 1.45, az + 2.4], [ax - 0.1, 1.05, az], 14, { para: [ax - 2.8, 1.45, az + 2.2], fov: 48 }));
+    await c.espera(3.5);
+    hel.gesto('reach');
+    await c.espera(1.2);
+    hel.segurar(pote, 'Right', [0, -0.04, 0]);
+    await c.espera(1.5);
+    hel.olharPara = new THREE.Vector3(0, 0.6, 0);
+    await c.espera(3);
+    hel.olharPara = null;
+    // panorâmica acompanhando: duas camas recebem pote, sem pressa
+    c.corte(P([ax - 2.8, 1.45, az + 2.2], [ax - 0.4, 1.0, az + 0.6], 26, { alvoPara: [3.6, 0.7, -1.6], curva: 'suave', fov: 48 }));
+    await hel.andar([[ax - 0.9, -1.6], [6.2, -1.6]], 0.6);
+    hel.em(6.2, 0, -1.6, Math.PI);
+    hel.gesto('pickup');
+    await c.espera(2.4);
+    await hel.andar([[3.6, -1.6]], 0.6);
+    hel.em(3.6, 0, -1.6, 0);
+    hel.gesto('pickup');
+    await c.espera(2.6);
+    S(() => som.passo(0.1));
+    await c.espera(4);
+
+    c.marca('1.6');
+    sincronizarMudo();
+    hel.segurar(pote, 'Right', [0, -0.04, 0]);
+    hel.em(ENF.cama12[0] + 0.15, 0, ENF.cama12[1] - 1.25, 0).posar(AJOELHADA, 2.5);
+    crian.olharPara = null;
+    c.corte(P([4.9, 0.75, 1.85], [3.0, 0.62, 2.9], 20, { para: [4.7, 0.72, 1.95], fov: 50 }));
+    calar();
+    S(() => toque(som.cantiga({ perto: 0.55 })));
+    cantar(0);
+    await c.espera(3.6);
+    cantar(1);
+    hel.olharPara = odila;
+    await c.espera(2);
+    hel.olharPara = crian;
+    await c.espera(1.6);
+    cantar(2);
+    await c.espera(3.6);
+    cantar(3);
+    await c.espera(4);
+    await fala('Vai arder um pouco.', { ator: hel });
+    hel.segurar(null);
+    await c.espera(2);
+
+    // ---- 1.7 as sete noites ----
+    c.marca('1.7');
+    sincronizarMudo();
+    const noite = async (n: number, corpo: () => Promise<void>) => {
+      c.log.push(`noite ${n}`);
+      S(() => som.sino(false, 0.18));
+      await corpo();
+    };
+    await noite(1, async () => {
+      hel.poseFn = torcer;
+      hel.em(ENF.bacia[0] + 0.05, 0, ENF.bacia[1] - 0.7, 0);
+      c.corte(P([2.15, 1.05, 3.05], [ENF.bacia[0], 0.55, ENF.bacia[1] - 0.2], 13, { fov: 44 }));
+      S(() => som.pano());
+      await c.espera(6);
+      S(() => som.pano());
+      await c.espera(7);
+      hel.poseFn = null;
+    });
+    await noite(2, async () => {
+      c.corte(P([3.4, 0.75, 3.1], [2.9, 0.62, 3.75], 10, { fov: 40 }));
+      await c.espera(10);
+    });
+    await noite(3, async () => {
+      const banquinho = 0;
+      hel.em(ENF.cama12[0] + 0.15, 0, ENF.cama12[1] - 1.3, 0);
+      hel.poseFn = () => sentadaCochilo(banquinho);
+      let acorda = 0;
+      hel.poseFn = () => sentadaCochilo(acorda);
+      c.corte(P([5.2, 1.0, 1.0], [3.7, 0.75, 1.9], 14, { fov: 46 }));
+      await c.espera(9);
+      S(() => som.sino(false, 0.2));
+      animar(0.5, (k) => (acorda = k));
+      await c.espera(5);
+      hel.poseFn = null;
+    });
+    await noite(4, async () => {
+      // ao fundo, fora de foco, dois homens levam uma trouxa pequena; Helena não vira
+      hel.em(ENF.cama12[0] + 0.15, 0, ENF.cama12[1] - 1.25, 0).posar(AJOELHADA, 50);
+      const h1 = c.ator(figurante('homem', 'npc_01_arquivista', { coat: 0x1e1a18 })).em(-3.6, 0, -0.7, Math.PI / 2);
+      const h2 = c.ator(figurante('homem', 'npc_08_cartografo', { coat: 0x26201c })).em(-4.6, 0, -0.7, Math.PI / 2);
+      const trouxa = new THREE.Mesh(new THREE.CapsuleGeometry(0.16, 0.5, 3, 8), new THREE.MeshStandardMaterial({ color: 0x8f7c5e, roughness: 1 }));
+      trouxa.rotation.z = Math.PI / 2;
+      h1.segurar(trouxa, 'Left', [-0.3, 0, 0]);
+      h1.posar(ESTENDE, 50);
+      c.corte(P([5.4, 1.15, 0.8], [3.7, 0.9, 2.0], 15, { fov: 40 }));
+      void h1.andar([[-1, -0.7], [6.2, -4.0]], 0.7);
+      void h2.andar([[-2, -0.7], [5.4, -4.0]], 0.7);
+      S(() => toque(som.choro(9, 0.1)));
+      await c.espera(15);
+      h1.segurar(null);
+      h1.ver(false);
+      h2.ver(false);
+    });
+    await noite(5, async () => {
+      // a mão da criança segura o dedo dela
+      hel.em(ENF.cama12[0] + 0.15, 0, ENF.cama12[1] - 1.25, 0).posar(AJOELHADA, 50);
+      c.corte(P([3.1, 0.95, 1.85], [3.65, 0.62, 2.45], 18, { fov: 38, para: [3.15, 0.92, 1.9] }));
+      await c.espera(3);
+      await fala('Mãe, tá frio.', { ator: crian });
+      await fala('Tá frio porque a febre tá indo embora.', { ator: hel });
+      await c.espera(4);
+    });
+    await noite(6, async () => {
+      // o moço da mesa olha para ela, abre a boca e não fala
+      silv.poseFn = null;
+      silv.posar(escrever(0), 50);
+      silv.em(ENF.mesa[0] + 0.05, 0, ENF.mesa[1] + 0.62, Math.PI * 0.35);
+      silv.olharPara = hel;
+      silv.rosto = { boca_abrir: 0 };
+      c.corte(P([mx - 0.6, 1.25, mz + 1.4], [3.6, 0.9, 1.9], 13, { fov: 34 }));
+      await c.espera(5);
+      animar(0.4, (k) => (silv.rosto = { boca_abrir: 0.3 * k, sobrancelha_erguer: 0.3 * k }));
+      await c.espera(3);
+      animar(0.6, (k) => (silv.rosto = { boca_abrir: 0.3 * (1 - k), tristeza: 0.4 * k }));
+      await c.espera(5);
+      silv.olharPara = null;
+    });
+    await noite(7, async () => {
+      // a última: ela acordada, a vela no fim
+      hel.posar(AJOELHADA, 50);
+      hel.olharPara = crian;
+      c.corte(P([5.6, 1.2, 0.4], [3.6, 0.7, 2.4], 12, { para: [5.2, 1.1, 0.9], fov: 48 }));
+      await c.espera(12);
+    });
+
+    c.marca('1.8');
+    sincronizarMudo();
+    calar();
+    await c.preto(true, 2);
+    S(() => som.tempo(0, 0));
+    await c.espera(3);
+    S(() => som.passarinho());
+    await c.espera(3);
+  });
+
+  // ===================== Bloco 2 · A janela =====================
+  await c.bloco('2', async () => {
+    c.marca('2.1');
+    sincronizarMudo();
+    calar();
+    S(() => som.tempo(0, 0.05));
+    const cen = enfermaria(true);
+    c.montar(cen);
+    const R = ENF.rastro;
+    const crian = c.ator(crianca(look)).em(R.x0, 0, R.z, Math.PI / 2).deitar(2, 0.12);
+    const odila = c.ator(figurante('menina da cama treze', 'npc_09_orfao', { altura: 1.4, coat: 0x8f7c5e, cabelo: 0x3a2014 })).em(ENF.cama13[0], 0.5, ENF.cama13[1], 0).deitar(-1);
+    odila.posar(ENCOLHIDO, 50);
+    const hel = c.ator(helena(false)).em(R.x1 - 2.4, 0, R.z - 1.6, Math.PI / 2).ver(false);
+    let fase = 0;
+    c.extra.push((d) => (dtq = d));
+    crian.poseFn = () => rastejar(fase);
+    // câmera baixa e presa atrás da criança, a janela fechando o fundo
+    const alvoJ = new THREE.Vector3(ENF.janela[0], 0.75, ENF.janela[1] + 0.15);
+    c.corte(P([R.x0 - 1.3, 1.1, 4.2], [R.x0 + (alvoJ.x - R.x0) * 0.45, 0.45, R.z], 1, { fov: 52 }));
+    const _alvo = new THREE.Vector3();
+    c.seguir = () => {
+      const cx = crian.base.position.x;
+      return { pos: new THREE.Vector3(cx - 1.3, 1.1, 4.2), alvo: _alvo.set(cx + (alvoJ.x - cx) * 0.45, 0.45, R.z + (alvoJ.z - R.z) * 0.45) };
+    };
+    await c.preto(false, 2.5);
+    S(() => toque(som.cantiga({ perto: 0.35, bpm: 62 })));
+    // três apoios: no terceiro, as mãos dela
+    const apoios = [R.x0 + 1.15, R.x0 + 2.55, R.x1];
+    let x = R.x0;
+    let semMexer = 0;
+    let respiro = 0;
+    c.ligarToque(true);
+    for (let i = 0; i < apoios.length; i++) {
+      await c.ate_(() => {
+        const f = c.frente();
+        const dt = dtq;
+        if (f > 0.05) {
+          const v = 0.075 * f;
+          x = Math.min(apoios[i], x + v * dt);
+          fase += v * dt * 22;
+          semMexer = 0;
+          c.dica(null);
+        } else if ((semMexer += dt) > 4) c.dica(document.body.classList.contains('touch') ? 'Segure o dedo na tela' : 'Segure para a frente');
+        crian.base.position.x = x;
+        if ((respiro += dt) > 2.4 && f > 0.05) {
+          respiro = 0;
+          S(() => som.respirar(0.07));
+        }
+        return x >= apoios[i] - 0.001;
+      });
+      c.dica(null);
+      // de bruços para de joelhos, virada para a parede sul; tenta subir
+      const r = crian.fig.root;
+      const h = crian.fig.height;
+      crian.poseFn = null;
+      crian.posar(apoiar(0), 4);
+      const rumo0 = crian.base.rotation.y;
+      animar(0.9, (k) => {
+        r.rotation.x = (Math.PI / 2) * (1 - k);
+        r.position.set(0, 0.12 * (1 - k), (-h / 2) * (1 - k));
+        crian.base.rotation.y = rumo0 + (0 - rumo0) * k * (i < 2 ? 1 : 0);
+      });
+      await c.espera(1.1);
+      let subir = 0;
+      animar(2.6, (k) => {
+        subir = k;
+        crian.posar(apoiar(subir * (i < 2 ? 0.75 : 0.95)), 50);
+      });
+      await c.espera(2.8);
+      if (i < 2) {
+        // cai de novo
+        S(() => som.queda());
+        animar(0.35, (k) => {
+          r.rotation.x = (Math.PI / 2) * k;
+          r.position.set(0, 0.12 * k, (-h / 2) * k);
+          crian.base.rotation.y = 0 + (Math.PI / 2 - 0) * k;
+        });
+        await c.espera(1.4);
+        crian.posar(null, 50);
+        crian.poseFn = () => rastejar(fase);
+      }
+    }
+    c.ligarToque(false);
+    // mãos de mulher entram no quadro e a seguram pelos braços
+    hel.ver(true).em(R.x1 - 0.5, 0, R.z, Math.PI / 2).posar(SEGURA, 50);
+    hel.base.position.x -= 0.6;
+    void hel.andar([[R.x1 - 0.48, R.z]], 0.5);
+    await c.espera(2);
+    crian.posar(null, 2);
+    await c.espera(2);
+
+    c.marca('2.2');
+    sincronizarMudo();
+    hel.parar();
+    hel.em(R.x1 - 0.48, 0, R.z, Math.PI / 2).posar(TRINCO, 3);
+    crian.em(R.x1 - 0.1, 0, R.z + 0.05, Math.PI / 2).posar(null, 50);
+    crian.fig.root.rotation.set(0, 0, 0);
+    crian.fig.root.position.set(0, 0, 0);
+    c.corte(P([ENF.janela[0] - 1.9, 1.45, ENF.janela[1] - 1.2], [ENF.janela[0], 1.55, ENF.janela[1]], 20, { para: [ENF.janela[0] - 1.6, 1.4, ENF.janela[1] - 0.9], fov: 46 }));
+    await c.espera(4);
+    // a janela abre; a cantiga para no meio do verso; a luz toma a tela, sem som
+    const fe = cen.h.folhaEsq;
+    const fd = cen.h.folhaDir;
+    const e0 = fe.rotation.y;
+    const d0 = fd.rotation.y;
+    animar(1.4, (k) => {
+      fe.rotation.y = e0 - 1.7 * k;
+      fd.rotation.y = d0 + 1.7 * k;
+    });
+    S(() => som.porta());
+    calar();
+    const fora = (cen.h.fora as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const luzJ = cen.lamps[cen.lamps.length - 1];
+    animar(1.5, (k) => {
+      fora.color.setHex(0x5a6070).lerp(new THREE.Color(0xfff0c8), k);
+      luzJ.intensity = 0.7 + 3.5 * k;
+      luzJ.color = 0xffd8a0;
+    });
+    c.branco(0.92, 1.5);
+    await c.espera(c.ff ? 0 : 2);
+
+    c.marca('2.3');
+    // dois quadros dentro da luz; com Reduzir movimento, um segundo em luz baixa
+    const rm = document.body.classList.contains('rm');
+    if (rm) {
+      c.branco(0.55, 0.5);
+      await c.espera(0.6);
+    }
+    await c.silhueta(rm ? 1 : 2 / 30);
+    await c.espera(1.5);
+
+    c.marca('2.4');
+    sincronizarMudo();
+    c.branco(0.18, 3);
+    const porta = ENF.porta;
+    const h1 = c.ator(figurante('um homem', 'npc_08_cartografo', { coat: 0x2a241e })).em(porta[0] - 0.4, 0, porta[1] + 1.1, 0.3);
+    const m1 = c.ator(figurante('uma mulher', 'npc_12_acolita', { coat: 0x3a3028 })).em(porta[0] + 0.5, 0, porta[1] + 1.3, -0.2);
+    const m2 = c.ator(figurante('outra mulher', 'npc_02_acendedora', { coat: 0x2e2420 })).em(porta[0] + 0.1, 0, porta[1] + 0.6, 0);
+    for (const a of [h1, m1, m2]) a.olharPara = crian;
+    // a criança de pé no parapeito, a mãe atrás
+    crian.em(ENF.janela[0] - 0.12, 0.9, ENF.janela[1], Math.PI / 2).posar(NO_PARAPEITO, 2);
+    hel.em(ENF.janela[0] - 0.75, 0, ENF.janela[1], Math.PI / 2).posar(SEGURA, 50);
+    luzJ.intensity = 1.6;
+    fora.color.setHex(0xd8d0b8);
+    c.corte(P([5.4, 1.7, -3.2], [6.0, 1.2, 3.2], 40, { para: [5.6, 1.68, -2.9], fov: 52 }));
+    let desb = 0;
+    c.extra.push((dt) => {
+      desb = Math.min(1, desb + dt / 34);
+      odila.desbotar(desb);
+    });
+    await c.espera(5);
+    h1.gesto('point');
+    await fala('Levantou.', { ator: h1 });
+    await c.espera(1.5);
+    m1.gesto('bow');
+    await fala('Foi o unguento.', { ator: m1 });
+    await fala('Foi o unguento da doutora.', { ator: m2 });
+    hel.posar(ABRACO, 2);
+    hel.olharPara = crian;
+    await c.espera(12);
+
+    // ---- 2.5 a folha ----
+    await c.preto(true, 0.8);
+    c.marca('2.5');
+    sincronizarMudo();
+    c.branco(0, 0.1);
+    const casaD = casa(true, false);
+    c.montar(casaD);
+    casaD.h.porta.rotation.y = -1.4;
+    const helC = c.ator(helena(false)).em(CASA.porta[0], 0, CASA.porta[1] + 0.7, Math.PI);
+    const rapaz = c.ator(figurante('o moço', 'npc_11_detetive', { coat: 0x2a2a30, altura: 1.76 })).em(CASA.porta[0] + 0.05, 0, CASA.porta[1] - 0.55, 0);
+    const folha = folhaLacrada();
+    folha.rotation.x = Math.PI / 2;
+    rapaz.segurar(folha, 'Right', [0, 0, 0.04]);
+    rapaz.posar(ESTENDE, 3);
+    // por cima do ombro dela; o visitante fica cortado do peito para cima
+    c.corte(P([CASA.porta[0] + 0.62, 1.42, CASA.porta[1] + 1.6], [CASA.porta[0] - 0.05, 1.0, CASA.porta[1] - 0.5], 35, { fov: 42 }));
+    await c.preto(false, 1);
+    await c.espera(2);
+    await fala('Doutora, isso aqui é da enfermaria. De todas. A senhora devia ver antes de...', { ator: rapaz });
+    helC.gesto('reach');
+    await c.espera(0.6);
+    await fala(`Eu vi ${filho} levantar.`, { ator: helC });
+    rapaz.segurar(null);
+    helC.segurar(folha, 'Right', [0, 0, 0.04]);
+    rapaz.posar(null, 2);
+    // ela põe a folha em cima da estante da cozinha, sem abrir
+    const [ex, ez] = CASA.estante;
+    await helC.andar([[ex + 0.7, ez]], 0.8);
+    helC.em(ex + 0.6, 0, ez, -Math.PI / 2).gesto('reach');
+    c.corte(P([ex + 2.2, 1.6, ez + 1.4], [ex + 0.1, 1.9, ez], 10, { fov: 46 }));
+    await c.espera(0.8);
+    helC.segurar(null);
+    folha.position.set(ex + 0.05, 2.25, ez + 0.3);
+    folha.rotation.set(0, 0.4, 0);
+    await c.espera(4);
+    void rapaz.andar([[CASA.porta[0], CASA.porta[1] - 3]], 0.9);
+    await c.espera(4);
+    rapaz.ver(false);
+
+    // ---- 2.6 a visita da noite ----
+    await c.preto(true, 0.8);
+    c.marca('2.6');
+    sincronizarMudo();
+    const casaN = casa(false, false);
+    c.montar(casaN);
+    // a folha continua na estante
+    casaN.root.add(folha);
+    folha.position.set(ex + 0.05, 2.25, ez + 0.3);
+    const helN = c.ator(helena(false)).em(CASA.porta[0] + 0.1, 0, CASA.porta[1] + 1.2, Math.PI);
+    const velho = c.ator(figurante('uma voz de velho', 'npc_10_professor', { coat: 0x1e1a16 })).em(CASA.porta[0], 0, CASA.porta[1] - 0.75, 0).posar(CHAPEU_NO_PEITO, 50);
+    const chap = chapeu();
+    chap.rotation.x = Math.PI / 2;
+    chap.scale.setScalar(0.8);
+    velho.segurar(chap, 'Right', [0.08, 0, 0.06]);
+    const lampPorta = casaN.lamps[casaN.lamps.length - 1];
+    c.corte(P([CASA.porta[0] + 1.3, 1.5, CASA.porta[1] + 0.45], [CASA.porta[0] - 0.05, 1.42, CASA.porta[1] + 1.1], 30, { para: [CASA.porta[0] + 1.2, 1.48, CASA.porta[1] + 0.5], fov: 44 }));
+    await c.preto(false, 1);
+    S(() => som.bater());
+    await c.espera(2.5);
+    helN.gesto('pull');
+    S(() => som.porta());
+    animar(1.4, (k) => {
+      casaN.h.porta.rotation.y = -1.2 * k;
+      lampPorta.intensity = 0.9 * k;
+    });
+    // a mão velha com o chapéu contra o peito, na fresta
+    c.corte(P([CASA.porta[0] + 0.55, 1.3, CASA.porta[1] + 0.95], [CASA.porta[0] - 0.05, 1.2, CASA.porta[1] - 0.7], 6, { fov: 34 }));
+    await c.espera(3.5);
+    c.corte(P([CASA.porta[0] + 1.25, 1.5, CASA.porta[1] + 0.48], [CASA.porta[0] - 0.05, 1.42, CASA.porta[1] + 1.1], 30, { para: [CASA.porta[0] + 1.15, 1.48, CASA.porta[1] + 0.52], fov: 44 }));
+    helN.olharPara = velho;
+    await fala('A senhora fez uma coisa bonita, doutora. Tem muita gente precisando saber.', { quem: 'Uma voz de velho', ator: velho });
+    await fala('Eu só fiquei acordada.', { ator: helN });
+    await fala('Pois então. Deixa a gente contar por você.', { quem: 'Uma voz de velho', ator: velho });
+    await c.espera(3);
+
+    // ---- 2.7 os anos ----
+    await c.preto(true, 0.8);
+    c.marca('2.7');
+    sincronizarMudo();
+    const of = oficina();
+    c.montar(of);
+    S(() => som.sino(true, 0.3));
+    void c.preto(false, 0.6);
+    c.corte(P([-8.6, 1.5, 0.7], [-9, 0.9, 0], 5, { fov: 40 }));
+    await c.espera(5);
+    c.corte(P([-2.2, 1.6, 1.4], [-3, 1.0, 0], 5, { fov: 44 }));
+    const pl = of.h.placa;
+    animar(0.6, (k) => (pl.position.y = 1.5 - 0.52 * k));
+    S(() => som.prensa());
+    await c.espera(5);
+    S(() => som.sino(true, 0.25));
+    c.corte(P([3, 1.5, 2.2], [3, 1.6, -0.3], 5, { fov: 46 }));
+    await c.espera(5);
+    c.corte(P([9.4, 1.5, -1.0], [9, 1.5, -2.1], 5, { fov: 40 }));
+    await c.espera(5);
+    // o banco dos romeiros cheio, na frente da clínica dela
+    const vilaD = vila(true);
+    c.montar(vilaD);
+    for (let i = 0; i < 4; i++) {
+      const a = c.ator(figurante('romeiro', ['npc_01_arquivista', 'npc_12_acolita', 'npc_06_novico', 'npc_04_estalajadeira'][i], { coat: [0x2a2420, 0x3a3028, 0x4a4238, 0x2e2a26][i] }));
+      a.em(7.85, 0, 5.0 + i * 0.65, -Math.PI / 2).posar(SENTADO, 50);
+    }
+    S(() => som.sino(true, 0.3));
+    c.corte(P([3.5, 1.7, 9.5], [8, 1.0, 6], 8, { para: [3.8, 1.7, 8.8], fov: 46 }));
+    await c.espera(2);
+    void c.letreiro('Quinze anos depois', 5);
+    await c.espera(6);
+  });
+
+  // ===================== Bloco 3 · A partida =====================
+  await c.bloco('3', async () => {
+    await c.preto(true, 1);
+    c.marca('3.1');
+    sincronizarMudo();
+    calar();
+    S(() => som.tempo(0, 0.2));
+    const casaA = casa(true, true);
+    c.montar(casaA);
+    const eu = c.ator(protagonista(look)).em(CASA.mala[0], 0, CASA.mala[1] - 0.75, 0);
+    eu.poseFn = dobrar;
+    const hel = c.ator(helena(true)).em(-1.5, 0, 0, Math.PI / 2).ver(false);
+    c.corte(P([CASA.mesa[0] + 0.5, 1.3, CASA.mesa[1] + 0.7], [CASA.mesa[0] - 0.1, 0.92, CASA.mesa[1]], 9, { fov: 40 }));
+    await c.preto(false, 1.5);
+    S(() => toque(som.tema({ bpm: 44, vol: 0.05 })));
+    await c.espera(7);
+    c.corte(P([0.9, 1.6, -2.2], [3.4, 1.2, 1.0], 22, { para: [1.1, 1.6, -2.0], fov: 50 }));
+    await esperaFala('(lá fora, a mãe conversa com o carroceiro)', { canto: true, dur: 4 });
+    await c.espera(22);
+
+    c.marca('3.2');
+    sincronizarMudo();
+    hel.ver(true);
+    await hel.andar([[CASA.mala[0] - 0.05, CASA.mala[1] - 1.4]], 0.9);
+    eu.poseFn = null;
+    eu.base.rotation.y = Math.PI;
+    hel.em(CASA.mala[0] - 0.05, 0, CASA.mala[1] - 1.35, 0).posar(GOLA, 3);
+    hel.olharPara = eu;
+    eu.olharPara = hel;
+    c.corte(P([3.6, 1.65, 0.0], [2.05, 1.45, 0.5], 50, { para: [3.4, 1.62, 0.1], fov: 46 }));
+    await c.espera(3);
+    await fala(`Você tá ${agasalhado}?`, { ator: hel });
+    await fala('Tô, mãe.', { ator: eu });
+    hel.posar(ESTENDE, 3);
+    const pao = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.12), new THREE.MeshStandardMaterial({ color: 0x8f7c5e, roughness: 1 }));
+    hel.segurar(pao, 'Right');
+    await fala('Lá em cima venta. Coma direito.', { ator: hel });
+    hel.segurar(null);
+    eu.segurar(pao, 'Left');
+    hel.posar(null, 3);
+    // ele vira para a janela; ela põe um pote embrulhado no fundo da mala; a câmera vê, ele não
+    eu.olharPara = new THREE.Vector3(CASA.janela[0], 1.6, CASA.janela[1]);
+    eu.base.rotation.y = Math.PI / 2;
+    await c.espera(1.5);
+    c.corte(P([CASA.mala[0] - 1.2, 1.5, CASA.mala[1] - 0.9], [CASA.mala[0], 0.6, CASA.mala[1]], 14, { fov: 40 }));
+    hel.base.rotation.y = 0.5;
+    hel.gesto('pickup');
+    await c.espera(1.3);
+    const embr = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.13, 8), new THREE.MeshStandardMaterial({ color: 0x8f7c5e, roughness: 1 }));
+    embr.position.set(CASA.mala[0] + 0.15, 0.62, CASA.mala[1]);
+    casaA.root.add(embr);
+    await c.espera(4);
+    eu.segurar(null);
+    await c.espera(4);
+
+    c.marca('3.3');
+    sincronizarMudo();
+    await c.preto(true, 0.6);
+    const vilaD = vila(true);
+    c.montar(vilaD);
+    S(() => som.tempo(0, 0.3));
+    const eu2 = c.ator(protagonista(look)).em(6.4, 0, 1.0, 0);
+    const rom: Ator[] = [];
+    for (let i = 0; i < 3; i++) {
+      const a = c.ator(figurante('romeiro', ['npc_12_acolita', 'npc_01_arquivista', 'npc_06_novico'][i], { coat: [0x3a3028, 0x2a2420, 0x4a4238][i] }));
+      a.em(7.85, 0, 5.2 + i * 0.7, -Math.PI / 2).posar(SENTADO, 50);
+      rom.push(a);
+    }
+    const helP = c.ator(helena(true)).em(8.3, 0, 8.6, -Math.PI / 2 - 0.4);
+    c.corte(P([3.2, 1.8, 3.0], [7.0, 1.2, 5.6], 35, { para: [3.6, 1.75, 4.6], fov: 48 }));
+    await c.preto(false, 0.8);
+    void eu2.andar([[6.6, 5.6]], 1.0);
+    await c.espera(3.5);
+    for (const a of rom) {
+      a.posar(null, 2.5);
+      a.olharPara = eu2;
+    }
+    await c.espera(1.4);
+    eu2.parar();
+    eu2.base.rotation.y = Math.PI / 2;
+    // uma mulher segura a manga do casaco dele
+    rom[0].em(7.25, 0, 5.4, -Math.PI / 2).posar(SEGURA_MANGA, 3);
+    rom[0].olharPara = eu2;
+    await fala(`É ${ele}.`, { ator: rom[0] });
+    eu2.poseFn = maosSemJeito;
+    c.corte(P([6.0, 1.3, 7.0], [6.9, 1.0, 5.5], 10, { fov: 40 }));
+    await c.espera(3);
+    helP.olharPara = rom[0];
+    await fala(`Deixa ${moco}, que ${ele} tem estrada.`, { ator: helP });
+    rom[0].posar(null, 2);
+    await c.espera(2);
+
+    // ---- 3.4 a serra ----
+    await c.preto(true, 0.8);
+    c.marca('3.4');
+    sincronizarMudo();
+    const sr = serra();
+    c.montar(sr);
+    S(() => som.tempo(0, 0.7));
+    const carro = sr.h.carro;
+    const eu3 = c.ator(protagonista(look));
+    const carroceiro = c.ator(figurante('o carroceiro', 'npc_03_vigia', { coat: 0x2a241e }));
+    eu3.posar(SENTADO, 50);
+    carroceiro.posar(BOLEIA, 50);
+    let cz = 22;
+    const xEstrada = (z: number) => Math.sin(((30 - z) / 9) * 0.5) * 2.2;
+    const poeCarro = () => {
+      const x = xEstrada(cz);
+      carro.position.set(x, 0, cz);
+      carro.rotation.y = Math.PI;
+      // o carro olha para o norte (-z): o rumo π
+      eu3.em(x + 0.3, 0.88, cz + 0.6, Math.PI / 2 + Math.PI);
+      carroceiro.em(x - 0.3, 0.88, cz - 0.9, Math.PI);
+    };
+    poeCarro();
+    const andarCarro = (dt: number) => {
+      cz -= dt * 0.9;
+      poeCarro();
+    };
+    c.extra.push(andarCarro);
+    const rodas = S(() => toque(som.carroca(0.16)));
+    void rodas;
+    // plano aberto da garganta, Pedra Alta no alto entre a névoa, o feixe passa pela carroça
+    c.corte(P([2.5, 6.5, 44], [0, 14, -80], 40, { para: [1.8, 5.2, 37], alvoPara: [2, 24, -150], fov: 50 }));
+    await c.preto(false, 2);
+    await c.espera(10);
+    c.corte(P([xEstrada(cz) + 2.2, 1.9, cz - 3.5], [xEstrada(cz), 1.4, cz + 0.4], 24, { fov: 48 }));
+    c.seguir = () => ({ pos: new THREE.Vector3(xEstrada(cz) + 2.2, 1.9, cz - 3.5), alvo: new THREE.Vector3(xEstrada(cz), 1.4, cz + 0.4) });
+    await c.espera(3);
+    carroceiro.olharPara = eu3;
+    await fala('Primeira vez em Pedra Alta?', { ator: carroceiro });
+    eu3.olharPara = carroceiro;
+    await fala('É.', { ator: eu3 });
+    await c.espera(1.5);
+    await fala('Lá todo mundo sabe quem é quem.', { ator: carroceiro });
+    carroceiro.olharPara = null;
+    eu3.olharPara = new THREE.Vector3(0, 30, -150);
+    await c.espera(6);
+
+    // ---- 3.5 a freada ----
+    c.marca('3.5');
+    sincronizarMudo();
+    c.extra.splice(c.extra.indexOf(andarCarro), 1);
+    calar();
+    const xs = xEstrada(cz - 6);
+    const caio = c.ator(figurante('Caio', 'npc_09_orfao', { altura: 1.38, coat: 0x4a3a2a })).em(xs - 0.3, 0.05, cz - 6, Math.PI / 2).deitar(0, 0.05);
+    caio.posar(DEITADO, 50);
+    const marta = c.ator(figurante('Marta', 'npc_02_acendedora', { coat: 0x3a2e24, altura: 1.62 })).em(xs + 0.55, 0, cz - 6.2, -Math.PI / 2).posar(AJOELHADA_RUA, 50);
+    marta.olharPara = caio;
+    c.seguir = null;
+    c.corte(P([xEstrada(cz) + 1.9, 1.55, cz - 1.6], [xs, 0.45, cz - 6], 12, { para: [xEstrada(cz) + 1.7, 1.5, cz - 2.0], fov: 46 }));
+    S(() => som.rangido(0.3));
+    await c.espera(1);
+    marta.olharPara = eu3;
+    await fala('Ajuda! Pelo amor de Deus, alguém ajuda!', { ator: marta });
+    // ele desce da carroça
+    eu3.posar(null, 4);
+    eu3.em(xEstrada(cz) + 1.1, 0, cz - 0.2, Math.PI);
+    void eu3.andar([[xs + 0.4, cz - 4.8]], 1.3);
+    c.letterbox(false);
+    await c.espera(2.5);
+    c.titulo('Estrada da Serra');
+    await c.espera(3);
+  });
+
+  calar();
+  som.tempo(0, 0);
+  Cine.marcarVista();
 }

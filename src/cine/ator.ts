@@ -99,7 +99,14 @@ export class Ator {
   }
 
   /** anda pela rota (pontos x, z no chão da base) e resolve ao chegar */
+  /** avanço rápido ou pulo: a caminhada chega na hora */
+  instante: () => boolean = () => false;
   andar(pts: Array<[number, number]>, vel = 1.1): Promise<void> {
+    if (this.instante() && pts.length) {
+      const [x, z] = pts[pts.length - 1];
+      this.base.position.set(x, this.base.position.y, z);
+      return Promise.resolve();
+    }
     return new Promise((res) => {
       this.rota = { pts: pts.map(([x, z]) => new THREE.Vector3(x, this.base.position.y, z)), vel, i: 0, res };
     });
@@ -118,6 +125,33 @@ export class Ator {
     const hb = this.fig.headBone;
     if (hb) return hb.getWorldPosition(out);
     return this.base.localToWorld(out.set(0, this.fig.height * 0.93, 0));
+  }
+
+  /** objeto na mão (pote, folha, chapéu): segue o osso da mão, posto direto na cena */
+  private mao: { obj: THREE.Object3D; osso: string; off: THREE.Vector3; bone: THREE.Object3D | null } | null = null;
+  segurar(obj: THREE.Object3D | null, lado: 'Left' | 'Right' = 'Right', off: V3 = [0, 0, 0]): this {
+    if (this.mao) this.mao.obj.parent?.remove(this.mao.obj);
+    this.mao = obj ? { obj, osso: lado + 'Hand', off: new THREE.Vector3(...off), bone: null } : null;
+    if (obj) this.base.parent?.add(obj);
+    return this;
+  }
+  /** perde cor e contraste, até ficar quase da cor da parede (k de 0 a 1) */
+  private cores: Array<{ m: THREE.MeshStandardMaterial; c: THREE.Color }> | null = null;
+  desbotar(k: number, parede = 0x5a5048): void {
+    if (!this.fig.external) return;
+    if (!this.cores) {
+      this.cores = [];
+      this.fig.root.traverse((o) => {
+        const me = o as THREE.Mesh;
+        if (me.isMesh) for (const m of ([] as THREE.Material[]).concat(me.material)) if ((m as THREE.MeshStandardMaterial).color) this.cores!.push({ m: m as THREE.MeshStandardMaterial, c: (m as THREE.MeshStandardMaterial).color.clone() });
+      });
+    }
+    const alvo = new THREE.Color(parede);
+    for (const x of this.cores) {
+      x.m.color.copy(x.c).lerp(alvo, k * 0.85);
+      // sem contraste: a textura some sob a cor chapada
+      if (x.m.map) x.m.color.multiplyScalar(1 - k * 0.25);
+    }
   }
 
   update(dt: number, t: number): void {
@@ -155,6 +189,14 @@ export class Ator {
     f.speaking = this.falando;
     f.faceOverride = this.rosto;
     f.update(dt);
+    const mh = this.mao;
+    if (mh) {
+      mh.bone ??= f.root.getObjectByName(mh.osso) ?? null;
+      if (mh.bone) {
+        mh.bone.getWorldPosition(mh.obj.position);
+        mh.obj.position.add(mh.off);
+      } else this.base.localToWorld(mh.obj.position.set(0.2, f.height * 0.5, 0.25));
+    }
     if (!this.cabecaFeita && f.headBone && this.cabeca !== 1) {
       f.headBone.scale.setScalar(this.cabeca);
       this.cabecaFeita = true;

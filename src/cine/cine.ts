@@ -87,6 +87,8 @@ export class Cine {
   blocoAtual = '';
   /** pedido de pular a abertura inteira */
   pularTudo = false;
+  /** pulo pedido e ainda não recolhido pelo bloco */
+  private pulando = false;
   private esperas: Espera[] = [];
   private plano: Plano | null = null;
   private planoT = 0;
@@ -108,7 +110,6 @@ export class Cine {
   private $: Record<string, HTMLElement> = {};
   private holdT = 0;
   private holdTarget: 'bloco' | 'tudo' | null = null;
-  private wasPauseKey = false;
 
   constructor(
     private host: CineHost,
@@ -124,6 +125,7 @@ export class Cine {
       <div class="letreiro"></div>
       <div class="titulo"></div>
       <div class="branco"></div>
+      <svg class="silhueta" viewBox="0 0 100 100" aria-hidden="true"><path d="M48 52 l-3 -9 a4 4 0 1 1 6 0 l-1 2 l5 3 l2 14 l-2 0 l-1 -8 l-1 18 l2 14 l-4 0 l-2 -14 l-2 14 l-4 0 l2 -16 l-1 -16 l-3 8 l-2 -1 z M58 30 l1 0 l0 66 l-1 0 z M56 26 h5 v6 h-5 z" fill="#140c08"/></svg>
       <div class="preto on"></div>
       <button class="pausar" aria-label="Pausar a cena" type="button"><i></i><i></i></button>
       <div class="dica"></div>
@@ -136,7 +138,7 @@ export class Cine {
         </div>
       </div>`;
     document.body.appendChild(this.el);
-    for (const k of ['cima', 'baixo', 'legenda', 'quem', 'txt', 'letreiro', 'titulo', 'branco', 'preto', 'pausar', 'dica', 'pausa']) this.$[k] = this.el.querySelector('.' + k) as HTMLElement;
+    for (const k of ['cima', 'baixo', 'legenda', 'quem', 'txt', 'letreiro', 'titulo', 'branco', 'preto', 'pausar', 'dica', 'pausa', 'silhueta']) this.$[k] = this.el.querySelector('.' + k) as HTMLElement;
     this.$.pausar.addEventListener('click', () => this.pausar(true));
     const pz = this.$.pausa;
     pz.querySelector('[data-a=continuar]')!.addEventListener('click', () => this.pausar(false));
@@ -189,11 +191,13 @@ export class Cine {
   // ---------- relógio e esperas ----------
   /** espera `s` segundos de cena; rejeita com PULAR se a pessoa pular */
   espera(s: number): Promise<void> {
+    if (this.pulando) return Promise.reject(PULAR);
     if (this.ff || s <= 0) return Promise.resolve();
     return new Promise((res, rej) => this.esperas.push({ at: this.t + s, res, rej }));
   }
   /** espera uma condição checada a cada quadro (trecho jogável) */
   ate_(cond: () => boolean): Promise<void> {
+    if (this.pulando) return Promise.reject(PULAR);
     if (this.ff) return Promise.resolve();
     return new Promise((res, rej) => {
       const e: Espera = { at: Infinity, res, rej };
@@ -224,11 +228,13 @@ export class Cine {
   async bloco(id: string, fn: () => Promise<void>): Promise<void> {
     if (this.pularTudo) return;
     this.blocoAtual = id;
+    this.pulando = false;
     try {
       await fn();
     } catch (e) {
       if (e !== PULAR) throw e;
     }
+    this.pulando = false;
     this.limparFala();
     this.extra = [];
     this.seguir = null;
@@ -238,6 +244,9 @@ export class Cine {
     if (tudo) this.pularTudo = true;
     Cine.marcarVista();
     this.pausar(false);
+    // o roteiro pode estar esperando uma caminhada: ela termina e a próxima espera já recusa
+    this.pulando = true;
+    for (const a of this.atores) a.parar();
     const es = this.esperas.splice(0);
     for (const e of es) e.rej(PULAR);
   }
@@ -362,6 +371,19 @@ export class Cine {
     b.style.opacity = String(nivel);
   }
 
+  /** a silhueta de um homem com lanterna num cajado, dentro da luz (plano 2.3) */
+  async silhueta(s: number): Promise<void> {
+    if (this.ff) return;
+    const el = this.$.silhueta;
+    el.classList.add('on');
+    this.log.push(`${this.t.toFixed(2)} silhueta ${s}`);
+    try {
+      await this.espera(s);
+    } finally {
+      el.classList.remove('on');
+    }
+  }
+
   letterbox(on: boolean, imediato = false): void {
     this.el.classList.toggle('lb', on);
     this.el.classList.toggle('lb-instante', imediato);
@@ -385,6 +407,7 @@ export class Cine {
     e.setLamps(c.lamps);
   }
   ator(a: Ator): Ator {
+    a.instante = () => this.ff || this.pulando;
     this.atores.push(a);
     a.entrar(this.host.engine.scene);
     return a;
@@ -394,9 +417,7 @@ export class Cine {
   update(dt: number): void {
     const inp = this.host.input;
     // Esc, Start ou o botão de pausa no toque
-    const pauseKey = inp.took('pausa');
-    if (pauseKey && !this.wasPauseKey) this.pausar(!this.paused);
-    this.wasPauseKey = false;
+    if (inp.took('pausa')) this.pausar(!this.paused);
     if (this.paused) {
       this.atualizarSegura(dt);
       this.cam();
@@ -437,8 +458,15 @@ export class Cine {
     const c = this.host.engine.camera;
     c.position.copy(this.camPos);
     c.lookAt(this.camAlvo);
-    if (Math.abs(c.fov - this.fov) > 0.01) {
-      c.fov = this.fov;
+    // tela em pé: o plano foi composto em 16:9; abre o ângulo vertical para o quadro não virar uma fresta
+    let fov = this.fov;
+    const asp = c.aspect;
+    if (asp < 16 / 9) {
+      const t = Math.tan((fov * Math.PI) / 360) * Math.pow(16 / 9 / asp, 0.6);
+      fov = Math.min(95, (Math.atan(t) * 360) / Math.PI);
+    }
+    if (Math.abs(c.fov - fov) > 0.01) {
+      c.fov = fov;
       c.updateProjectionMatrix();
     }
     this.focus.copy(this.camAlvo);
@@ -449,7 +477,10 @@ export class Cine {
     return { pos: this.camPos, alvo: this.camAlvo };
   }
   /** eixo "para a frente" do jogador, 0..1, de teclado, controle ou toque (dedo pousado na tela) */
+  /** testes: o trecho jogável anda sozinho */
+  auto = false;
   frente(): number {
+    if (this.auto) return 1;
     const inp = this.host.input;
     let f = inp.held('frente') ? 1 : 0;
     f = Math.max(f, -inp.padMove.y, -inp.touchMove.y, this.toque ? 1 : 0);

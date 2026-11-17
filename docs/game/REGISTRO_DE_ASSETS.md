@@ -89,3 +89,16 @@ Os 29 GLB de `public/models/personagens/ps2/` (protagonistas em oito combinaçõ
 | Clipes de animação dos humanos (os mesmos números CMU da tabela do lote 1) e as variantes derivadas (braço do lampião, tocha, cabeça nivelada, pernas paradas nos gestos) | embutidos nos GLB humanos | CMU Graphics Lab Motion Capture Database, redirecionada por `tools/pipeline/retarget.py` | Uso livre. Agradecimento pedido: "The data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217." |
 
 Os oito `player_*.glb` antigos de `public/models/personagens/` saíram do repositório: o manifesto aponta para os novos. O `vulto.glb` antigo fica como reserva de corpo de inimigo.
+
+## Abertura do Novo jogo (17/11/2026)
+
+A abertura (`docs/game/ABERTURA.md`) não traz nenhum arquivo novo para o repositório. Tudo o que ela mostra ou toca é código escrito para este projeto ou uso novo de modelos já registrados acima.
+
+| Asset | Onde | Origem | Licença |
+| --- | --- | --- | --- |
+| Cenários da abertura (enfermaria de Remanso, rua da vila, casa de Helena, oficina de gravura, garganta da serra com Pedra Alta e o Farol) | `src/cine/cenarios.ts` | Geometria paramétrica escrita para este projeto, com o kit e os materiais de `src/world/` | Autoral, do projeto |
+| Gravura do Menino da Janela (textura de canvas: criança na janela, raios, linhas de entalhe) | `src/cine/cenarios.ts`, função `gravura` | Desenhada por código para este projeto | Autoral, do projeto |
+| Silhueta do homem com lanterna no cajado (plano 2.3) | `src/cine/cine.ts` | SVG desenhado para este projeto | Autoral, do projeto |
+| Cantiga "Dorme, dorme, passarinho" (letra de quatro versos e melodia de oito compassos em ré dórico, cantarolada por síntese de formantes) | `src/cine/som.ts` | Letra e melodia compostas para este projeto; nenhuma cantiga tradicional foi copiada | Autoral, do projeto |
+| Tosse, rangido, sinos, passarinho, choro distante, respiração, pano, batida, porta, prensa, passos, queda, carroça e o tema da partida | `src/cine/som.ts` | Síntese em WebAudio escrita para este projeto | Autoral, do projeto |
+| Elenco da abertura (Helena, o rapaz da mesa, a menina da cama treze, a criança, Seu Cândido, Marta, Caio, carroceiro, romeiros e moradores) | `src/cine/elenco.ts` | Uso novo dos GLB de `personagens/ps2/` já registrados (moradores e protagonistas), com tinta de roupa e cabelo, escala e poses impostas por código | Os mesmos dos GLB de origem |

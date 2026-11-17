@@ -5,7 +5,7 @@
   position: fixed; inset: 0; z-index: 40; pointer-events: none; color: var(--osso-4, #c2ad86);
 }
 #cine.toque { pointer-events: auto; touch-action: none; }
-#cine .barra { position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height 0.6s steps(4, end); }
+#cine .barra { position: absolute; left: 0; right: 0; height: 0; background: #000; z-index: 2; transition: height 0.6s steps(4, end); }
 #cine.lb .barra { height: max(var(--bar), 56px); }
 #cine.lb-instante .barra { transition: none; }
 #cine .cima { top: 0; }
@@ -35,7 +35,7 @@ body.hc #cine .legenda.on { background: #000; outline: 6px solid #000; color: #f
   color: var(--osso-5, #e3d5b3); text-shadow: 2px 2px 0 #000; transition: opacity 0.8s steps(4, end);
 }
 #cine .titulo.on { opacity: 1; }
-#cine .preto { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity 1.2s steps(6, end); }
+#cine .preto { position: absolute; inset: 0; z-index: 3; background: #000; opacity: 0; transition: opacity 1.2s steps(6, end); }
 #cine .preto.on { opacity: 1; }
 #cine .branco { position: absolute; inset: 0; background: #fff4dc; opacity: 0; mix-blend-mode: screen; transition: opacity 1.5s steps(8, end); }
 #cine .dica {
@@ -45,13 +45,13 @@ body.hc #cine .legenda.on { background: #000; outline: 6px solid #000; color: #f
 }
 #cine .dica.on { opacity: 0.85; }
 #cine .pausar {
-  position: absolute; right: 12px; top: 10px; width: 40px; height: 40px; pointer-events: auto; display: none;
+  position: absolute; z-index: 4; right: 12px; top: 10px; width: 40px; height: 40px; pointer-events: auto; display: none;
   background: transparent; border: 1px solid var(--ouro-1, #3a2e15); padding: 0; cursor: pointer; gap: 6px; align-items: center; justify-content: center;
 }
 #cine .pausar i { display: block; width: 4px; height: 14px; background: var(--ouro-3, #8f7438); }
 body.touch #cine .pausar { display: flex; }
 #cine.fim .pausar, #cine.fim .pausa { display: none; }
-#cine .pausa { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.72); pointer-events: auto; }
+#cine .pausa { position: absolute; inset: 0; z-index: 5; display: none; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.72); pointer-events: auto; }
 #cine .pausa.on { display: flex; }
 #cine .pausa .caixa { display: flex; flex-direction: column; gap: 12px; width: min(360px, 90vw); }
 #cine .pausa .cab {
@@ -73,3 +73,5 @@ body.touch #cine .pausar { display: flex; }
 #cine .pausa .segura { --p: 0; }
 #cine .pausa .segura .anel { --p: inherit; }
 @media (orientation: portrait) { #cine .legenda { font-size: calc(17px * var(--ui-scale, 1)); } }
+#cine .silhueta { position: absolute; left: 50%; top: 50%; width: min(28vh, 40vw); height: min(28vh, 40vw); transform: translate(-50%, -30%); opacity: 0; }
+#cine .silhueta.on { opacity: 0.9; }
