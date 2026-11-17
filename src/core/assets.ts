@@ -74,6 +74,18 @@ export function fixMaterials(root: THREE.Object3D, character = false): void {
         m.map = t;
         m.needsUpdate = true;
       }
+      // vidro com transmissão (lustres, lanterna, lupa, relógio): a transmissão do three.js desenha a cena opaca
+      // inteira de novo num alvo próprio a cada quadro e compila uma segunda versão de cada shader opaco (no
+      // preparo atrás do menu, 0,8 s de travada só nisso). Na PS2 o vidro é translúcido simples.
+      const phys = m as unknown as THREE.MeshPhysicalMaterial;
+      if (phys.isMeshPhysicalMaterial && phys.transmission > 0) {
+        phys.transmission = 0;
+        phys.thickness = 0;
+        phys.transparent = true;
+        phys.opacity = 0.32;
+        phys.depthWrite = false;
+        phys.needsUpdate = true;
+      }
       // cores por vértice dos kits Poly Haven são máscaras de mistura, não cor final
       if (!character) m.vertexColors = false;
       if (character && m.userData.ps2_alpha === undefined) {
