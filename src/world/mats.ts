@@ -53,7 +53,7 @@ export const M = {
     return scan('flag', 'fort_wall', 4.2, { color: 0x8c8486, envMapIntensity: 1.3, roughness: 0.8 });
   },
   get brick() {
-    return pbr('brick', () => T.brick(1024, 22, 3), 3.2);
+    return pbr('brick', () => T.brick(512, 22, 3), 3.2);
   },
   get wood() {
     return pbr('wood', () => T.wood(512, 5, [0.36, 0.2, 0.12], 4), 1.6, { envMapIntensity: 0.7 });
@@ -243,4 +243,17 @@ function bookSpines(): T.MapSet {
       rough: 0.55 - gold * 0.25,
     };
   });
+}
+
+/**
+ * Gera as texturas procedurais (tijolo, madeira, ardósia, casca, metal, tecido, livros) uma por vez, cedendo o
+ * quadro entre elas. Feitas todas juntas dentro de buildRegion, eram 0,6 s de página parada com o menu na tela.
+ */
+export async function warmProceduralMats(yieldFrame: () => Promise<void>): Promise<void> {
+  const keys = ['brick', 'wood', 'woodDark', 'slate', 'bark', 'bronze', 'iron', 'wine', 'clothDark', 'parchment', 'books'] as const;
+  for (const k of keys) {
+    if (cache.has(k)) continue;
+    void M[k];
+    await yieldFrame();
+  }
 }

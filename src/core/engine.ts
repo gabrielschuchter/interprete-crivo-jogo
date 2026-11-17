@@ -304,6 +304,37 @@ export class Engine {
   }
 
   /**
+   * Sobe para a placa as texturas ainda não enviadas de `root`, em fatias de `budgetMs` por quadro. Usado no
+   * preparo atrás do menu: enviadas todas no quadro escondido, eram meio segundo de página parada.
+   */
+  async uploadTextures(root: THREE.Object3D, nextFrame: () => Promise<void>, budgetMs = 10): Promise<void> {
+    const seen = new Set<THREE.Texture>();
+    const list: THREE.Texture[] = [];
+    root.traverse((o) => {
+      const mat = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
+      if (!mat) return;
+      for (const m of Array.isArray(mat) ? mat : [mat]) {
+        for (const v of Object.values(m)) {
+          const t = v as THREE.Texture | null;
+          if (t && t.isTexture && !seen.has(t) && !(t as THREE.Texture & { isRenderTargetTexture?: boolean }).isRenderTargetTexture && t.image) {
+            seen.add(t);
+            const props = this.renderer.properties.get(t) as { __webglInit?: boolean };
+            if (!props.__webglInit) list.push(t);
+          }
+        }
+      }
+    });
+    let t0 = performance.now();
+    for (const t of list) {
+      this.renderer.initTexture(t);
+      if (performance.now() - t0 > budgetMs) {
+        await nextFrame();
+        t0 = performance.now();
+      }
+    }
+  }
+
+  /**
    * Compila os shaders da cena em paralelo (KHR_parallel_shader_compile) e espera ficarem prontos, sem travar a
    * tela de carga. Não usa renderer.compileAsync: se um material for descartado durante a espera, ele lança erro
    * dentro de um setTimeout próprio e a promessa nunca resolve. Aqui o material sem programa sai da lista.
@@ -327,13 +358,19 @@ export class Engine {
     }
     // texturas sobem para a placa aqui, na tela de carga: antes subiam no primeiro quadro em que cada objeto
     // aparecia (no Pátio, 135 texturas e vários segundos de travada ao começar a andar)
+    // em fatias de 10 ms: de uma vez, as texturas dos moradores e inimigos paravam o menu por quase um segundo
     const seen = new Set<THREE.Texture>();
-    for (const m of upload ? mats : []) {
+    let tu = performance.now();
+    for (const m of upload ? [...mats] : []) {
       for (const v of Object.values(m)) {
         const t = v as THREE.Texture | null;
         if (t && t.isTexture && !seen.has(t) && !(t as THREE.Texture & { isRenderTargetTexture?: boolean }).isRenderTargetTexture && t.image) {
           seen.add(t);
           this.renderer.initTexture(t);
+          if (performance.now() - tu > 10) {
+            await new Promise((r) => setTimeout(r, 16));
+            tu = performance.now();
+          }
         }
       }
     }
@@ -359,6 +396,15 @@ export class Engine {
   private toLink = new Set<LinkableProgram>();
   get pendingLinks(): number {
     return this.toLink.size;
+  }
+  /**
+   * Com compilação paralela (Chrome e Edge no Windows, a maioria das GPUs), terminar o programa num quadro do menu
+   * não adianta nada: no ANGLE sobre Direct3D 11 a consulta de ligação é que dispara a compilação final e para a
+   * página por 0,2 a 0,5 s. Ali o menu deixa os programas para o primeiro desenho, que acontece atrás de uma tela
+   * de carga. Sem a extensão, o menu continua terminando um por quadro.
+   */
+  get parallelCompile(): boolean {
+    return this.renderer.extensions.has('KHR_parallel_shader_compile');
   }
   /** Termina programas pendentes até gastar `budgetMs`. Chamado por quadro no menu e de uma vez nas cargas. */
   linkPending(budgetMs: number): number {
@@ -517,6 +563,55 @@ export class Engine {
     const h = cv.height / pr;
     r.setViewport(0, 0, w, h);
     r.setScissor(0, 0, w, h);
+  }
+
+  /**
+   * Desenha a cena em fatias, poucos objetos por quadro, cada material uma vez. No Windows (ANGLE sobre Direct3D 11)
+   * o driver só gera a versão final de cada shader no primeiro desenho, e não na compilação: um quadro com a cena
+   * inteira parava a página por meio segundo. Em fatias, o custo se espalha por vários quadros curtos.
+   */
+  async warmDraw(root: THREE.Object3D, focus: THREE.Vector3, nextFrame: () => Promise<void>, budgetMs = 14): Promise<void> {
+    const all: THREE.Mesh[] = [];
+    const pick: THREE.Mesh[] = [];
+    const seen = new Set<string>();
+    root.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh || !m.visible) return;
+      all.push(m);
+      const mats = Array.isArray(m.material) ? m.material : [m.material];
+      const key = mats.map((x) => x.uuid).join() + ((m as THREE.SkinnedMesh).isSkinnedMesh ? 's' : '') + (m.castShadow ? 'c' : '');
+      if (!seen.has(key)) {
+        seen.add(key);
+        pick.push(m);
+      }
+    });
+    const culled = new Map<THREE.Mesh, boolean>();
+    for (const m of all) m.visible = false;
+    try {
+      let i = 0;
+      let k = 4;
+      while (i < pick.length) {
+        const batch = pick.slice(i, i + k);
+        for (const m of batch) {
+          culled.set(m, m.frustumCulled);
+          m.frustumCulled = false;
+          m.visible = true;
+        }
+        const t0 = performance.now();
+        this.render(0.016, focus);
+        const ms = performance.now() - t0;
+        for (const m of batch) {
+          m.visible = false;
+          m.frustumCulled = culled.get(m) ?? true;
+        }
+        i += batch.length;
+        k = ms > budgetMs * 2 ? Math.max(1, k >> 1) : ms < budgetMs / 2 ? Math.min(32, k * 2) : k;
+        await nextFrame();
+      }
+    } finally {
+      for (const m of all) m.visible = true;
+      for (const [m, f] of culled) m.frustumCulled = f;
+    }
   }
 
   render(dt: number, focus: THREE.Vector3): void {

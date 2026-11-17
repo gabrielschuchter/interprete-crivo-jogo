@@ -20,7 +20,7 @@ import { Npc, NPCS } from './entities/npc';
 import { buildRegion } from './world/index';
 import { groundAt, pointBlocked, type BuiltRegion, type PropPlacement, type RegionId } from './world/region';
 import { glowSprite } from './world/textures';
-import { M } from './world/mats';
+import { M, warmProceduralMats } from './world/mats';
 import { halo } from './world/kit';
 import { ITEMS, PAGES, QUESTS, CASE_LIA, type QuestDef } from './content/data';
 import * as D from './domain/state';
@@ -208,13 +208,18 @@ export class Game {
       let fa = 0;
       let fb = 0;
       const prog = () => this.ui.loading(true, 0.05 + 0.6 * (fa * 0.3 + fb * 0.7));
-      await Promise.all([
+      const rede = Promise.all([
         this.audio.preload().then(() => ((fa = 1), prog())),
         preloadModels(firstBodies).then(() => ((fb = 1), prog())),
       ]);
-      this.mark('rede');
+      // um quadro vazio enquanto a rede trabalha: céu, chuva e pós-processamento (brilho, composição, gradação)
+      // compilam aqui, e não no primeiro quadro do preparo atrás do menu (0,4 s de menu parado no Windows)
+      await this.nextPaint();
       const target = saved ? asRegion(saved.region) : 'atrio';
       this.engine.applyEnv(ENV[target] ?? ENV.atrioNoiteChuva);
+      this.engine.render(0.016, this.focus);
+      await rede;
+      this.mark('rede');
       this.ui.loading(true, 0.7);
       await this.warmFigures(saved ? [saved.look, CREATE_LOOK] : [CREATE_LOOK], true);
       this.mark('catalogo');
@@ -334,6 +339,8 @@ export class Game {
       this.mark('preparo');
       await preloadProps((f) => (this.prepProgress = f * 0.4), id === 'atrio' ? PROPS_FIRST : undefined);
       this.restProps = preloadProps();
+      // texturas procedurais em fatias, com o menu respirando entre elas (antes, 0,6 s parado dentro de buildRegion)
+      await warmProceduralMats(() => this.nextPaint());
       await this.loadRegion(id, flags, (p) => (this.prepProgress = 0.4 + p * 0.4));
       this.builtKey = key;
       // quem mora ou ronda a região, e o protagonista: compilados agora, para Continuar e Novo jogo não esperarem
@@ -349,6 +356,11 @@ export class Game {
       cam.position.set(at.x + 0.55, at.y + 1.45, at.z + 2.3);
       cam.lookAt(at.x - 1.05, at.y + 1, at.z);
       this.focus.set(at.x, at.y, at.z);
+      // texturas da região e do protagonista sobem em fatias antes do quadro escondido
+      await this.engine.uploadTextures(this.engine.scene, () => this.nextPaint());
+      // e os programas da cena com o protagonista compilam em paralelo; o quadro escondido só cria os de sombra
+      await this.engine.precompile(this.engine.scene, false, 15000, false);
+      await this.engine.warmDraw(this.engine.scene, this.focus, () => this.nextPaint());
       this.engine.render(0.016, this.focus);
       stand.removeFrom(this.engine.scene);
       this.warmed.add(id);
@@ -1854,7 +1866,9 @@ export class Game {
       this.fpsAcc = this.fpsN = 0;
     }
     // menu parado: termina, um a um, os shaders que a abertura deixou pendentes (ver Engine.linkPending)
-    if (this.mode === 'menu' || this.mode === 'create' || (this.mode === 'book' && !this.state)) this.engine.linkPending(12);
+    if (this.mode === 'menu' || this.mode === 'create' || (this.mode === 'book' && !this.state)) {
+      if (!this.engine.parallelCompile) this.engine.linkPending(12);
+    }
     // só o jogo em curso mede o quadro; nos testes (?teste) o render por software é lento de propósito e não conta
     if (this.mode === 'play' && !this.ui.instant) {
       const q = this.qualityGov.frame(raw);

@@ -44,3 +44,58 @@ Os sete NPCs da história (`public/models/personagens/*.glb`, 800 KB cada, do pi
 ## Como medir de novo
 
 Build e `npx vite preview --port 4173`, depois: `node tools/perf/metricas.mjs` (bytes, programas, triângulos, tempos), `node tools/perf/carga.mjs` (detalhe por tipo de arquivo e quadros lentos; `REDE=20` limita a banda), `node tools/perf/tremor.mjs` (`REGIOES=atrio,bosque` e `SO=1` para só a série com a camada PS2), `node tools/perf/perfil.mjs` (perfil de CPU do Novo jogo; `PILHA=1` mostra quem chama as funções que bloqueiam) e `node tools/perf/vistas.mjs <prefixo>` para capturas fixas de antes e depois.
+
+# Medida em GPU real (17/11/2026)
+
+Medido no computador do Gabriel: notebook com GeForce GTX 1650 Ti (4 GB), Windows 11, Chromium 159 com ANGLE sobre Direct3D 11 (o mesmo caminho do Chrome e do Edge no Windows), build de produção servido por `vite preview`. Ferramentas novas: `tools/perf/fps.mjs` (taxa de quadros por cenário; `JANELA=1` com janela e vsync, `CELULAR=1` emulando telefone) e `tools/perf/travadas.mjs` (tarefas longas com o menu na tela). Antes é a main em bfdf9a3; depois é este trabalho.
+
+## Taxa de quadros
+
+Com janela e vsync (o que o jogador vê), tudo fica no limite da tela do notebook, 120 Hz: menu, os quatro planos medidos da abertura e as quatro regiões, de 100 a 120 fps antes e depois. Nenhum cenário fica abaixo de 30 fps no computador.
+
+Sem vsync (folga da GPU, média de 10 s, jogador andando):
+
+| Cena | Antes fps | Depois fps | Antes p99 ms | Depois p99 ms |
+|---|---|---|---|---|
+| Abertura 1.3 (enfermaria) | 374 | 412 | 5,9 | 5,5 |
+| Abertura 2.4 (seis figuras) | 360 | 339 | 5,3 | 6,5 |
+| Abertura 3.4 (serra) | 562 | 580 | 3,9 | 4,0 |
+| Pátio | 95 | 122 | 30,4 | 15,5 |
+| Bosque | 119 | 168 | 17,3 | 10,6 |
+| Arquivo | 141 | 206 | 16,0 | 8,5 |
+| Observatório | 263 | 299 | 9,7 | 6,0 |
+
+O menu sem janela mede 32 a 38 fps nos dois casos: é artefato do Chromium sem janela com página só de DOM. Com janela ele roda a 120.
+
+Emulação de celular (390 x 844, densidade 3, toque, CPU 4 vezes mais lenta, qualidade baixa automática; a GPU continua a do notebook):
+
+| Cena | Antes fps | Depois fps | Quadros acima de 50 ms em 10 s, antes e depois |
+|---|---|---|---|
+| Pátio | 28,5 | 36,6 | 25 e 6 |
+| Bosque | 48,0 | 55,5 | 4 e 7 |
+| Arquivo | 43,3 | 48,1 | 10 e 5 |
+| Observatório | 75,5 | 69,8 | 2 e 3 |
+| Abertura 2.4 | 91 | 117 | 1 e 1 |
+
+## Travadas com o menu na tela
+
+O problema real no computador não era taxa de quadros, e sim a página parada enquanto o menu está na tela: o jogo monta o Pátio por trás (para Continuar e Novo jogo não esperarem) e, no Windows, isso congelava o menu por mais de um segundo de cada vez. Mediana de cinco cargas, do menu aparecer até 9 s depois:
+
+| Medida | Antes | Depois |
+|---|---|---|
+| Maior travada | 1.444 ms | 293 ms |
+| Soma das tarefas longas | 2.558 ms | 1.299 ms |
+
+O que mudou:
+
+1. Vidro com transmissão. Os lustres, a lanterna, a lupa e o relógio de bolso trazem vidro com `KHR_materials_transmission`. No three.js isso desenha a cena opaca inteira uma segunda vez, num alvo próprio, a cada quadro, e compila uma segunda versão de cada shader opaco. `fixMaterials` troca por vidro translúcido simples (sem diferença visível na resolução PS2). É de onde vem o ganho de 13 a 46% nas regiões.
+2. No ANGLE sobre Direct3D 11 a compilação paralela não termina o shader: a versão final é gerada no primeiro desenho ou na primeira consulta de ligação. O quadro escondido do preparo, com a cena inteira, parava o menu por meio segundo. Agora `Engine.warmDraw` desenha a cena em fatias, poucos materiais por quadro, e o menu deixa de terminar programas por quadro quando há compilação paralela (`Engine.parallelCompile`); sem ela, o comportamento antigo segue.
+3. Céu, chuva e pós-processamento compilam num quadro vazio durante a carga, enquanto a rede trabalha, e não no primeiro quadro do preparo.
+4. Texturas sobem para a placa em fatias de 10 ms (`Engine.uploadTextures` e o laço de `precompile`).
+5. As texturas procedurais (tijolo, madeira, ardósia, casca, metal, tecido, livros) são geradas uma por quadro antes de montar a região, e o tijolo caiu de 1024 para 512 px, o teto de textura de cenário da direção de arte.
+
+## O que só um celular físico mede
+
+A emulação usa a GPU do notebook e só desacelera a CPU; a GPU de um celular, o aquecimento depois de minutos de jogo e a memória disponível só se medem num aparelho de verdade (com `chrome://inspect` e `node tools/perf/fps.mjs` apontado para ele, ou o contador do próprio jogo).
+
+No celular emulado o menu ainda trava (a montagem do Pátio é trabalho de CPU, multiplicado por quatro): a maior parte é a construção da geometria do Pátio e as texturas procedurais, que pedem montar a região em fatias, um passo maior que fica registrado aqui.
