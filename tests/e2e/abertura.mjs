@@ -66,7 +66,10 @@ try {
     await E(() => (window.__game.cine.auto = true));
     ok(await E(() => document.querySelector('#cine').classList.contains('lb')), 'letterbox no ar');
     ok(await E(() => document.querySelector('#cine [data-a=tudo]').hidden), 'primeira vez: só "pular esta parte"');
-    let r = await avancar(E, 60);
+    // regressão da tela preta (17/11/2026): a imagem tem de aparecer em segundos, não depois de meio minuto de preto
+    await avancar(E, 8);
+    ok(!(await E(() => document.querySelector('#cine .preto').classList.contains('on'))), 'o véu preto abriu aos 8 s (a vila aparece)');
+    let r = await avancar(E, 52);
     ok(r?.bloco === '1', 'bloco 1 em curso aos 60 s: ' + JSON.stringify(r));
     // até o fim, de minuto em minuto
     let ult = r;
