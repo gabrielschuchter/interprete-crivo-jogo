@@ -13,12 +13,10 @@ const alvo = process.env.ALVO ?? 'novo';
 await cdp.send('Profiler.enable');
 await cdp.send('Profiler.setSamplingInterval', { interval: 1000 });
 if (alvo === 'menu') await cdp.send('Profiler.start');
-await waitMode('splash');
+await waitMode('menu');
 if (alvo === 'menu') var prof = (await cdp.send('Profiler.stop')).profile;
 else {
   await E(() => localStorage.clear());
-  await p.keyboard.press('Enter');
-  await waitMode('menu');
   await p.click('#menu [data-a=new]');
   await waitMode('create');
   await p.click('#create [data-prof=enfermagem]');

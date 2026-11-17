@@ -68,10 +68,8 @@ const fight = async (group, tries = 8) => {
 try {
   console.log('Abertura');
   await p.goto(URL0);
-  await waitMode('splash');
-  await E(() => localStorage.clear());
-  await p.keyboard.press('Enter');
   await waitMode('menu');
+  await E(() => localStorage.clear());
   await p.click('#menu [data-a=new]');
   await waitMode('create');
   await p.click('#create [data-prof=enfermagem]');
@@ -218,8 +216,6 @@ try {
   console.log('Registro');
   const before = await E(() => { __game.checkpoint(); return JSON.stringify(__game.state.quests); });
   await p.reload({ waitUntil: 'domcontentloaded', timeout: 120000 }); // a cena pesada demora a descarregar no WebGL por software
-  await waitMode('splash');
-  await p.keyboard.press('Enter');
   await waitMode('menu');
   await p.click('#menu [data-a=continue]');
   await waitMode('play');

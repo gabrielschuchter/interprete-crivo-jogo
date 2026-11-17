@@ -52,10 +52,8 @@ const MORADORES = { atrio: ['custodia', 'amelia', 'dito', 'vera'], arquivo: ['ba
 try {
   console.log('Abertura');
   await p.goto(URL0);
-  await waitMode('splash');
-  await E(() => localStorage.clear());
-  await p.keyboard.press('Enter');
   await waitMode('menu');
+  await E(() => localStorage.clear());
   await p.click('#menu [data-a=new]');
   await waitMode('create');
   await p.click('#create [data-prof=enfermagem]');

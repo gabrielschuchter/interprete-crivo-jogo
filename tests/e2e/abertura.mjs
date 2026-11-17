@@ -31,10 +31,8 @@ async function abrir(corpo) {
     throw new Error(`tempo esgotado esperando o modo ${m}`);
   };
   await p.goto(BASE + '?teste&abertura');
-  await waitMode('splash');
-  await E(() => localStorage.clear());
-  await p.keyboard.press('Enter');
   await waitMode('menu');
+  await E(() => localStorage.clear());
   await p.click('#menu [data-a=new]');
   await waitMode('create');
   if (corpo === 'masc') await p.click('#create [data-body=masc]').catch(() => E(() => {}));

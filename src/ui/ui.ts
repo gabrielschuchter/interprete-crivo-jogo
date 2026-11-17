@@ -15,6 +15,7 @@ import { problems } from '../core/diag';
 import { BRILHO_MAX, BRILHO_MIN } from '../core/settings';
 import { CaseView } from './caseview';
 import { TouchControls, isTouchDevice } from './touch';
+import { allSlots, freeSlot, latestSlot, playtimeLabel, slotInfo, type SlotId } from '../core/registros';
 
 export type BookTab = 'inventario' | 'habilidades' | 'mapa' | 'diario' | 'codice' | 'config';
 
@@ -57,18 +58,6 @@ const SKIN_NAMES = ['muito clara', 'clara', 'média', 'escura', 'muito escura'];
 const HAIR_NAMES = ['preto', 'castanho-escuro', 'castanho', 'grisalho', 'ruivo', 'loiro'];
 const COAT_NAMES = ['vinho', 'azul-marinho', 'verde-escuro', 'roxo', 'marrom', 'grafite'];
 
-const TIPS = [
-  'Último fôlego: com pouco vigor ainda sai uma esquiva (a partir de 60% do custo) ou um golpe (a partir da metade). O vigor vai a zero e demora a voltar.',
-  'O Crivo olha para o que merece um segundo olhar. Ele não marca tudo o tempo todo.',
-  'Inimigos hesitam antes de investir. O anel vermelho no chão mostra até onde o golpe chega.',
-  'Nenhuma missão tem cronômetro. Ler com calma nunca é penalizado.',
-  'Um desfecho ruim não torna ruim, por si só, uma decisão bem conduzida.',
-  'O pulso do Crivo interrompe quem está se preparando para atacar.',
-  'Os golpes leves enchem os losangos de foco. O golpe firme gasta todo o foco que houver: com um ponto vira o Corte da lua, com três, a Queda do pilar.',
-  'Firme apertado no instante em que o golpe inimigo chega desvia a arma dele e responde na hora. Cedo ou tarde demais, o golpe entra.',
-  'Esquivar no último instante desacelera o tempo e rende foco. Um golpe leve logo depois da esquiva sai como contracorte.',
-  'Três vozes repetindo a mesma fonte não são três confirmações.',
-];
 
 export class UI {
   private $: Record<string, HTMLElement> = {};
@@ -131,7 +120,6 @@ export class UI {
       <div id="banner"><div class="label k"></div><div class="t"></div><div class="d"></div></div>
       <div id="region-title"><div class="sub"></div><div class="rule"></div><div class="name"></div></div>
       <div id="dialogue" class="hidden" role="dialog" aria-label="Conversa" aria-live="polite"><div class="retrato" aria-hidden="true"></div><div class="who"><span class="nm"></span><span class="label role"></span></div><div class="txt"></div><div class="choices"></div><div class="next"></div><button class="dx" type="button" aria-label="Sair da conversa">Sair</button></div>
-      <div id="splash" class="screen hidden"></div>
       <div id="menu" class="screen hidden" role="dialog" aria-modal="true" aria-label="Menu inicial"></div>
       <div id="create" class="screen hidden" role="dialog" aria-modal="true" aria-label="Criação de personagem"></div>
       <div id="book" class="screen hidden" role="dialog" aria-modal="true" aria-label="Caderno"></div>
@@ -141,7 +129,7 @@ export class UI {
       <div id="defeat" class="screen center hidden" role="dialog" aria-modal="true" aria-label="Derrota"></div>
       <div id="ending" class="screen center hidden" role="dialog" aria-modal="true" aria-label="Epílogo"></div>
       <div id="fade"></div>
-      <div id="loading"><div class="word">Interprete<i>.</i></div><div class="bar"><b></b></div><div class="tip"></div></div>`;
+      <div id="loading" role="progressbar" aria-label="Carregando" aria-valuemin="0" aria-valuemax="100"><div class="brasao">${glyphSvg('brasao', 56)}</div><div class="linha"><b></b></div><div class="nota" aria-live="polite"></div></div>`;
     for (const e of Array.from(root.querySelectorAll<HTMLElement>('[id]'))) this.$[e.id] = e;
     this.touch = new TouchControls(root);
     if (isTouchDevice()) this.touch.enable();
@@ -253,7 +241,7 @@ export class UI {
     if (a && this.topScreen()?.contains(a)) a.click();
   }
   private topScreen(): HTMLElement | null {
-    for (const id of ['ending', 'defeat', 'pause', 'case', 'shop', 'book', 'create', 'menu', 'splash']) if (!this.$[id].classList.contains('hidden')) return this.$[id];
+    for (const id of ['ending', 'defeat', 'pause', 'case', 'shop', 'book', 'create', 'menu']) if (!this.$[id].classList.contains('hidden')) return this.$[id];
     if (!this.$.dialogue.classList.contains('hidden')) return this.$.dialogue;
     return null;
   }
@@ -317,13 +305,29 @@ export class UI {
   }
 
   // ---------- carregamento, véu, títulos ----------
+  private loadT0 = 0;
+  /**
+   * Tela de carga: preto, o brasão e uma linha de 160 px que anda em degraus de 8 px. Texto só por exceção:
+   * "Preparando" depois de 10 s.
+   */
   loading(on: boolean, p = 0): void {
+    const el = this.$.loading;
+    if (on && el.classList.contains('hidden')) this.loadT0 = 0;
     this.show('loading', on);
-    if (on) {
-      (this.$.loading.querySelector('.bar b') as HTMLElement).style.width = `${Math.round(p * 100)}%`;
-      const tip = this.$.loading.querySelector('.tip') as HTMLElement;
-      if (!tip.textContent || p === 0) tip.textContent = TIPS[Math.floor(Math.random() * TIPS.length)];
-    }
+    if (!on) return;
+    if (!this.loadT0) this.loadT0 = performance.now();
+    const px = Math.round((Math.max(0, Math.min(1, p)) * 160) / 8) * 8;
+    (el.querySelector('.linha b') as HTMLElement).style.width = `${px}px`;
+    el.setAttribute('aria-valuenow', String(Math.round(p * 100)));
+    if (performance.now() - this.loadT0 > 10000) (el.querySelector('.nota') as HTMLElement).textContent = 'Preparando';
+  }
+  /** A carga parou: a linha fica onde estava e aparece a única saída. O relatório vai para o Diagnóstico. */
+  loadingFailed(): void {
+    const n = this.$.loading.querySelector('.nota') as HTMLElement;
+    n.innerHTML = 'Um arquivo não chegou.<br><button class="btn" data-a="retry">Tentar de novo</button>';
+    const b = n.querySelector('button') as HTMLButtonElement;
+    b.addEventListener('click', () => location.reload());
+    b.focus();
   }
   fade(on: boolean): Promise<void> {
     this.$.fade.classList.toggle('on', on);
@@ -595,6 +599,11 @@ export class UI {
   }
   update(dt: number): void {
     this.touch.update(dt, this.g.mode);
+    if (this.waiting) {
+      const b = this.waiting.querySelector('.espera b') as HTMLElement | null;
+      // a mesma linha da carga, em degraus de 8 px sobre 160
+      if (b) b.style.width = `${Math.round(this.g.prepProgress * 20) * 8}px`;
+    }
     if (this.typing) {
       const t = this.typing;
       const before = Math.floor(t.i);
@@ -607,53 +616,140 @@ export class UI {
     }
   }
 
-  // ---------- tela inicial, menu, criação ----------
-  splash(on: boolean): void {
-    this.show('splash', on);
-    if (on)
-      this.$.splash.innerHTML = `<div class="title-block"><div class="brasao">${glyphSvg('brasao', 72)}</div><div class="label over">Uma aventura de método, dúvida e companhia</div><h1>Interprete<i>.</i></h1><div class="subtitle">O Crivo e a Névoa das Conclusões</div></div><div class="press">${this.touch.enabled ? 'Toque para começar' : 'Pressione qualquer tecla'}</div>`;
-  }
+  // ---------- menu, registros, criação ----------
+  /** o brasão sai da tela de carga e cresce até o lugar dele no menu, só na primeira vez */
+  private menuIntro = true;
+  /** botão pressionado esperando o preparo da região (linha de progresso embaixo dele) */
+  private waiting: HTMLElement | null = null;
+  /**
+   * Menu principal: fundo preto, brasão grande no alto, três botões em coluna (Novo jogo, Continuar jogo,
+   * Configurações). Continuar fica apagado sem registro. Ver docs/game/CARGA_E_MENU.md.
+   */
   menu(on: boolean): void {
     this.show('menu', on);
+    this.waiting = null;
     if (!on) return;
     const rec = this.g.recoverSave();
-    const has = this.g.hasSave();
-    const note = rec === 'recuperado' ? '<p class="warn" role="alert">O registro mais recente estava ilegível. O jogo voltou para a gravação anterior.</p>' : rec === 'ilegivel' ? '<p class="warn" role="alert">Há um registro gravado que não pôde ser lido. Ele foi guardado à parte e não será apagado enquanto você não começar um novo caminho.</p>' : '';
-    this.$.menu.innerHTML = `<div class="side"><div class="brasao">${glyphSvg('brasao', 56)}</div><h1>Interprete<i>.</i></h1><div class="subtitle">O Crivo e a Névoa das Conclusões</div>
-      ${has ? `<button class="btn" data-a="continue" data-focus>Continuar<small>${esc(this.g.saveSummary())}</small></button>` : ''}
-      <button class="btn" data-a="new" ${has ? '' : 'data-focus'}>Novo caminho<small>${has ? 'Substitui o registro atual depois de confirmar' : 'Escolha um ofício e conheça o Crivo'}</small></button>
-      <button class="btn" data-a="config">Configurações<small>Imagem, som, controles e acessibilidade</small></button>
-      <div class="row save-tools">${has ? '<button class="btn small" data-a="export">Baixar registro</button>' : ''}<button class="btn small" data-a="import">Importar registro</button><input type="file" accept="application/json,.json" hidden aria-hidden="true" tabindex="-1"></div>${note}
-      <div class="foot">Versão 0.1 · um jogador. A cooperação entra numa fase posterior.<br>Os casos são simulações fictícias e não orientam decisões de saúde.</div></div><div></div>`;
-    this.$.menu.querySelectorAll('button').forEach((b) =>
+    const last = latestSlot();
+    const used = allSlots().filter((i) => i.used);
+    const line = rec === 'recuperado' ? 'O registro não pôde ser lido. A cópia anterior foi recuperada' : rec === 'ilegivel' ? 'O registro foi guardado à parte' : last ? this.g.saveSummary(last) : 'Nenhum registro neste navegador';
+    this.$.menu.innerHTML = `<div class="coluna"><div class="brasao">${glyphSvg('brasao', 64)}</div><h1>Interprete<i>.</i></h1>
+      <div class="botoes">
+        <button class="mb" data-a="new" ${last ? '' : 'data-focus'}>Novo jogo</button>
+        <button class="mb" data-a="continue" ${last ? 'data-focus' : 'disabled aria-disabled="true"'}>Continuar jogo</button>
+        <div class="resumo${last ? '' : ' apagado'}">${esc(line)}</div>
+        <button class="mb" data-a="config">Configurações</button>
+      </div>
+      <button class="registros" data-a="slots">${used.length ? `Registros (${used.length})` : 'Importar registro'}</button></div>
+      <div class="rodape">Versão 0.1 · um jogador<br>Os casos são simulações fictícias e não orientam decisões de saúde.</div>`;
+    this.$.menu.querySelectorAll<HTMLElement>('button').forEach((b) =>
       b.addEventListener('click', () => {
+        if ((b as HTMLButtonElement).disabled || this.waiting) return;
         this.sfx('uiAbrir');
-        const a = (b as HTMLElement).dataset.a;
-        if (a === 'continue') this.g.continueGame();
-        else if (a === 'new') {
-          if (has) this.confirm('Começar um novo caminho?', 'O registro atual será substituído quando você confirmar o nome do novo viajante.', 'Começar de novo', () => this.g.openCreate());
-          else this.g.openCreate();
-        } else if (a === 'export') this.downloadSave();
-        else if (a === 'import') file.click();
+        const a = b.dataset.a;
+        if (a === 'continue') {
+          this.waitOn(b);
+          void this.g.continueGame();
+        } else if (a === 'new') this.newGame(b);
+        else if (a === 'slots') this.slotsScreen();
         else this.openBook('config');
       }),
     );
-    const file = this.$.menu.querySelector('input[type=file]') as HTMLInputElement;
+    if (this.menuIntro) {
+      this.menuIntro = false;
+      const br = this.$.menu.querySelector('.brasao') as HTMLElement;
+      requestAnimationFrame(() => {
+        const r = br.getBoundingClientRect();
+        if (!r.height) return;
+        br.style.setProperty('--de-y', `${Math.round(window.innerHeight / 2 - (r.top + r.height / 2))}px`);
+        br.style.setProperty('--de-s', String(56 / r.height));
+        br.classList.add('chega');
+      });
+    }
+    this.focusFirst(this.$.menu);
+  }
+  /** Novo jogo: espaço livre vai direto à criação; com os três ocupados, pergunta qual substituir. */
+  private newGame(b: HTMLElement): void {
+    const free = freeSlot();
+    if (free) {
+      this.waitOn(b);
+      void this.g.openCreate(free);
+    } else this.slotsScreen(true);
+  }
+  private waitOn(b: HTMLElement): void {
+    if (this.g.prepProgress >= 1) return;
+    this.waiting = b;
+    b.insertAdjacentHTML('beforeend', '<i class="espera"><b></b></i>');
+  }
+  /**
+   * Os três espaços: nome, nível, tempo e data de cada um, com carregar, baixar cópia, importar e apagar.
+   * `replacing`: o Novo jogo com os três ocupados escolhe aqui qual substituir.
+   */
+  slotsScreen(replacing = false): void {
+    const p = this.$.pause;
+    const when = (t: number) => (t ? new Date(t).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
+    const rows = allSlots()
+      .map((i) => {
+        const head = i.ok ? `<b>${esc(i.name)}</b><small>Nível ${i.level} · ${playtimeLabel(i.playtime)}${i.savedAt ? ' · ' + when(i.savedAt) : ''}</small>` : i.used ? '<b>Registro ilegível</b><small>Guardado à parte; dá para baixar a cópia</small>' : '<b>Espaço livre</b><small>&nbsp;</small>';
+        const acts = replacing
+          ? `<button class="btn" data-a="replace" data-n="${i.slot}" ${i.slot === 1 ? 'data-focus' : ''}>Substituir</button>`
+          : `${i.ok ? `<button class="btn" data-a="load" data-n="${i.slot}">Carregar</button>` : ''}${i.used ? `<button class="btn" data-a="export" data-n="${i.slot}">Baixar cópia</button>` : ''}<button class="btn" data-a="import" data-n="${i.slot}">Importar</button>${i.used ? `<button class="btn" data-a="delete" data-n="${i.slot}">Apagar</button>` : ''}`;
+        return `<div class="espaco"><span class="n">${i.slot}</span><span class="d">${head}</span><span class="acoes">${acts}</span></div>`;
+      })
+      .join('');
+    p.innerHTML = `<div class="card espacos"><div class="label">${replacing ? 'Os três espaços estão ocupados' : 'Registros'}</div><h2>${replacing ? 'Qual registro substituir?' : 'Registros deste navegador'}</h2>${rows}<p class="label" style="text-transform:none;letter-spacing:0">O registro só é substituído quando você confirma o nome do novo personagem. A gravação anterior fica como cópia.</p><button class="btn" data-a="back" ${replacing ? '' : 'data-focus'}>Voltar</button><input type="file" accept="application/json,.json" hidden aria-hidden="true" tabindex="-1"></div>`;
+    this.show('pause', true);
+    const file = p.querySelector('input[type=file]') as HTMLInputElement;
+    let target: SlotId = 1;
     file.addEventListener('change', () => {
       const f = file.files?.[0];
       if (!f) return;
       void f.text().then((txt) => {
         const go = () => {
-          if (this.g.importSave(txt)) {
-            this.toast('Registro importado.', 'Registro');
+          if (this.g.importSave(txt, target)) {
+            this.toast(`Registro importado no espaço ${target}.`, 'Registro');
+            this.show('pause', false);
             this.menu(true);
+            void this.g.prepare();
           } else this.toast('Este arquivo não é um registro válido do jogo, ou o navegador recusou a gravação.', 'Registro', 8);
         };
-        if (has) this.confirm('Substituir o registro atual?', 'O registro deste navegador dá lugar ao do arquivo. A gravação anterior fica guardada como cópia.', 'Substituir', go);
+        if (slotInfo(target).used) this.confirm(`Substituir o espaço ${target}?`, 'O registro deste espaço dá lugar ao do arquivo. A gravação anterior fica guardada como cópia.', 'Substituir', go);
         else go();
       });
     });
-    this.focusFirst(this.$.menu);
+    p.querySelectorAll<HTMLElement>('button').forEach((b) =>
+      b.addEventListener('click', () => {
+        this.sfx('ui');
+        const n = Number(b.dataset.n) as SlotId;
+        const a = b.dataset.a;
+        if (a === 'back') {
+          this.show('pause', false);
+          return this.menu(true);
+        }
+        if (a === 'replace') {
+          this.show('pause', false);
+          this.menu(true);
+          return void this.g.openCreate(n);
+        }
+        if (a === 'load') {
+          this.show('pause', false);
+          this.menu(true);
+          return void this.g.continueGame(n);
+        }
+        if (a === 'export') return this.downloadSave(n);
+        if (a === 'import') {
+          target = n;
+          return file.click();
+        }
+        if (a === 'delete')
+          this.confirm(`Apagar o espaço ${n}?`, `${slotInfo(n).name || 'Este registro'} sai deste navegador, com a cópia anterior. Não há como desfazer; baixe uma cópia antes, se quiser guardar.`, 'Apagar', () => {
+            this.g.deleteSlot(n);
+            this.toast(`Espaço ${n} apagado.`, 'Registro');
+            this.slotsScreen();
+          });
+      }),
+    );
+    this.focusFirst(p);
   }
   confirm(title: string, text: string, yes: string, onYes: () => void): void {
     const p = this.$.pause;
@@ -675,7 +771,7 @@ export class UI {
     const render = () => {
       const prof = PROFESSIONS.find((p) => p.id === c.prof)!;
       const coats = COAT_COLORS;
-      this.$.create.innerHTML = `<div class="side"><div><div class="label">Novo caminho</div><h2>Quem chega ao Pátio?</h2></div>
+      this.$.create.innerHTML = `<div class="side"><div><div class="label">Novo jogo</div><h2>Quem chega ao Pátio?</h2></div>
         <div><div class="label" style="margin-bottom:8px">Ofício</div><div class="profs">${PROFESSIONS.map((p) => `<button class="chip" data-prof="${p.id}" aria-pressed="${p.id === c.prof}">${esc(p.name)}</button>`).join('')}</div></div>
         <div class="prof-line">${esc(prof.line)}<br><span class="label" style="font-style:normal">Objeto de ofício · ${esc(prof.tool)}</span></div>
         <div class="row"><span class="label">Nome</span><input type="text" maxlength="18" placeholder="Viajante" value="${esc(c.name)}" style="flex:1;width:auto" aria-label="Nome"></div>
@@ -749,15 +845,15 @@ export class UI {
     );
     this.focusFirst(p);
   }
-  downloadSave(): void {
-    const data = this.g.exportSave();
+  downloadSave(slot?: SlotId): void {
+    const data = this.g.exportSave(slot);
     if (!data) return this.toast('Ainda não há registro para copiar.');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
     a.download = 'interprete-rpg-registro.json';
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-    this.toast('Cópia do registro baixada. No menu inicial, "Importar registro" traz esse arquivo de volta.', 'Registro', 8);
+    this.toast('Cópia do registro baixada. No menu inicial, em Registros, "Importar" traz esse arquivo de volta.', 'Registro', 8);
   }
   defeat(on: boolean): void {
     this.show('defeat', on);
@@ -814,7 +910,7 @@ export class UI {
     this.show('book', false);
   }
   closeAll(): void {
-    for (const id of ['book', 'shop', 'case', 'pause', 'defeat', 'menu', 'create', 'splash']) this.show(id, false);
+    for (const id of ['book', 'shop', 'case', 'pause', 'defeat', 'menu', 'create']) this.show(id, false);
   }
   get bookOpen(): boolean {
     return !this.$.book.classList.contains('hidden');

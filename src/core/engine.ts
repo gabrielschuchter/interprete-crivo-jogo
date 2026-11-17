@@ -308,7 +308,7 @@ export class Engine {
    * tela de carga. Não usa renderer.compileAsync: se um material for descartado durante a espera, ele lança erro
    * dentro de um setTimeout próprio e a promessa nunca resolve. Aqui o material sem programa sai da lista.
    */
-  async precompile(scene: THREE.Object3D, link = true, maxMs = 15000): Promise<void> {
+  async precompile(scene: THREE.Object3D, link = true, maxMs = 15000, upload = true, lights?: THREE.Scene): Promise<void> {
     let mats: Set<THREE.Material>;
     // a camada PS2 troca o shader dos materiais novos (encaixe de vértices): aplicada antes, para o que se
     // compila aqui ser o mesmo programa que o primeiro quadro usa, e não uma versão que vai para o lixo
@@ -318,7 +318,8 @@ export class Engine {
     const prevTarget = this.renderer.getRenderTarget();
     this.renderer.setRenderTarget(this.composer.readBuffer);
     try {
-      mats = this.renderer.compile(scene, this.camera) as unknown as Set<THREE.Material>;
+      // `lights`: objeto fora da cena compilado com as luzes, a névoa e o ambiente dela (aquecimento das regiões)
+      mats = this.renderer.compile(scene, this.camera, lights ?? null) as unknown as Set<THREE.Material>;
     } catch {
       return;
     } finally {
@@ -327,7 +328,7 @@ export class Engine {
     // texturas sobem para a placa aqui, na tela de carga: antes subiam no primeiro quadro em que cada objeto
     // aparecia (no Pátio, 135 texturas e vários segundos de travada ao começar a andar)
     const seen = new Set<THREE.Texture>();
-    for (const m of mats) {
+    for (const m of upload ? mats : []) {
       for (const v of Object.values(m)) {
         const t = v as THREE.Texture | null;
         if (t && t.isTexture && !seen.has(t) && !(t as THREE.Texture & { isRenderTargetTexture?: boolean }).isRenderTargetTexture && t.image) {

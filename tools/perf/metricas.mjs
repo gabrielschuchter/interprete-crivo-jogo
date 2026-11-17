@@ -24,13 +24,11 @@ const cena = () => E(() => {
 });
 const t0 = Date.now();
 await p.goto(base + '?teste');
-await waitMode('splash');
+await waitMode('menu');
 const tMenu = Date.now() - t0;
 open = false;
 const abertura = { ms: tMenu, pedidos: reqs, MB: +(bytes / 1048576).toFixed(2), ...(await cena()) };
 await E(() => localStorage.clear());
-await p.keyboard.press('Enter');
-await waitMode('menu');
 await p.waitForTimeout(4000);
 await p.click('#menu [data-a=new]');
 await waitMode('create');
