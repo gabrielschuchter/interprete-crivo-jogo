@@ -30,5 +30,15 @@
   "npc_09_orfao": "personagens/ps2/npc_09_orfao.glb",
   "npc_10_professor": "personagens/ps2/npc_10_professor.glb",
   "npc_11_detetive": "personagens/ps2/npc_11_detetive.glb",
-  "npc_12_acolita": "personagens/ps2/npc_12_acolita.glb"
+  "npc_12_acolita": "personagens/ps2/npc_12_acolita.glb",
+  "crianca_fem_curto": "personagens/ps2/crianca_fem_curto.glb",
+  "crianca_fem_coque": "personagens/ps2/crianca_fem_coque.glb",
+  "crianca_fem_longo": "personagens/ps2/crianca_fem_longo.glb",
+  "crianca_masc_curto": "personagens/ps2/crianca_masc_curto.glb",
+  "crianca_masc_coque": "personagens/ps2/crianca_masc_coque.glb",
+  "crianca_masc_longo": "personagens/ps2/crianca_masc_longo.glb",
+  "cine_odila": "personagens/ps2/cine_odila.glb",
+  "cine_caio": "personagens/ps2/cine_caio.glb",
+  "cine_helena_jovem": "personagens/ps2/cine_helena_jovem.glb",
+  "cine_helena_velha": "personagens/ps2/cine_helena_velha.glb"
 }

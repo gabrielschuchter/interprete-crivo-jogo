@@ -57,6 +57,10 @@ As receitas estão em `tools/chars/elenco.py`, que escreve `elenco.json`. `tools
 | MINI_03 | Carcereiro dos Trilhos (`carcereiro`) | `mini_03_carcereiro` | 6,0 mil | 10 |
 | MINI_04 | Matriarca do Coro Velado (`matriarca`) | `mini_04_matriarca` | 4,3 mil | 10 |
 | BOSS_01 | O Grande Intérprete, corpo do Veredito | `boss_01_grande_interprete` | 4,1 mil | 10 |
+| PC_F_CRIANCA, PC_M_CRIANCA | o protagonista aos doze anos na abertura, dois corpos e três penteados | `crianca_<fem\|masc>_<curto\|coque\|longo>` | 3,4 a 3,9 mil | 11 |
+| CINE_01 | Odila, a menina da cama treze (abertura) | `cine_odila` | 3,9 mil | 11 |
+| CINE_02 | Caio, o menino da serra (abertura) | `cine_caio` | 3,8 mil | 11 |
+| CINE_HELENA_J, CINE_HELENA_V | Dra. Helena Avelar, jovem e aos 53 (abertura) | `cine_helena_jovem`, `cine_helena_velha` | 4,0 e 3,9 mil | 11 |
 
 ## Comportamento em jogo
 
@@ -83,5 +87,8 @@ A máscara da detetive virou dominó (faixa dos olhos com o nariz livre, furos l
 Os mini-chefes reaproveitam os clipes humanos de captura; o golpe próprio do martelo e do gancho e a Matriarca pairando são feitos em tempo real no jogo, não na forja. Os sete NPCs da história (Heloísa, Íris e os demais) continuam com os modelos anteriores, e o próximo passo natural é passá-los pela forja.
 
 ## Como rodar
+
+No Windows (computador do Gabriel, 17/11/2026): `uv venv --python 3.13` com `pip install bpy==5.3.* numpy pillow`, a extensão MPFB2 instalada com `bpy.ops.extensions.package_install_files`, os assets de sistema do MakeHuman extraídos na pasta de dados de usuário do MPFB e os 19 BVH da CMU baixados de `una-dinosauria/cmu-mocap` (pasta `data/<NNN>/<NN_NN>.bvh`) em `CMU_MOCAP_DIR`. Cada corpo sai em 15 a 20 s na CPU. Em rede com inspeção de TLS, o `uv` precisa de `UV_SYSTEM_CERTS=1`.
+
 
 Requisitos: Python 3.13 com o pacote `bpy` 5.3, a extensão MPFB2 instalada no perfil do Blender com os assets de sistema do MakeHuman, a base CMU em BVH (variável `CMU_MOCAP_DIR`), Node com `@gltf-transform/cli` global. Um personagem: `python3 tools/chars/build.py tools/chars/elenco.json saida.glb npc_03_vigia`. O elenco: `tools/chars/lote.sh`. Conferência visual: `node tools/chars/shot.mjs saida.png "m=models/personagens/ps2/npc_03_vigia.glb&luz=neutra"` com o `npm run dev` no ar (página `prancha.html`).
