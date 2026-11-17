@@ -17,7 +17,7 @@ import { CANTIGA, Som, type Toque } from './cine/som';
 import { CASA, ENF, casa, enfermaria, oficina, serra, vila } from './cine/cenarios';
 import {
   ABRACO, AJOELHADA, AJOELHADA_RUA, BOLEIA, CHAPEU_NO_PEITO, DEITADO, ENCOLHIDO, ESTENDE, GOLA, NO_PARAPEITO, SEGURA, SEGURA_MANGA, SENTADO, TRINCO,
-  apoiar, chapeu, crianca, dobrar, escrever, figurante, folhaLacrada, helena, maosSemJeito, protagonista, rastejar, sentadaCochilo, torcer,
+  apoiar, caio as caioAtor, chapeu, crianca, dobrar, escrever, figurante, folhaLacrada, helena, maosSemJeito, odila as odilaAtor, protagonista, rastejar, sentadaCochilo, torcer,
 } from './cine/elenco';
 
 type G = Game;
@@ -906,7 +906,7 @@ export async function abertura(c: Cine, som: Som, look: D.Look): Promise<void> {
     silv.poseFn = escrever;
     const crian = c.ator(crianca(look)).em(ENF.cama12[0], 0.5, ENF.cama12[1], 0).deitar(1);
     crian.posar(ENCOLHIDO, 50);
-    const odila = c.ator(figurante('menina da cama treze', 'npc_09_orfao', { altura: 1.4, coat: 0x8f7c5e, cabelo: 0x3a2014 })).em(ENF.cama13[0], 0.5, ENF.cama13[1], 0).deitar(-1);
+    const odila = c.ator(odilaAtor()).em(ENF.cama13[0], 0.5, ENF.cama13[1], 0).deitar(-1);
     odila.posar(ENCOLHIDO, 50);
     c.corte(P([-8.4, 0.62, 2.0], [-5.6, 0.75, 1.2], 50, { para: [1.4, 0.62, 2.0], alvoPara: [4.4, 0.75, 1.2], curva: 'linear', fov: 50 }));
     void c.preto(false, 1.2);
@@ -1090,7 +1090,7 @@ export async function abertura(c: Cine, som: Som, look: D.Look): Promise<void> {
     c.montar(cen);
     const R = ENF.rastro;
     const crian = c.ator(crianca(look)).em(R.x0, 0, R.z, Math.PI / 2).deitar(2, 0.12);
-    const odila = c.ator(figurante('menina da cama treze', 'npc_09_orfao', { altura: 1.4, coat: 0x8f7c5e, cabelo: 0x3a2014 })).em(ENF.cama13[0], 0.5, ENF.cama13[1], 0).deitar(-1);
+    const odila = c.ator(odilaAtor()).em(ENF.cama13[0], 0.5, ENF.cama13[1], 0).deitar(-1);
     odila.posar(ENCOLHIDO, 50);
     const hel = c.ator(helena(false)).em(R.x1 - 2.4, 0, R.z - 1.6, Math.PI / 2).ver(false);
     let fase = 0;
@@ -1495,7 +1495,7 @@ export async function abertura(c: Cine, som: Som, look: D.Look): Promise<void> {
     c.extra.splice(c.extra.indexOf(andarCarro), 1);
     calar();
     const xs = xEstrada(cz - 6);
-    const caio = c.ator(figurante('Caio', 'npc_09_orfao', { altura: 1.38, coat: 0x4a3a2a })).em(xs - 0.3, 0.05, cz - 6, Math.PI / 2).deitar(0, 0.05);
+    const caio = c.ator(caioAtor()).em(xs - 0.3, 0.05, cz - 6, Math.PI / 2).deitar(0, 0.05);
     caio.posar(DEITADO, 50);
     const marta = c.ator(figurante('Marta', 'npc_02_acendedora', { coat: 0x3a2e24, altura: 1.62 })).em(xs + 0.55, 0, cz - 6.2, -Math.PI / 2).posar(AJOELHADA_RUA, 50);
     marta.olharPara = caio;

@@ -1,8 +1,8 @@
 /**
- * Elenco da abertura sobre os corpos que a forja já gerou (nenhum representa pessoa real). Enquanto a forja não
- * tem corpo infantil, a criança é o corpo jovem do protagonista escolhido, encolhido a 1,42 m com a cabeça 12%
- * maior; Helena e os outros são receitas do elenco PS2 com cor de figurino e de cabelo trocadas por tinta.
- * Pendência registrada em docs/game/ABERTURA.md: corpos infantis e Helena próprios na forja.
+ * Elenco da abertura (nenhum representa pessoa real). A criança, Helena jovem e velha, Odila e Caio têm corpos
+ * próprios da forja (tools/chars/elenco.py, receitas da abertura): criança de doze anos nos dois corpos e nos três
+ * penteados do protagonista, de camisola de linho e descalça. Os demais são receitas do elenco PS2 com cor de
+ * figurino e de cabelo trocadas por tinta.
  *
  * Poses de cena no espaço do personagem (x para a esquerda da figura, y para cima, z para a frente).
  */
@@ -20,23 +20,30 @@ function pele(look: Look): { skinMap?: string; tintSkin?: number } {
   return look.body ? { skinMap: `textures/ps2/pele/${look.body}_${look.skin % SKINS.length}.webp` } : { tintSkin: SKINS[look.skin % SKINS.length] };
 }
 
-/** O protagonista aos doze anos: corpo jovem escolhido, menor, de camisola de linho */
-export function crianca(look: Look): Ator {
+/** Corpo da criança na forja: crianca_<fem|masc>_<curto|coque|longo> (o capuz vira o curto) */
+function criancaKey(look: Look): string {
   const c = corte(look) === 'capuz' ? 'curto' : corte(look);
-  const a = new Ator('criança', {
+  return `crianca_${look.body ?? 'fem'}_${c}`;
+}
+
+/** Corpos próprios da abertura, para baixar antes da primeira cena (a criança do corpo escolhido, Helena, Odila e Caio) */
+export function modelosAbertura(look: Look): string[] {
+  return [criancaKey(look), 'cine_helena_jovem', 'cine_helena_velha', 'cine_odila', 'cine_caio'];
+}
+
+/** O protagonista aos doze anos: corpo infantil da forja no corpo, tom de pele e cabelo escolhidos, de camisola de linho */
+export function crianca(look: Look): Ator {
+  return new Ator('criança', {
     skin: SKINS[look.skin % SKINS.length],
     hair: HAIRS[look.hair % HAIRS.length],
-    coat: 0x8f7c5e,
+    coat: 0xcbbd9e,
     height: 1.42,
-    model: look.body ? `player_${look.body}_${c}` : `player_${c}`,
-    modelAlt: 'player_curto',
+    model: criancaKey(look),
+    modelAlt: look.body ? `player_${look.body}_curto` : 'player_curto',
     ...pele(look),
     tintHair: new THREE.Color(HAIRS[look.hair % HAIRS.length]).multiplyScalar(2.4).getHex(),
-    tintCoat: 0xd8ccb4,
     persona: 'cine_crianca',
   });
-  a.cabeca = 1.12;
-  return a;
 }
 
 /** O protagonista aos vinte anos, de roupa de viagem, sem arma (é a casa da mãe) */
@@ -56,17 +63,27 @@ export function protagonista(look: Look): Ator {
   });
 }
 
-/** Dra. Helena Avelar: a viúva da estalagem do elenco, de avental; aos 53, cabelo grisalho */
+/** Dra. Helena Avelar, médica de Remanso: vestido escuro, avental de linho e xale vinho; aos 53, grisalha */
 export function helena(velha: boolean): Ator {
   return new Ator('Helena', {
     skin: SKINS[1],
-    hair: velha ? 0x8a8078 : 0x2a1a12,
-    coat: 0x2a1420,
+    hair: velha ? 0x8e8880 : 0x2a1a12,
+    coat: 0x24202a,
     height: 1.64,
-    model: 'npc_04_estalajadeira',
-    tintHair: velha ? 0x9a948c : 0x3a2618,
+    model: velha ? 'cine_helena_velha' : 'cine_helena_jovem',
+    modelAlt: 'npc_04_estalajadeira',
     persona: 'npc_04_estalajadeira',
   });
+}
+
+/** Odila, a menina da cama treze: camisola gasta, tranças escuras, palidez de febre */
+export function odila(): Ator {
+  return new Ator('menina da cama treze', { skin: SKINS[1], hair: 0x3a2014, coat: 0xbfb092, height: 1.4, model: 'cine_odila', modelAlt: 'npc_09_orfao', persona: 'npc_09_orfao' });
+}
+
+/** Caio, o menino da estrada da serra: colete remendado, camisa de algodão, botina */
+export function caio(): Ator {
+  return new Ator('Caio', { skin: SKINS[1], hair: 0x3a2a1e, coat: 0x4a3a2a, height: 1.38, model: 'cine_caio', modelAlt: 'npc_09_orfao', persona: 'npc_09_orfao' });
 }
 
 /** Figura do elenco com tinta de figurino; nome é só rótulo de cena */

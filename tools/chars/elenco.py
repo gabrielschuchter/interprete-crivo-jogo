@@ -408,6 +408,80 @@ E["boss_01_grande_interprete"] = R("BOSS_01", "O Grande Intérprete", {"macro": 
      "metal": {"pintura": "metal", "col": "b0904a", "rust": 0.2}, "livro": {"pintura": "tecido", "col": "3a1a20", "kind": "couro", "folds": 0, "trim": "b0904a", "trim_w": 0.12}} | hc,
     clipes=MOB_CLIPS, pele_tinta="dcd8dc", pele_sat=0.4, sobrancelha_cor="b0aca4")
 
+# ------------------------------------------------------------------ abertura (Remanso, 1890): a criança, Helena jovem e velha, Odila e Caio
+# Corpos infantis com macro de idade 0,2 (cerca de 12 anos no MakeHuman): a cabeça e as proporções já saem de criança.
+# A camisola de linho cobre até a canela e os pés ficam descalços (pé e dedos fora de "esconder").
+DESCALCO = [b for b in HUM if b not in ("LeftFoot", "RightFoot", "LeftToeBase", "RightToeBase")]
+
+
+def camisola(cor="cbbd9e"):
+    return ([{"tipo": "tronco", "z_bot": "hip", "z_top": "neck", "off": 0.012, "collar": 0.025, "cell": "camisola"},
+             {"tipo": "manga", "off": 0.016, "t1": 0.92, "cuff": 0.02, "cell": "manga"},
+             {"tipo": "saia", "z_top": "waist", "z_hem": "knee-0.3", "off": 0.02, "flare": 0.1, "cell": "barra"}],
+            {"camisola": cloth(cor, "linho", folds=0.45, grime=0.35, patches=1), "manga": cloth(cor, "linho", folds=0.35, grime=0.3),
+             "barra": cloth(cor, "linho", folds=0.6, grime=0.55, trim="a8987c", trim_w=0.04)})
+
+
+def crianca(corpo, style):
+    p, c = camisola()
+    hp, hc = hair("9a8a74", {"curto": "curto" if corpo == "fem" else "bagunca", "coque": "coque", "longo": "trancas" if corpo == "fem" else "curto"}[style],
+                  volume=0.011, length=0.26 if corpo == "fem" else 0.18, locks=2 if style == "longo" and corpo == "fem" else (1 if style == "coque" else 0))
+    m = macro(0.0, 0.2, 0.45, 0.38, 0.35, 0.5) if corpo == "fem" else macro(1.0, 0.2, 0.45, 0.4, 0.38, 0.5)
+    pele = "young_caucasian_female" if corpo == "fem" else "young_caucasian_male"
+    return R(f"PC_{'F' if corpo == 'fem' else 'M'}_CRIANCA", "O protagonista aos doze anos", {"macro": m, "pele": pele, "sobrancelha": "eyebrow001" if corpo == "fem" else "eyebrow002"},
+             p + hp, c | hc, cabelo_material=True, sobrancelha_cor="241812", esconder=DESCALCO)
+
+
+for corpo in ("fem", "masc"):
+    for st in ("curto", "coque", "longo"):
+        E[f"crianca_{corpo}_{st}"] = crianca(corpo, st)
+
+# Odila, a menina da cama treze: mesma camisola, mais gasta, tranças escuras
+p, c = camisola("bfb092")
+hp, hc = hair("3a2014", "trancas", volume=0.01, length=0.3, locks=2, seed=7)
+E["cine_odila"] = R("CINE_01", "Odila, a menina da cama treze", {"macro": macro(0.0, 0.19, 0.42, 0.3, 0.3, 0.5), "pele": "young_caucasian_female"},
+                    p + hp, c | hc, pele_tinta="e6dcd4", pele_sat=0.6, olheiras=0.4, esconder=DESCALCO)
+
+# Caio, o menino da estrada da serra: camisa de algodão, colete de lã remendado, calça curta e botina
+hp, hc = hair("3a2a1e", "bagunca", volume=0.012, hl_front=64, seed=5)
+E["cine_caio"] = R("CINE_02", "Caio, o menino da serra", {"macro": macro(1.0, 0.18, 0.4, 0.38, 0.36, 0.5), "pele": "young_caucasian_male", "sobrancelha": "eyebrow002"},
+    [{"tipo": "tronco", "z_bot": "hip", "z_top": "neck", "off": 0.018, "collar": 0.03, "cell": "colete"},
+     {"tipo": "manga", "off": 0.014, "t1": 0.8, "cuff": 0.016, "cell": "camisa"},
+     {"tipo": "calca", "off": 0.014, "z_bot": "knee-0.12", "cell": "calca"},
+     {"tipo": "bota", "z_top": "knee-0.03", "cell": "bota"},
+     {"tipo": "cinto", "z": "waist", "off": 0.026, "cell": "couro"},
+     {"tipo": "cachecol", "thick": 0.026, "tail": 0.16, "side": 1, "cell": "lenco"}] + hp,
+    {"colete": cloth("4a3a2a", "la", folds=0.3, grime=0.6, patches=2, trim="2e2418", trim_w=0.05), "camisa": cloth("b0a284", "linho", folds=0.4, grime=0.5),
+     "calca": cloth("3a3028", "la", folds=0.35, grime=0.7, patches=1), "bota": BOOT, "couro": LEATHER, "lenco": cloth("5e1a26", "la", folds=0.3, grime=0.3)} | hc,
+    sobrancelha_cor="2a2018")
+
+
+# Dra. Helena Avelar, médica de Remanso: vestido escuro de gola alta, avental de linho da enfermaria, xale vinho.
+# Jovem (cerca de 35 anos) de cabelo castanho escuro em coque; aos 53, grisalha e um pouco mais curvada.
+def helena(velha):
+    hp, hc = hair("8e8880" if velha else "2a1a12", "coque", volume=0.01, seed=13, locks=0 if velha else 2)
+    m = macro(0.0, 0.64 if velha else 0.47, 0.5, 0.48 if velha else 0.42, 0.42, 0.6)
+    pele = "middleage_caucasian_female" if velha else "young_caucasian_female"
+    return R("CINE_HELENA_" + ("V" if velha else "J"), "Dra. Helena Avelar" + (" aos 53" if velha else ""), {"macro": m, "pele": pele},
+        [{"tipo": "tronco", "z_bot": "hip", "z_top": "neck", "off": 0.013, "collar": 0.05, "cell": "corpete"},
+         {"tipo": "manga", "off": 0.016, "t1": 0.98, "cuff": 0.022, "cell": "manga"},
+         {"tipo": "saia", "id": "saia", "z_top": "waist", "z_hem": 0.04, "off": 0.024, "flare": 0.17, "cell": "saia"},
+         {"tipo": "avental", "ref": "saia", "z_top": "waist", "z_hem": "knee-0.3", "width": 0.8, "bib": True, "cell": "avental"},
+         {"tipo": "capa", "z_bot": "chest-0.05", "off": 0.032, "flare": 0.08, "cell": "xale"},
+         {"tipo": "cinto", "z": "waist", "off": 0.03, "cell": "faixa"},
+         {"tipo": "bota", "z_top": "knee-0.12", "cell": "bota"},
+         {"tipo": "bolsinha", "a": 1.35, "z": "hip+0.02"}] + hp,
+        {"corpete": cloth("24202a", "la", folds=0.2, trim="1a161c", trim_w=0.06), "manga": cloth("24202a", "la", folds=0.25, trim="c8b890", trim_w=0.06),
+         "saia": cloth("2a2026", "la", folds=0.7, grime=0.5, trim="1e1a1e", trim_w=0.05),
+         "avental": cloth("c8bc9c", "linho", folds=0.4, grime=0.7 if velha else 0.5, patches=1, trim="a8987c", trim_w=0.03),
+         "xale": cloth("4e1824", "la", folds=0.35, grime=0.3, trim="6e5a3a", trim_w=0.06, motif_kind="arco"), "faixa": cloth("6e5a3a", "couro", folds=0, seams=False),
+         "bota": BOOT, "couro": LEATHER} | hc,
+        sobrancelha_cor="5a544e" if velha else "241812", olheiras=0.35 if velha else 0.2)
+
+
+E["cine_helena_jovem"] = helena(False)
+E["cine_helena_velha"] = helena(True)
+
 if __name__ == '__main__':
     out = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'elenco.json')
     json.dump({'elenco': E}, open(out, 'w'), ensure_ascii=False, indent=1)
