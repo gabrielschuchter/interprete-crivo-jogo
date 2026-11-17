@@ -120,5 +120,57 @@ window.T = {
     T.log.push('preparo ' + JSON.stringify(out));
     return out;
   },
+  /**
+   * Joga o capítulo 1 (src/cap1.ts) como uma pessoa: estrada acima com o menino nas costas até o portão,
+   * a estátua, o refeitório, a aula inaugural (fala `escolha`) e o dormitório. Termina no Pátio de noite,
+   * com a chegada aberta. Devolve o que viu pelo caminho.
+   */
+  async capitulo1(escolha = 0) {
+    const g = __game; const out = { cenas: [] };
+    const wait = async (cond, what, ms = 120000) => {
+      const t0 = performance.now();
+      while (!cond()) {
+        if (performance.now() - t0 > ms) throw new Error(`capítulo 1: tempo esgotado em ${what} (modo ${g.mode}, região ${g.region.id})`);
+        await new Promise((r) => setTimeout(r, 100));
+      }
+    };
+    const livre = () => g.mode === 'play' && !g.busy;
+    if (g.region.id !== 'estrada') throw new Error('capítulo 1: o jogo não começou na estrada (' + g.region.id + ')');
+    out.carga = !!g.player.carga;
+    out.marta = g.npcs.some((n) => n.def.id === 'marta');
+    // anda um trecho de verdade: Marta acompanha e fala
+    // a dica de controles some no tempo de relógio; aqui o tempo é simulado
+    g.ui.hint(null);
+    // com Shift apertado: com carga não corre
+    await T.sim(6, () => { g.input.hold('KeyW', true); g.input.hold('ShiftLeft', true); });
+    g.input.hold('KeyW', false); g.input.hold('ShiftLeft', false);
+    out.velocidade = +g.player.speed.toFixed(2);
+    out.martaPerto = (() => { const m = g.npcs.find((n) => n.def.id === 'marta'); return m ? +m.pos.distanceTo(g.player.pos).toFixed(2) : -1; })();
+    out.falasEstrada = g.state.quests.capitulo1.vars.b ?? 0;
+    // daqui até o portão: a cena do guarda e a enfermaria seguem sozinhas
+    g.player.teleport(3.0, 0, -55.5, Math.PI);
+    await wait(() => g.region.id === 'atrio' && livre(), 'portão e enfermaria');
+    out.cenas.push(g.cenasVistas.slice(-2).join(' || '));
+    out.passoDepoisDoPortao = g.state.quests.capitulo1.step;
+    out.estudantes = g.npcs.filter((n) => n.def.id.startsWith('estudante_')).length;
+    await T.use('estatua_iolanda');
+    await wait(livre, 'estátua');
+    out.iolanda = g.state.codex.includes('iolanda');
+    await T.use('cap1_refeitorio');
+    await wait(livre, 'refeitório');
+    out.cenas.push(g.cineLog.join('|'));
+    // a escolha da fala é lida quando a cena começa, dentro do Interagir
+    await T.use('cap1_anfiteatro', escolha);
+    await wait(livre, 'aula inaugural');
+    out.cenas.push(g.cineLog.join('|'));
+    out.fala = g.state.quests.capitulo1.vars.fala ?? 0;
+    await T.use('cap1_dormitorio');
+    await wait(() => livre() && g.state.quests.chegada?.status === 'ativa', 'dormitório e ponte');
+    out.cenas.push(g.cineLog.join('|'));
+    out.pote = (g.state.inventory.pote_unguento ?? 0) > 0;
+    out.concluido = g.state.quests.capitulo1.status === 'concluida';
+    T.log.push('capítulo 1 ' + JSON.stringify(out));
+    return out;
+  },
   st() { const s = __game.state; return { quests: Object.fromEntries(Object.entries(s.quests).map(([k, v]) => [k, v.status === 'concluida' ? 'ok' : v.step])), lvl: s.level, xp: s.xp, hp: s.hp, coins: s.coins, inv: s.inventory, flags: s.flags.filter((f) => !f.startsWith('limpo') && !f.startsWith('tutorial')), codex: s.codex.length }; },
 };

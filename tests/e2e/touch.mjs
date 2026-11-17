@@ -85,6 +85,9 @@ async function session(W, H, full) {
   if (!full) return ctx.close();
 
   await E(fs0);
+  // o capítulo 1 vem antes: o resto do teste anda pelo Pátio de sempre
+  await E(() => T.capitulo1());
+  await waitMode('play');
   const st = () => E(() => { const p = __game.player; return { v: p.speed, yaw: p.camYaw, run: __game.input.touchRun, mx: __game.input.touchMove.x, my: __game.input.touchMove.y }; });
   const sx = 110, sy = H - 110;
   await send('touchStart', [[sx, sy, 1]]);

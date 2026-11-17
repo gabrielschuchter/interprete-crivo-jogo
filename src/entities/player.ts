@@ -12,7 +12,18 @@ const USING = new Set(['pickup', 'examine', 'pull', 'open', 'push', 'reach', 'in
 const EMBLEM: Record<string, Emblem> = { nutricao: 'caderno', medicina: 'estetoscopio', enfermagem: 'relogio', psicologia: 'oculos', fisioterapia: 'fita' };
 import { BRAND } from '../world/palette';
 import { GOLPES, GUARDA, ARMA_GUARDA, RAIZ, ARMA_RAIZ, ESQUIVA, ARMA_ESQUIVA, MERGULHO, ARMA_MERGULHO, amostra, fixa, avancoAte, giroAte, saltoEm, firmePorFoco, danoPorFoco, type Golpe, type GolpeId } from './esgrima';
-import { approach } from './motion';
+import { approach, type Pose } from './motion';
+
+/** passo de quem carrega alguém nas costas, em m/s */
+export const CARGA_VEL = 1.55;
+/** quem carrega: tronco à frente, mãos por baixo dos joelhos de quem vai atrás, na altura da cintura */
+export const CARREGA: Pose = { spine: [0.26, 0, 0], neck: [-0.12, 0, 0], head: [-0.1, 0, 0], aL: [0.3, -0.9, 0.3], fL: [0.32, -0.05, 0.95], aR: [-0.3, -0.9, 0.3], fR: [-0.32, -0.05, 0.95], drop: 0.06 };
+/** quem vai nas costas: coxas abertas para a frente, canelas penduradas, braços por cima dos ombros, cabeça de lado */
+export const NAS_COSTAS: Pose = {
+  lL: [0.5, -0.05, 0.86], sL: [0.1, -0.98, 0.15], lR: [-0.5, -0.05, 0.86], sR: [-0.1, -0.98, 0.15], drop: 0,
+  spine: [0.42, 0, 0], neck: [0.2, 0, 0], head: [0.15, 0.55, 0.25],
+  aL: [0.22, 0.3, 0.93], fL: [-0.55, -0.45, 0.7], aR: [-0.22, 0.3, 0.93], fR: [0.55, -0.45, 0.7],
+};
 
 /** Rastro luminoso do cajado: leitura clara do golpe (Atlas H-06). */
 class Trail {
@@ -144,6 +155,7 @@ export class Player {
   private camKick = 0;
   private vigorDelay = 0;
   private stepAcc = 0;
+  private stepPhase = 0;
   private hurtT = 0;
   dead = false;
   light = new THREE.PointLight(0xffb060, 9, 9, 1.8);
@@ -167,6 +179,26 @@ export class Player {
   }
   lockTarget: { pos: THREE.Vector3; alive: boolean; radius: number } | null = null;
   frozen = false;
+  /**
+   * Alguém nas costas (capítulo 1: Caio na estrada da serra). Com carga o corpo anda devagar, sem correr,
+   * pular, esquivar nem golpear; a arma e a tocha somem e os braços seguram as pernas de quem vai atrás.
+   */
+  carga: Figure | null = null;
+  carregar(f: Figure | null): void {
+    if (this.carga && this.carga !== f) this.carga.root.parent?.remove(this.carga.root);
+    this.carga = f;
+    if (f && !f.root.parent) this.fig.root.parent?.add(f.root);
+    if (f) {
+      f.combat = { pose: NAS_COSTAS, arma: { yaw: 0, elev: 0, roll: 0 }, w: 1, armaW: 0 };
+      this.endGolpe(false);
+      this.charging = false;
+      this.heavyHold = -1;
+      this.dodgeT = 0;
+      this.lockTarget = null;
+    }
+    if (this.fig.weapon) this.fig.weapon.visible = !f;
+    if (this.fig.torch) this.fig.torch.group.visible = !f;
+  }
   onStep: (() => void) | null = null;
   onAttack: ((e: AttackEvent) => void) | null = null;
   onSwing: ((g: Golpe) => void) | null = null;
@@ -252,6 +284,7 @@ export class Player {
   }
   removeFrom(scene: THREE.Scene): void {
     scene.remove(this.fig.root, this.light, this.trail.mesh);
+    if (this.carga) scene.remove(this.carga.root);
   }
 
   teleport(x: number, y: number, z: number, yaw: number): void {
@@ -371,6 +404,11 @@ export class Player {
   /** escreve na figura a pose de esgrima deste quadro (golpe, carga, esquiva, mergulho ou guarda) */
   private overlay(dt: number): void {
     const fig = this.fig;
+    if (this.carga) {
+      fig.combat = { pose: CARREGA, arma: { yaw: 0, elev: 0, roll: 0 }, w: 1, armaW: 0 };
+      this.ovW = 1;
+      return;
+    }
     const guardGoal = this.combatNear && !this.dead && !this.air && this.speed < 4 && !USING.has(fig.action) && fig.action !== 'hit' ? (this.speed > 0.4 ? 0.5 : 1) : 0;
     this.guardW = approach(this.guardW, guardGoal, 5, dt);
     let a = null as ReturnType<typeof amostra> | null;
@@ -456,8 +494,9 @@ export class Player {
       const r = new THREE.Vector3(-f.z, 0, f.x);
       wish.addScaledVector(f, mz / Math.max(1, ml)).addScaledVector(r, mx / Math.max(1, ml));
     }
-    const running = controls && (input.held('correr') || input.padRun()) && wish.lengthSq() > 0 && this.vigor > 1 && !this.charging;
-    const free = controls && !this.dead && !this.frozen;
+    const carrying = !!this.carga;
+    const running = controls && !carrying && (input.held('correr') || input.padRun()) && wish.lengthSq() > 0 && this.vigor > 1 && !this.charging;
+    const free = controls && !this.dead && !this.frozen && !carrying;
     const g = this.golpe;
     const gt = this.golpeT;
     this.sinceDodge += dt;
@@ -635,7 +674,7 @@ export class Player {
     } else if (this.hurtT > 0 || this.dead || fig.action === 'die' || USING.has(fig.action)) {
       this.vel.multiplyScalar(Math.exp(-dt * 8));
     } else if (wish.lengthSq() > 0.01) {
-      const target = running ? stats.runSpeed : stats.walkSpeed + 1.2;
+      const target = carrying ? CARGA_VEL : running ? stats.runSpeed : stats.walkSpeed + 1.2;
       // magnitude analógica contínua (joystick): de 35% a 100% da velocidade, sem degrau; teclado vale 1
       const analog = Math.min(1, ml);
       speed = target * (analog < 1 ? 0.35 + 0.65 * analog : 1);
@@ -754,6 +793,18 @@ export class Player {
     fig.update(dt);
     fig.root.position.copy(this.pos);
     fig.root.rotation.y = this.yaw;
+    const cg = this.carga;
+    if (cg) {
+      // nas costas: o quadril de quem vai atrás na altura do quadril de quem carrega, um palmo para trás,
+      // com um balanço pequeno a cada passo
+      const k = fig.height / 1.74;
+      const bob = this.speed > 0.3 ? Math.abs(Math.sin(this.stepPhase)) * 0.03 : 0;
+      this.stepPhase += this.speed * dt * 3.1;
+      cg.root.position.set(this.pos.x - Math.sin(this.yaw) * 0.27 * k, this.pos.y + 0.36 * k + bob, this.pos.z - Math.cos(this.yaw) * 0.27 * k);
+      cg.root.rotation.y = this.yaw;
+      cg.speed = 0;
+      cg.update(dt);
+    }
     if (this.golpe) {
       // giro e salto são do corpo visível; posição e mira de jogo seguem no chão
       fig.root.rotation.y += giroAte(this.golpe, this.golpeT);

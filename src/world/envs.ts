@@ -50,6 +50,15 @@ export const ENV: Record<string, EnvPreset> = {
     rain: 0, exposure: 1.1, bloom: 0.75,
     tintShadow: [0.98, 0.97, 1.05], tintLight: [1.08, 1.0, 0.88], envIntensity: 0.35, interior: true, moon: false,
   },
+  /** a serra de dia coberto, como no plano 3.4 da abertura: névoa cinza, luz fria e chapada */
+  estrada: {
+    skyTop: 0x3a4658, skyHorizon: 0x9a9a98, cloud: 0x8a8c90, cloudAmount: 0.95,
+    fog: 0x6c727c, fogDensity: 0.016,
+    hemiSky: 0xa0a8b8, hemiGround: 0x2c2a22, hemiIntensity: 0.85,
+    sun: 0xd8d0c0, sunIntensity: 1.3, sunDir: [0.3, 0.5, -0.8],
+    rain: 0, exposure: 0.95, bloom: 0.5,
+    tintShadow: [0.95, 0.98, 1.08], tintLight: [1.07, 1.0, 0.9], envIntensity: 0.7, moon: false,
+  },
   observatorio: {
     skyTop: 0x060914, skyHorizon: 0x1c2a4a, cloud: 0x39466a, cloudAmount: 0.7,
     fog: 0x131a2c, fogDensity: 0.02,

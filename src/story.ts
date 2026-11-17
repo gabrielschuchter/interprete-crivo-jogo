@@ -15,12 +15,18 @@ import { Cine, type Plano, type V3 } from './cine/cine';
 import type { Ator } from './cine/ator';
 import { CANTIGA, Som, type Toque } from './cine/som';
 import { CASA, ENF, casa, enfermaria, oficina, serra, vila } from './cine/cenarios';
+import * as Cap1 from './cap1';
 import {
   ABRACO, AJOELHADA, AJOELHADA_RUA, BOLEIA, CHAPEU_NO_PEITO, DEITADO, ENCOLHIDO, ESTENDE, GOLA, NO_PARAPEITO, SEGURA, SEGURA_MANGA, SENTADO, TRINCO,
   apoiar, chapeu, crianca, dobrar, escrever, figurante, folhaLacrada, helena, maosSemJeito, protagonista, rastejar, sentadaCochilo, torcer,
 } from './cine/elenco';
 
 type G = Game;
+
+// capítulo 1 (src/cap1.ts)
+export const cap1Comeco = Cap1.comeco;
+export const cap1Cena = Cap1.cena;
+export const tick = Cap1.tick;
 
 /** itens recolhidos com tratamento próprio */
 export const CUSTOM_PICKUPS = new Set<string>(['caixa_dalva']);
@@ -78,6 +84,7 @@ export function npcHasBusiness(g: G, id: string): boolean {
 
 // ---------- conversas ----------
 export async function talk(g: G, id: string): Promise<void> {
+  if (await Cap1.conversa(g, id)) return;
   D.unlockCodex(g.state!, id);
   switch (id) {
     case 'heloisa':
@@ -516,6 +523,7 @@ export async function page(g: G, id: string): Promise<void> {
 // ---------- eventos de região ----------
 export function onEnterRegion(g: G, region: string): void {
   const s = g.state!;
+  Cap1.aoEntrar(g, region);
   if (region === 'bosque' && g.step('ponte') === 1) g.advance('ponte', 2);
   if (region === 'bosque' && g.step('ponte') === 2 && s.flags.includes('limpo:bosque:trilha')) g.advance('ponte', 3);
   if (region === 'arquivo' && g.step('arquivo') === 1) g.advance('arquivo', 2);
@@ -583,6 +591,7 @@ export async function useProp(g: G, p: PropPlacement): Promise<void> {
   const s = g.state!;
   const data = p.data ?? {};
   const N = (t: string) => g.say('', t);
+  if (data.cap1 && (await Cap1.examinar(g, p))) return;
   const first = seen(g, p.id);
 
   if (p.kind === 'chest') {

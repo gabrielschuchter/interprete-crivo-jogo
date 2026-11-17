@@ -114,6 +114,8 @@ try {
   await waitMode('play');
   await E(fs.readFileSync(path.join(here, 'page-helpers.js'), 'utf8'));
   ok((await E(() => __game.state.difficulty)) === DIF, 'a dificuldade escolhida na criação vai para o registro');
+  // o capítulo 1 vem antes da campanha do Pátio
+  await E(() => T.capitulo1());
 
   console.log('Pátio e Bosque');
   await E(async () => { await T.talk('heloisa'); await T.talk('iris'); });

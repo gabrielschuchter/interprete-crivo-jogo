@@ -42,11 +42,12 @@ const REGION_SOUND: Record<RegionId, { surface: Surface; loops: Partial<Record<A
   // sala.mp3 é ruído largo (centroide perto de 2 kHz) e soa como chuva no telhado: fora do Arquivo, que é interior seco
   arquivo: { surface: 'pedra', loops: { salao: 0.14 } },
   observatorio: { surface: 'entulho', loops: { poca: 0.3 } },
+  estrada: { surface: 'terra', loops: {} },
 };
 
 export type Mode = 'boot' | 'menu' | 'create' | 'play' | 'dialogue' | 'book' | 'shop' | 'case' | 'pause' | 'dead' | 'transition' | 'ending' | 'cine';
 
-const REGION_IDS: readonly RegionId[] = ['atrio', 'bosque', 'arquivo', 'observatorio'];
+const REGION_IDS: readonly RegionId[] = ['atrio', 'bosque', 'arquivo', 'observatorio', 'estrada'];
 const asRegion = (r: string): RegionId => (REGION_IDS.includes(r as RegionId) ? (r as RegionId) : 'atrio');
 /** região e marcas com que ela foi montada: duas montagens com a mesma chave são a mesma cena */
 const regionKey = (id: RegionId, flags: Iterable<string>): string => `${id}|${[...flags].sort().join(',')}`;
@@ -124,7 +125,7 @@ export class Game {
   lastExamined = '';
   private combatSeen = false;
   private saveTimer = 0;
-  private busy = false;
+  busy = false;
   frames = 0;
   fps = 0;
   /** qualidade escolhida pelo jogo: começa pelo aparelho e desce sozinha se o quadro não segurar */
@@ -649,8 +650,12 @@ export class Game {
       this.builtKey = '';
       await this.abertura(this.state!.look);
     }
+    // capítulo 1 (docs/game/CAPITULO_1.md): a abertura termina com o protagonista descendo da carroça na serra,
+    // e o controle volta ali mesmo, com Caio nas costas
     const flags = new Set(this.state!.flags);
-    if (this.builtKey !== regionKey('atrio', flags)) await this.loadRegion('atrio', flags);
+    D.startQuest(this.state!, 'capitulo1');
+    this.tracked = 'capitulo1';
+    if (this.builtKey !== regionKey('estrada', flags)) await this.loadRegion('estrada', flags);
     this.spawnPlayer('inicio');
     await this.warmScene();
     this.save();
@@ -658,8 +663,93 @@ export class Game {
     this.mark('jogo');
     await this.ui.fade(false);
     this.busy = false;
+    // a abertura já mostrou o título da estrada ao devolver o controle
+    if (!this.querAbertura()) this.ui.regionTitle(this.region.name, this.region.subtitle);
+    Story.cap1Comeco(this);
+  }
+
+  // ---------- cenas do capítulo ----------
+  /**
+   * Cena curta no meio do jogo (portão, enfermaria, refeitório, aula, dormitório): mesmo sistema da abertura,
+   * com pausa e "Pular a cena". Com `regiao` a cena acontece na própria região (o portão); sem, a região sai e o
+   * cenário de teatro entra. Termina com o véu preto fechado e o modo em 'transition': quem chamou decide se volta
+   * ao jogo (`voltarAoJogo`) ou troca de região. No modo de teste a cena corre no avanço rápido.
+   */
+  async cena(fn: (c: Cine, som: Som) => Promise<void>, o: { regiao?: boolean; escolha?: number } = {}): Promise<void> {
+    this.busy = true;
+    this.mode = 'transition';
+    this.ui.prompt(null);
+    this.ui.bark(null);
+    this.input.releaseLock();
+    await this.ui.fade(true);
+    this.ui.hudVisible(false);
+    const sc = this.engine.scene;
+    const p = this.player;
+    const escondidos: THREE.Object3D[] = [];
+    const esconder = (obj: THREE.Object3D | undefined | null) => {
+      if (obj && obj.visible) {
+        obj.visible = false;
+        escondidos.push(obj);
+      }
+    };
+    esconder(p?.fig.root);
+    esconder(p?.carga?.root);
+    for (const n of this.npcs) esconder(n.fig.root);
+    this.crivo.model.root.visible = false;
+    if (!o.regiao) sc.remove(this.region.root);
+    this.mode = 'cine';
+    const c = (this.cine = new Cine({ engine: this.engine, input: this.input, reduceMotion: () => this.settings.reduceMotion, audioPause: () => undefined }, { cena: true, ff: this.ui.instant && !new URLSearchParams(location.search).has('cenas') }));
+    c.autoEscolha = this.ui.instant ? (this.autoChoice ?? o.escolha) : undefined;
+    const som = new Som(this.audio);
+    som.mudo = c.ff;
+    await this.ui.fade(false);
+    try {
+      await c.bloco('cena', () => fn(c, som));
+      c.fechar();
+      await c.preto(true, 0.6).catch(() => undefined);
+    } catch (err) {
+      // uma cena nunca prende o jogo: o erro vira registro e a história segue
+      console.error(err);
+      this.errors.push(String((err as Error)?.stack ?? err));
+    } finally {
+      this.cineLog = c.log;
+      this.cenasVistas.push(c.log.join('|'));
+      c.dispose();
+      this.cine = null;
+      this.mode = 'transition';
+      await this.ui.fade(true);
+      if (!o.regiao) sc.add(this.region.root);
+      this.engine.applyEnv(this.region.env);
+      this.engine.setLamps(this.region.lamps);
+      for (const x of escondidos) x.visible = true;
+    }
+  }
+  /** registro da última cena (testes) */
+  cineLog: string[] = [];
+  /** registro de todas as cenas desta sessão (testes) */
+  cenasVistas: string[] = [];
+  /** depois de uma cena: devolve o controle na mesma região */
+  async voltarAoJogo(): Promise<void> {
+    this.save();
+    this.enterPlay();
+    await this.ui.fade(false);
+    this.busy = false;
+  }
+  /** troca de região no fim de uma cena (o véu já está fechado) */
+  async trocarRegiao(to: RegionId, spawn: string): Promise<void> {
+    await this.loadRegion(to, new Set(this.state!.flags));
+    this.spawnPlayer(spawn);
+    await this.warmScene();
+    this.save();
+    this.enterPlay();
+    await this.ui.fade(false);
+    this.busy = false;
     this.ui.regionTitle(this.region.name, this.region.subtitle);
-    this.runScript(() => Story.opening(this), null, true);
+  }
+  /** capítulo 1 em curso: o Crivo ainda não entrou na história (ele aparece na Sala Nove, capítulo 3 da bíblia) */
+  get semCrivo(): boolean {
+    const s = this.state;
+    return !!s && D.questActive(s, 'capitulo1');
   }
 
   /** Continua o registro de um espaço (sem argumento, o mais recente). */
@@ -814,7 +904,7 @@ export class Game {
       const m = enemyModelPath(e.kind);
       if (m) bodies.add(m);
     }
-    await Promise.all([...[...bodies].map((m) => loadGltf(m)), ...this.region.npcs.map((n) => loadExternalModel(NPCS[n.id]?.model ?? n.id))]);
+    await Promise.all([...[...bodies].map((m) => loadGltf(m)), ...this.region.npcs.map((n) => loadExternalModel(NPCS[n.id]?.model ?? n.id)), ...(this.region.extraModels ?? []).map((m) => loadExternalModel(m))]);
     const t2 = performance.now();
     sc.add(this.region.root);
     this.engine.applyEnv(this.region.env);
@@ -1828,6 +1918,10 @@ export class Game {
       return;
     }
     if (d.kind === 'rest') return this.rest();
+    if (data.cena) {
+      void Story.cap1Cena(this, String(data.cena));
+      return;
+    }
     this.runScript(() => Story.useProp(this, x.def));
   }
 
@@ -2108,7 +2202,7 @@ export class Game {
     // 9 estourava o rosto visto de frente (auditoria, item 3); a lanterna segue sendo o ganho de alcance
     // a tocha tremula; a Lanterna da Transparência pende do cinto e soma uma luz fria e estável
     const fl = 1 + Math.sin(this.engine.time * 11) * 0.06 + Math.sin(this.engine.time * 27.3) * 0.04;
-    p.light.intensity = (lantern ? 16 : 7) * fl;
+    p.light.intensity = p.carga ? 0 : (lantern ? 16 : 7) * fl;
     p.light.distance = lantern ? 16 : 10;
     p.setLantern(lantern);
     if (p.fig.weaponKind !== st.weaponLook) void p.fig.equipWeapon(st.weaponLook);
@@ -2183,7 +2277,7 @@ export class Game {
     for (const n of this.npcs) n.update(dt, p.pos);
 
     // habilidades e itens
-    if (controls && !p.dead) {
+    if (controls && !p.dead && !this.semCrivo) {
       if (inp.took('crivo')) this.crivoAbility();
       if (inp.took('trocarCrivo')) {
         if (s.crivoSkills.includes('lupa')) {
@@ -2231,7 +2325,7 @@ export class Game {
     });
 
     // o Crivo some quando a câmera encosta nele, para não tapar a cena
-    this.crivo.model.root.visible = cam.position.distanceTo(this.crivo.pos) > 1.25;
+    this.crivo.model.root.visible = !this.semCrivo && cam.position.distanceTo(this.crivo.pos) > 1.25;
 
     // objetos: animação leve
     const t = this.engine.time;
@@ -2320,12 +2414,15 @@ export class Game {
       quest: tq ? tq.def.title : 'Sem objetivo acompanhado',
       step: stepText,
       ability: s.crivoActive === 'lupa' && s.crivoSkills.includes('lupa') ? 'lupa' : 'pulso',
+      semCrivo: this.semCrivo,
       abilityCd: Math.min(1, this.abilityCd / cdMax),
       caldo: D.countItem(s, 'caldo'),
       points: s.skillPoints,
       crivoPoints: s.crivoPoints,
       boss: boss ? { name: boss.cfg.name, frac: boss.hp / boss.maxHp, recite: boss.reciteProgress } : null,
     });
+
+    if (this.mode === 'play') Story.tick(this, dt);
 
     // registro periódico
     this.saveTimer += dt;
@@ -2377,7 +2474,7 @@ export class Game {
       if (this.interestId !== best.def.id) {
         this.interestId = best.def.id;
         this.crivo.point(2.5);
-        if (this.mode === 'play') this.audio.sfx('crivoCurioso', 0.6);
+        if (this.mode === 'play' && !this.semCrivo) this.audio.sfx('crivoCurioso', 0.6);
       }
     } else {
       this.interestPos = null;

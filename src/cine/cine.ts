@@ -111,12 +111,15 @@ export class Cine {
   private holdT = 0;
   private holdTarget: 'bloco' | 'tudo' | null = null;
 
+  /** a abertura grava o "já viu"; as cenas do capítulo, não */
+  private abertura: boolean;
   constructor(
-    private host: CineHost,
-    opts: { ate?: string | null } = {},
+    readonly host: CineHost,
+    opts: { ate?: string | null; ff?: boolean; cena?: boolean } = {},
   ) {
     this.ate = opts.ate ?? null;
-    this.ff = !!this.ate;
+    this.ff = !!this.ate || !!opts.ff;
+    this.abertura = !opts.cena;
     this.el = document.createElement('div');
     this.el.id = 'cine';
     this.el.innerHTML = `
@@ -133,7 +136,7 @@ export class Cine {
         <div class="caixa">
           <p class="cab">Cena em pausa</p>
           <button type="button" data-a="continuar">Continuar</button>
-          <button type="button" data-a="bloco" class="segura"><span class="anel"></span><span class="r">Pular esta parte</span><small>segure</small></button>
+          <button type="button" data-a="bloco" class="segura"><span class="anel"></span><span class="r">${opts.cena ? 'Pular a cena' : 'Pular esta parte'}</span><small>segure</small></button>
           <button type="button" data-a="tudo" class="segura"><span class="anel"></span><span class="r">Pular a abertura</span><small>segure</small></button>
         </div>
       </div>`;
@@ -159,7 +162,7 @@ export class Cine {
       b.addEventListener('keyup', (e) => (e.code === 'Enter' || e.code === 'Space') && stop());
     }
     // na primeira vez, pular só pula a parte em curso: quem pulou a febre pode querer ver a janela
-    pz.querySelector<HTMLElement>('[data-a=tudo]')!.hidden = !Cine.jaViu();
+    pz.querySelector<HTMLElement>('[data-a=tudo]')!.hidden = !!opts.cena || !Cine.jaViu();
     this.letterbox(true, true);
   }
 
@@ -179,6 +182,7 @@ export class Cine {
   }
 
   dispose(): void {
+    this.fecharEscolha(0);
     for (const a of this.atores) a.remover();
     this.atores = [];
     if (this.cenario) this.host.engine.scene.remove(this.cenario.root);
@@ -242,7 +246,8 @@ export class Cine {
 
   pular(tudo: boolean): void {
     if (tudo) this.pularTudo = true;
-    Cine.marcarVista();
+    if (this.abertura) Cine.marcarVista();
+    this.fecharEscolha(-1);
     this.pausar(false);
     // o roteiro pode estar esperando uma caminhada: ela termina e a próxima espera já recusa
     this.pulando = true;
@@ -341,6 +346,55 @@ export class Cine {
     );
   }
 
+  // ---------- escolha ----------
+  private esc: { el: HTMLElement; res: (i: number) => void; botoes: HTMLButtonElement[] } | null = null;
+  /** escolha forçada (testes); sem ela, o avanço rápido fica com a primeira */
+  autoEscolha: number | undefined;
+  /**
+   * Escolha de fala na própria cena, sobre a barra de baixo: botões com foco, setas, números 1 a 9, controle
+   * (direcional e A) e toque. Pular a cena no meio fica com a primeira opção.
+   */
+  escolha(opcoes: string[]): Promise<number> {
+    if (this.pulando) return Promise.reject(PULAR);
+    if (this.ff || this.autoEscolha !== undefined) return Promise.resolve(Math.min(opcoes.length - 1, this.autoEscolha ?? 0));
+    const el = document.createElement('div');
+    el.className = 'escolha';
+    el.setAttribute('role', 'group');
+    el.setAttribute('aria-label', 'O que dizer');
+    const botoes = opcoes.map((t, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.innerHTML = `<span class="n">${i + 1}</span><span class="t"></span>`;
+      (b.querySelector('.t') as HTMLElement).textContent = t;
+      b.addEventListener('click', () => this.fecharEscolha(i));
+      el.appendChild(b);
+      return b;
+    });
+    el.addEventListener('keydown', (e) => {
+      const i = botoes.indexOf(document.activeElement as HTMLButtonElement);
+      if (e.code === 'ArrowDown' || e.code === 'ArrowUp') {
+        e.preventDefault();
+        botoes[(i + (e.code === 'ArrowDown' ? 1 : botoes.length - 1)) % botoes.length].focus();
+      }
+      const n = Number(e.key);
+      if (n >= 1 && n <= botoes.length) this.fecharEscolha(n - 1);
+    });
+    this.el.appendChild(el);
+    this.el.classList.add('escolhendo');
+    this.log.push(`${this.t.toFixed(1)} escolha ${opcoes.length}`);
+    botoes[0].focus();
+    return new Promise((res) => (this.esc = { el, res, botoes }));
+  }
+  private fecharEscolha(i: number): void {
+    const e = this.esc;
+    if (!e) return;
+    this.esc = null;
+    e.el.remove();
+    this.el.classList.remove('escolhendo');
+    e.res(Math.max(0, i));
+  }
+  private navAntes = 0;
+
   /** título de região ao devolver o controle */
   titulo(nome: string): void {
     const t = this.$.titulo;
@@ -416,6 +470,15 @@ export class Cine {
   // ---------- quadro ----------
   update(dt: number): void {
     const inp = this.host.input;
+    // escolha aberta: o controle anda pelas opções e A confirma
+    if (this.esc && !this.paused) {
+      const ny = inp.padNav.y;
+      const b = this.esc.botoes;
+      const i = Math.max(0, b.indexOf(document.activeElement as HTMLButtonElement));
+      if (ny && ny !== this.navAntes) b[(i + (ny > 0 ? 1 : b.length - 1)) % b.length].focus();
+      this.navAntes = ny;
+      if (inp.took('interagir') && inp.usingPad) this.fecharEscolha(i);
+    }
     // Esc, Start ou o botão de pausa no toque
     if (inp.took('pausa')) this.pausar(!this.paused);
     if (this.paused) {

@@ -78,7 +78,7 @@ try {
     const min = ult.t / 60;
     ok(min > 9 && min < 14, `duração de ${min.toFixed(1)} min (plano: 11 a 13, com o trecho jogável rápido)`);
     await waitMode('play', 60000);
-    ok((await E(() => window.__game.region.id)) === 'atrio', 'entrega para o jogo no Átrio');
+    ok((await E(() => window.__game.region.id)) === 'estrada' && (await E(() => !!window.__game.player.carga)), 'entrega para o jogo na Estrada da Serra, com o menino nas costas');
     ok(await E(() => localStorage.getItem('interprete-rpg-abertura-vista') === '1'), 'abertura marcada como vista');
     ok((await E(() => window.__game.errors.length)) === 0, 'sem erros registrados');
     await p.close();

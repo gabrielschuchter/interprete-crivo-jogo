@@ -31,8 +31,10 @@ export function buildAtrio(ctx: RegionCtx): BuiltRegion {
   const b = new RegionBuilder();
   const dawn = ctx.flags.has('epilogo');
   const act2 = ctx.flags.has('ponte_aberta');
-  const env = dawn ? ENV.atrioAmanhecer : act2 ? ENV.atrioEntardecer : ENV.atrioNoiteChuva;
-  const r = emptyRegion('atrio', 'Pátio dos Caminhos', 'Onde os caminhos se cruzam', b, env);
+  // capítulo 1 (docs/game/CAPITULO_1.md): o pátio é a entrada da Academia no fim da tarde da chegada
+  const cap1 = ctx.flags.has('cap1_academia') && !ctx.flags.has('cap1_fim');
+  const env = dawn ? ENV.atrioAmanhecer : act2 || cap1 ? ENV.atrioEntardecer : ENV.atrioNoiteChuva;
+  const r = cap1 ? emptyRegion('atrio', 'Academia de Medicina', 'Pedra Alta', b, env) : emptyRegion('atrio', 'Pátio dos Caminhos', 'Onde os caminhos se cruzam', b, env);
   r.music = 'atrio';
   r.bounds = { minX: -34, maxX: 34, minZ: -34, maxZ: 46 };
 
@@ -263,6 +265,15 @@ export function buildAtrio(ctx: RegionCtx): BuiltRegion {
   K.candle(b, -5.2, 1.13, 5.2, false);
   b.collideCircle(-5.2, 5.2, 0.45, -1, 1.3);
 
+  // Mestra Iolanda Ferro, com as duas bacias, entre a fonte e a entrada do pátio
+  estatuaIolanda(b, 0, 11.6, 0);
+  // portas do beco: refeitório a oeste, dormitório a leste
+  b.box(M.woodDark, 0.2, 2.6, 1.3, -3.45, 0, 30.6, 0);
+  K.plaque(b, 'Refeitório', -3.3, 2.95, 30.6, Math.PI / 2, 1.5, 0.3, '#e7d8b4', '#2a1418', '500 80px "Source Serif 4", Georgia, serif');
+  b.box(M.woodDark, 0.2, 2.6, 1.3, 3.45, 0, 40.6, 0);
+  K.plaque(b, 'Dormitório', 3.3, 2.95, 40.6, -Math.PI / 2, 1.5, 0.3, '#e7d8b4', '#2a1418', '500 80px "Source Serif 4", Georgia, serif');
+  K.wallLantern(b, 3.48, 3.0, 39.2, -Math.PI / 2, false);
+
   // silhuetas distantes na bruma
   K.spireTower(b, -58, -62, 9, 40, 24, 0, 0.4, false);
   K.spireTower(b, 60, -70, 10, 46, 28, 0, 0.1, false);
@@ -320,8 +331,39 @@ export function buildAtrio(ctx: RegionCtx): BuiltRegion {
     ...mestres.map((m, i) => ({ id: 'mestre_' + m.id, kind: 'examine' as const, x: MESTRES_POS[i][0], z: MESTRES_POS[i][1], label: `Ler a placa de ${m.nome}`, radius: 2.0, data: { text: m.texto, codex: m.id, xp: 10, mestre: true } })),
     { id: 'vento_beco', kind: 'examine', x: -2.6, z: 41.2, label: 'Examinar as velas do beco', radius: 2.0, data: { text: 'O beco corre de norte a sul entre dois paredões. Mesmo agora passa uma corrente de ar constante, e a cera das velas escorreu toda para o lado sul.' } },
   ];
+  const iolanda = { id: 'estatua_iolanda', kind: 'examine' as const, x: 0, z: 13.0, label: 'Examinar a estátua de Iolanda Ferro', radius: 2.0, data: { cap1: 'iolanda' } };
+  r.props.push(iolanda);
+  if (cap1) {
+    // a chegada: só os estudantes no pátio; portas que levam à campanha antiga ficam para depois
+    r.spawns.cap1 = { x: 0, z: 19.5, yaw: Math.PI };
+    r.npcs = [
+      { id: 'estudante_a', x: -2.2, z: 7.4, yaw: 1.2 },
+      { id: 'estudante_b', x: -0.9, z: 7.9, yaw: -1.9 },
+      { id: 'estudante_c', x: 10.6, z: 6.5, yaw: -Math.PI / 2 },
+      { id: 'estudante_d', x: 10.4, z: 7.9, yaw: -Math.PI / 2 - 0.6 },
+      { id: 'estudante_e', x: -1.6, z: 26.4, yaw: 0.3 },
+    ];
+    const fora = new Set(['portal_bosque', 'portal_arquivo', 'portal_observatorio', 'quadro_atrio', 'portao_sul']);
+    r.props = r.props.filter((p) => !fora.has(p.id));
+    r.props.push(
+      { id: 'cap1_anfiteatro', kind: 'examine', x: 0, z: -28.6, y: TH, label: 'Entrar no anfiteatro', radius: 2.4, data: { cena: 'anfiteatro' } },
+      { id: 'cap1_refeitorio', kind: 'examine', x: -2.6, z: 30.6, label: 'Entrar no refeitório', radius: 1.6, data: { cena: 'refeitorio' } },
+      { id: 'cap1_dormitorio', kind: 'examine', x: 2.6, z: 40.6, label: 'Entrar no dormitório', radius: 1.6, data: { cena: 'dormitorio' } },
+      { id: 'cap1_arco_leste', kind: 'examine', x: 22, z: 0, label: 'Olhar pelo arco leste', radius: 3.0, data: { cap1: 'arco' } },
+      { id: 'cap1_arco_oeste', kind: 'examine', x: -22, z: 0, label: 'Olhar pelo arco oeste', radius: 3.0, data: { cap1: 'arco' } },
+    );
+    r.mapPoints = [
+      { x: 0, z: 0, label: 'Fonte armilar', kind: 'poi' },
+      { x: 0, z: 11.6, label: 'Iolanda Ferro', kind: 'poi' },
+      { x: 0, z: -29, label: 'Anfiteatro', kind: 'portal' },
+      { x: -3.4, z: 30.6, label: 'Refeitório', kind: 'portal' },
+      { x: 3.4, z: 40.6, label: 'Dormitório', kind: 'portal' },
+    ];
+    return r;
+  }
   r.mapPoints = [
     { x: 0, z: 0, label: 'Fonte armilar', kind: 'poi' },
+    { x: 0, z: 11.6, label: 'Iolanda Ferro', kind: 'poi' },
     { x: 23, z: 0, label: 'Arco do Bosque', kind: 'portal' },
     { x: -23, z: 0, label: 'Arco do Arquivo', kind: 'portal' },
     { x: 0, z: -29, label: 'Academia · Observatório', kind: 'portal' },
@@ -329,4 +371,53 @@ export function buildAtrio(ctx: RegionCtx): BuiltRegion {
     { x: 7.4, z: 12.6, label: 'Quadro de casos', kind: 'poi' },
   ];
   return r;
+}
+
+/**
+ * Mestra Iolanda Ferro, morta há cento e quarenta anos: figura de manto em pedra, de braços abertos, com uma bacia
+ * de estanho em cada mão, à mesma altura. Aos pés, velas de promessa em degraus e a placa coberta de cera.
+ * Feita em primitivas de poucas faces, como as estátuas de praça dos jogos da época. `rot` aponta a frente.
+ */
+function estatuaIolanda(b: RegionBuilder, x: number, z: number, rot: number): void {
+  const c = Math.cos(rot);
+  const sn = Math.sin(rot);
+  const at = (lx: number, lz: number): [number, number] => [x + lx * c + lz * sn, z - lx * sn + lz * c];
+  const put = (geo: THREE.BufferGeometry, mat: THREE.Material, lx: number, ly: number, lz: number, rx = 0, rz = 0, sx = 1, sy = 1, sz = 1) => {
+    const [px, pz] = at(lx, lz);
+    b.add(geo, mat, trs(px, ly, pz, rot, rx, rz, sx, sy, sz));
+  };
+  // pedestal em dois degraus
+  b.box(M.stoneDark, 2.6, 0.35, 2.6, x, 0, z, rot, true);
+  b.box(M.stone, 1.5, 1.35, 1.5, x, 0.35, z, rot, true);
+  put(new THREE.BoxGeometry(1.7, 0.12, 1.7), M.carved, 0, 1.76, 0);
+  // manto: saia em cone, tronco, ombros, cabeça com véu
+  put(new THREE.CylinderGeometry(0.32, 0.62, 1.55, 9), M.carved, 0, 2.6, 0);
+  put(new THREE.CylinderGeometry(0.26, 0.31, 0.62, 9), M.carved, 0, 3.66, 0);
+  put(new THREE.SphereGeometry(0.34, 9, 6, 0, Math.PI * 2, 0, Math.PI / 2), M.carved, 0, 3.92, 0, 0, 0, 1.1, 0.45, 0.8);
+  put(new THREE.SphereGeometry(0.15, 9, 7), M.carved, 0, 4.18, 0.02, 0, 0, 0.9, 1.1, 1);
+  put(new THREE.SphereGeometry(0.18, 9, 7, 0, Math.PI * 2, 0, Math.PI * 0.6), M.stone, 0, 4.22, -0.02, -0.2, 0, 1, 1.15, 1.05);
+  // braços abertos à frente e as duas bacias iguais
+  for (const sd of [-1, 1]) {
+    put(new THREE.CylinderGeometry(0.07, 0.08, 0.62, 7), M.carved, sd * 0.42, 3.72, 0.16, 0.9, sd * 0.75);
+    put(new THREE.CylinderGeometry(0.06, 0.07, 0.5, 7), M.carved, sd * 0.68, 3.52, 0.42, 1.35, sd * 0.3);
+    put(new THREE.CylinderGeometry(0.24, 0.15, 0.1, 12), M.iron, sd * 0.74, 3.46, 0.66);
+  }
+  // velas de promessa em volta do pedestal, de frente e dos lados; duas acesas dão luz
+  let k = 0;
+  for (let i = 0; i < 9; i++) {
+    const lx = -0.9 + i * 0.22;
+    const [px, pz] = at(lx, 0.98 + (i % 2) * 0.12);
+    K.candle(b, px, 0.35, pz, i === 2 || i === 6);
+    k++;
+  }
+  for (const sd of [-1, 1]) for (let i = 0; i < 3; i++) {
+    const [px, pz] = at(sd * 1.0, -0.4 + i * 0.35);
+    K.candle(b, px, 0.35, pz, false);
+  }
+  void k;
+  // placa coberta de cera: só o nome escapa
+  const [qx, qz] = at(0, 0.77);
+  K.plaque(b, 'IOLANDA FERRO', qx, 1.32, qz, rot, 1.1, 0.22, '#cdb98e');
+  for (let i = 0; i < 7; i++) put(new THREE.SphereGeometry(0.09 + (i % 3) * 0.03, 6, 4), M.parchment, -0.45 + i * 0.15, 0.95 + (i % 2) * 0.1, 0.76, 0, 0, 1, 1.6, 0.35);
+  b.collideCircle(x, z, 1.5, -1, 2.2);
 }

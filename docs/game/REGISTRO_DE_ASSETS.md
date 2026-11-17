@@ -102,3 +102,15 @@ A abertura (`docs/game/ABERTURA.md`) não traz nenhum arquivo novo para o reposi
 | Cantiga "Dorme, dorme, passarinho" (letra de quatro versos e melodia de oito compassos em ré dórico, cantarolada por síntese de formantes) | `src/cine/som.ts` | Letra e melodia compostas para este projeto; nenhuma cantiga tradicional foi copiada | Autoral, do projeto |
 | Tosse, rangido, sinos, passarinho, choro distante, respiração, pano, batida, porta, prensa, passos, queda, carroça e o tema da partida | `src/cine/som.ts` | Síntese em WebAudio escrita para este projeto | Autoral, do projeto |
 | Elenco da abertura (Helena, o rapaz da mesa, a menina da cama treze, a criança, Seu Cândido, Marta, Caio, carroceiro, romeiros e moradores) | `src/cine/elenco.ts` | Uso novo dos GLB de `personagens/ps2/` já registrados (moradores e protagonistas), com tinta de roupa e cabelo, escala e poses impostas por código | Os mesmos dos GLB de origem |
+
+## Capítulo 1 · A estrada (17/11/2026)
+
+O capítulo 1 (`docs/game/CAPITULO_1.md`) também não traz arquivo novo para o repositório.
+
+| Asset | Onde | Origem | Licença |
+| --- | --- | --- | --- |
+| Estrada da Serra (estrada, paredões, carroça, oratório, muro e porta dos professores, Pedra Alta ao fundo) | `src/world/estrada.ts` | Geometria paramétrica escrita para este projeto, com o kit e as texturas de cenário já registrados | Autoral, do projeto |
+| Estátua de Iolanda Ferro, portas do refeitório e do dormitório | `src/world/atrio.ts` | Geometria paramétrica escrita para este projeto | Autoral, do projeto |
+| Cenários das cenas (enfermaria da Academia, refeitório, anfiteatro, dormitório) e os estudantes sentados | `src/cine/cenarios.ts` | Geometria paramétrica escrita para este projeto | Autoral, do projeto |
+| Aplauso | `src/cine/som.ts`, `Som.aplauso` | Síntese em WebAudio escrita para este projeto | Autoral, do projeto |
+| Elenco do capítulo (Marta, Caio, o guarda, Celeste, a cozinheira, o Reitor Varga, o homem de casaco gasto, cinco estudantes) | `src/entities/npc.ts`, `src/cap1.ts` | Uso novo dos GLB de personagens já registrados acima, com tinta e escala | As dos modelos de origem |

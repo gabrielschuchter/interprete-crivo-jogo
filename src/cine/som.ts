@@ -169,6 +169,17 @@ export class Som {
     this.ruido(t, 0.45, vol, 'bandpass', 1400, 1.2, 'efeitos', 900);
     this.ruido(t + 0.55, 0.6, vol * 0.7, 'bandpass', 900, 1.2, 'efeitos', 600);
   }
+  /** aplauso de sala cheia: palmas de ruído em tempos soltos, crescendo e morrendo em `dur` segundos */
+  aplauso(dur = 6, vol = 0.16): void {
+    if (!this.c) return;
+    const t = this.agora;
+    const n = Math.round(dur * 55);
+    for (let i = 0; i < n; i++) {
+      const at = Math.random() * dur;
+      const env = Math.sin(Math.PI * Math.min(1, at / dur * 1.15)) ** 0.6;
+      this.ruido(t + at, 0.045 + Math.random() * 0.03, vol * (0.35 + Math.random() * 0.65) * env + 0.0002, 'bandpass', 1100 + Math.random() * 1700, 1.1);
+    }
+  }
   /** pano torcido sobre a bacia: água pingando */
   pano(): void {
     const t = this.agora;
