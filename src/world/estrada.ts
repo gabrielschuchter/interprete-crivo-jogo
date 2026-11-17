@@ -147,7 +147,7 @@ export function buildEstrada(_ctx: RegionCtx): BuiltRegion {
     portao: { x: 3.2, z: -57, yaw: Math.PI },
   };
   r.npcs = [{ id: 'guarda', x: ESTRADA.guarda[0], z: ESTRADA.guarda[1], yaw: 0.2 }];
-  r.extraModels = ['npc_09_orfao', 'npc_02_acendedora'];
+  r.extraModels = ['cine_caio', 'npc_09_orfao', 'npc_02_acendedora'];
   r.props = [
     { id: 'oratorio_estrada', kind: 'examine', x: xEstrada(ESTRADA.oratorio[1]) + 2.6, z: ESTRADA.oratorio[1], label: 'Olhar o oratório', radius: 1.8, data: { cap1: 'oratorio' } },
     { id: 'carroca_estrada', kind: 'examine', x: ESTRADA.carroca[0] - 1.2, z: ESTRADA.carroca[1] - 0.4, label: 'Olhar a carroça', radius: 1.8, data: { cap1: 'carroca' } },

@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import type { Game } from './game';
 import * as D from './domain/state';
 import { Npc, NPCS } from './entities/npc';
-import { Figure, HAIRS, SKINS } from './entities/figure';
+import { Figure, SKINS } from './entities/figure';
 import { CARREGA, NAS_COSTAS } from './entities/player';
 import { groundAt, type PropPlacement } from './world/region';
 import { ESTRADA, xEstrada } from './world/estrada';
@@ -18,7 +18,7 @@ import { Cine, type Plano, type V3 } from './cine/cine';
 import type { Ator } from './cine/ator';
 import type { Som } from './cine/som';
 import { ANF, DORM, ENF_ACAD, REF, anfiteatro, dormitorio, enfermariaAcademia, gravura, refeitorio } from './cine/cenarios';
-import { AJOELHADA, AJOELHADA_RUA, ESTENDE, SENTADO, figurante, maosSemJeito, protagonista } from './cine/elenco';
+import { AJOELHADA, AJOELHADA_RUA, ESTENDE, SENTADO, caio, figurante, maosSemJeito, protagonista } from './cine/elenco';
 
 type G = Game;
 const Q = 'capitulo1';
@@ -55,7 +55,7 @@ function animar(c: Cine, s: number, f: (k: number) => void): void {
   c.extra.push(fn);
 }
 const alturaDe = (g: G) => (g.state!.look.body === 'masc' ? 1.8 : g.state!.look.body === 'fem' ? 1.68 : 1.74);
-const caioAtor = () => figurante('Caio', 'npc_09_orfao', { altura: 1.38, coat: 0x4a3a2a });
+const caioAtor = () => caio();
 const martaAtor = () => figurante('Marta', 'npc_02_acendedora', { coat: 0x3a2e24, altura: 1.62 });
 /** Caio preso às costas do ator do protagonista, como no jogo (Player.carregar) */
 function nasCostas(eu: Ator, caio: Ator, altura: number): void {
@@ -96,8 +96,8 @@ export function aoEntrar(g: G, region: string): void {
 function montarEstrada(g: G): void {
   const p = g.player;
   if (!p) return;
-  const caio = new Figure({ skin: SKINS[1], hair: HAIRS[1], coat: 0x4a3a2a, height: 1.38, model: 'npc_09_orfao', tintCoat: 0x4a3a2a, persona: 'npc_09_orfao' });
-  p.carregar(caio);
+  // o mesmo corpo da forja da abertura (cine_caio), com o morador como reserva
+  p.carregar(new Figure({ skin: SKINS[1], hair: 0x3a2a1e, coat: 0x4a3a2a, height: 1.38, model: 'cine_caio', modelAlt: 'npc_09_orfao', persona: 'npc_09_orfao' }));
   if (!g.npcs.some((n) => n.def.id === 'marta')) {
     const x = p.pos.x + Math.cos(p.yaw) * 1.0;
     const z = p.pos.z - Math.sin(p.yaw) * 1.0 + 0.6;

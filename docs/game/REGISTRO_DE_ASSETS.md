@@ -92,7 +92,7 @@ Os oito `player_*.glb` antigos de `public/models/personagens/` saíram do reposi
 
 ## Abertura do Novo jogo (17/11/2026)
 
-A abertura (`docs/game/ABERTURA.md`) não traz nenhum arquivo novo para o repositório. Tudo o que ela mostra ou toca é código escrito para este projeto ou uso novo de modelos já registrados acima.
+A abertura (`docs/game/ABERTURA.md`) mostra e toca código escrito para este projeto, modelos já registrados acima e, desde 17/11/2026, dez corpos próprios saídos da forja (última linha da tabela).
 
 | Asset | Onde | Origem | Licença |
 | --- | --- | --- | --- |
@@ -101,7 +101,8 @@ A abertura (`docs/game/ABERTURA.md`) não traz nenhum arquivo novo para o reposi
 | Silhueta do homem com lanterna no cajado (plano 2.3) | `src/cine/cine.ts` | SVG desenhado para este projeto | Autoral, do projeto |
 | Cantiga "Dorme, dorme, passarinho" (letra de quatro versos e melodia de oito compassos em ré dórico, cantarolada por síntese de formantes) | `src/cine/som.ts` | Letra e melodia compostas para este projeto; nenhuma cantiga tradicional foi copiada | Autoral, do projeto |
 | Tosse, rangido, sinos, passarinho, choro distante, respiração, pano, batida, porta, prensa, passos, queda, carroça e o tema da partida | `src/cine/som.ts` | Síntese em WebAudio escrita para este projeto | Autoral, do projeto |
-| Elenco da abertura (Helena, o rapaz da mesa, a menina da cama treze, a criança, Seu Cândido, Marta, Caio, carroceiro, romeiros e moradores) | `src/cine/elenco.ts` | Uso novo dos GLB de `personagens/ps2/` já registrados (moradores e protagonistas), com tinta de roupa e cabelo, escala e poses impostas por código | Os mesmos dos GLB de origem |
+| Elenco da abertura (o rapaz da mesa, Seu Cândido, Marta, carroceiro, romeiros e moradores) | `src/cine/elenco.ts` | Uso novo dos GLB de `personagens/ps2/` já registrados (moradores e protagonistas), com tinta de roupa e cabelo, escala e poses impostas por código | Os mesmos dos GLB de origem |
+| Corpos próprios da abertura: a criança aos doze anos nos dois corpos e três penteados (`crianca_<fem\|masc>_<curto\|coque\|longo>`), Odila (`cine_odila`), Caio (`cine_caio`) e Dra. Helena Avelar jovem e aos 53 (`cine_helena_jovem`, `cine_helena_velha`), dez GLB de 3,4 a 4 mil triângulos e 11 clipes | `public/models/personagens/ps2/` | Forja `tools/chars/build.py` (receitas da abertura em `tools/chars/elenco.py`, 17/11/2026), rodada no computador do Gabriel com bpy 5.3, MPFB2 2.0.18 (extensions.blender.org, sha256 c075b3e9…2dad) e os assets de sistema do MakeHuman (`makehuman_system_assets_cc0.zip`); corpo MakeHuman com idade de criança, figurino e atlas procedurais, clipes CMU (`una-dinosauria/cmu-mocap`, os mesmos 19 BVH do resto do elenco) | Corpo e pele CC0 (MakeHuman), figurino e atlas autorais, clipes CMU com o agradecimento acima |
 
 ## Capítulo 1 · A estrada (17/11/2026)
 

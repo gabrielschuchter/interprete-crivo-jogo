@@ -29,6 +29,7 @@ import type { CaseFeedback, ClinicalCase } from './domain/clinical';
 import * as Story from './story';
 import { Cine } from './cine/cine';
 import { Som } from './cine/som';
+import { modelosAbertura } from './cine/elenco';
 import { GEAR, RARITY_COLOR, RARITY_LABEL, rollDrop } from './domain/gear';
 import { DIFFICULTIES, DIFFICULTY_IDS, coinsLostOnDeath, difficultyDef, scaleCoins, scaleHeal, scalePrice, type DifficultyDef, type DifficultyId } from './domain/difficulty';
 import { buildWeapon, WEAPON_LOOKS } from './entities/weapons';
@@ -818,6 +819,8 @@ export class Game {
   }
   /** Roda a abertura do Novo jogo com a cena da região fora; `ate` começa num plano (`?cena=2.4`). */
   async abertura(look: Look, ate: string | null = new URLSearchParams(location.search).get('cena')): Promise<void> {
+    // corpos próprios da abertura (criança, Helena, Odila, Caio): baixam antes da primeira cena, sem surgir no meio do plano
+    await Promise.all(modelosAbertura(look).map((k) => loadExternalModel(k).catch(() => null)));
     this.mode = 'cine';
     this.ui.hudVisible(false);
     this.input.releaseLock();
