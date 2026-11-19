@@ -1,5 +1,7 @@
 # Design system · Interprete.
 
+Para o jogo, o documento consolidado é `docs/DESIGN_SYSTEM.md` (19/11/2026), com a referência visual em `design-system.html` e a camada semântica em `design/sistema/interprete-ds.css`. Este arquivo continua sendo a fonte do design system da escola e das regras de marca e voz que o jogo herda.
+
 Fonte da verdade: `design/tokens.json` (exportado do design system "Interprete." no Claude). `design/tokens.css` é derivado dele. Para uso em tela, importe `design/tokens.css` e use as variáveis. Não escreva hex solto no código do jogo.
 
 ## Princípios

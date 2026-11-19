@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="pt-BR" data-arte="ps2">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design system · Interprete RPG</title>
+<meta name="description" content="Referência visual do design system do Interprete RPG, montada com o CSS real do jogo.">
+<link rel="stylesheet" href="/design/tokens.css">
+<link rel="stylesheet" href="/design/ps2/tokens-ps2.css">
+<link rel="stylesheet" href="/src/ui/game.css">
+<link rel="stylesheet" href="/src/ui/ps2-ui.css">
+<link rel="stylesheet" href="/src/cine/cine.css">
+<link rel="stylesheet" href="/design/sistema/interprete-ds.css">
+<style>
+  /* só a moldura desta página; os componentes abaixo usam as classes e ids reais do jogo */
+  html, body { background: #000; height: auto !important; overflow: visible !important; overflow-x: hidden !important; }
+  body { margin: 0; padding: 0 16px 80px; user-select: text; color: var(--ds-texto); }
+  .pg { max-width: 1120px; margin: 0 auto; }
+  .pg > header { padding: 56px 0 24px; border-bottom: 1px solid var(--ds-fio-fraco); margin-bottom: 8px; }
+  .pg > header .logo { font: 700 56px/1 var(--ds-fonte-logotipo); color: var(--osso-6); }
+  .pg > header .logo i { font-style: normal; color: var(--ds-brasa-ponto); text-shadow: 0 0 6px var(--brasa-3); }
+  .pg > header p { max-width: 62ch; color: var(--ds-texto-secundario); }
+  .pg nav { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 14px; }
+  .pg nav a { color: var(--ouro-4); font: 400 12px/1.6 var(--ds-fonte-dado); letter-spacing: 0.18em; text-transform: uppercase; text-decoration: none; }
+  .pg nav a:hover, .pg nav a:focus-visible { color: var(--ouro-5); outline: 1px solid var(--ouro-3); outline-offset: 2px; }
+  section { padding: 36px 0 12px; border-bottom: 1px solid var(--ds-fio-fraco); }
+  section > h2 { font: 700 26px/1.15 var(--ds-fonte-titulo); letter-spacing: 0.06em; text-transform: uppercase; color: var(--osso-5); margin: 0 0 6px; text-shadow: var(--ds-sombra-titulo); }
+  section > p.n { color: var(--ds-texto-secundario); max-width: 70ch; margin: 0 0 18px; }
+  code { font: 400 13px/1 var(--ds-fonte-dado); color: var(--ouro-5); }
+  .rampa { display: grid; grid-template-columns: 110px 1fr; gap: 12px; align-items: center; margin-bottom: 8px; }
+  .rampa .nm { font: 400 12px/1 var(--ds-fonte-dado); letter-spacing: 0.18em; text-transform: uppercase; color: var(--ouro-4); }
+  .rampa .sw { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
+  .rampa .sw div { height: 58px; padding: 6px; font: 400 11px/1.3 var(--ds-fonte-dado); display: flex; flex-direction: column; justify-content: flex-end; }
+  .reg { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .reg div { padding: 14px; box-shadow: var(--ds-moldura); min-height: 92px; }
+  .reg b { display: block; font: 700 15px/1.2 var(--ds-fonte-titulo); letter-spacing: 0.06em; text-transform: uppercase; color: var(--osso-6); }
+  .reg span { display: inline-block; width: 18px; height: 18px; margin: 10px 6px 0 0; box-shadow: 0 0 0 1px var(--breu-1); }
+  .reg small { display: block; margin-top: 8px; font: 400 11px/1.4 var(--ds-fonte-dado); color: var(--ds-texto-secundario); }
+  .tipo > div { display: grid; grid-template-columns: 170px 1fr; gap: 16px; align-items: baseline; padding: 12px 0; border-bottom: 1px solid rgba(58, 46, 21, 0.6); }
+  .tipo .nm { font: 400 12px/1.4 var(--ds-fonte-dado); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ouro-4); }
+  .grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 18px; }
+  .amostra { padding: 18px; background: var(--ds-fundo-painel); box-shadow: var(--ds-moldura); display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+  .amostra > .label:first-child { margin-bottom: 4px; }
+  .linha { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .glifos { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+  .glifos div { padding: 14px 8px; text-align: center; box-shadow: var(--ds-chanfro); background: var(--ds-fundo-casa); color: var(--ouro-4); }
+  .glifos small { display: block; margin-top: 8px; font: 400 11px/1.3 var(--ds-fonte-dado); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ds-texto-secundario); }
+  .icones div { color: var(--osso-6); }
+  .icones svg { width: 28px; height: 28px; }
+  .contr { width: 100%; border-collapse: collapse; font-size: 15px; }
+  .contr td, .contr th { padding: 8px 10px; border-bottom: 1px solid rgba(58, 46, 21, 0.6); text-align: left; }
+  .contr th { font: 400 11px/1 var(--ds-fonte-dado); letter-spacing: 0.16em; text-transform: uppercase; color: var(--ouro-4); }
+  .contr td.r { font-family: var(--ds-fonte-dado); }
+  .contr td.x { color: var(--ds-texto-apagado); }
+  /* reposiciona peças que no jogo são absolutas sobre a cena */
+  .palco { position: relative; background: var(--texture-grain), var(--ardosia-2); min-height: 320px; overflow: hidden; box-shadow: 0 0 0 1px var(--ds-fio-fraco); }
+  .palco #dialogue { position: absolute; bottom: 16px; width: min(880px, calc(100% - 24px)); }
+  .palco-menu { position: relative; background: #000; padding: 28px 16px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 0 0 1px var(--ds-fio-fraco); }
+  .palco-menu #menu { position: static; display: flex; padding: 0; }
+  .palco-cena { position: relative; height: 300px; background: var(--ardosia-1); overflow: hidden; box-shadow: 0 0 0 1px var(--ds-fio-fraco); }
+  .palco-cena #cine { position: absolute; }
+  .hud-demo { position: relative; height: 240px; background: var(--texture-grain), var(--ardosia-2); box-shadow: 0 0 0 1px var(--ds-fio-fraco); overflow: hidden; }
+  .hud-demo { height: 300px; }
+  .hud-demo #hud .status { width: min(300px, 70%); }
+  .proib { columns: 2 280px; gap: 32px; color: var(--ds-texto-secundario); }
+  .proib li { break-inside: avoid; margin-bottom: 8px; }
+  @media (max-width: 640px) {
+    .pg > header .logo { font-size: 40px; }
+    .rampa { grid-template-columns: 1fr; gap: 4px; }
+    .rampa .sw div { height: 48px; font-size: 9px; padding: 3px; }
+    .tipo > div { grid-template-columns: 1fr; gap: 4px; }
+    .hud-demo #hud .objective { left: 28px; right: auto; top: 110px; text-align: left; }
+  }
+</style>
+</head>
+<body>
+<div class="pg">
+<header>
+  <div class="logo">Interprete<i>.</i></div>
+  <p>Referência visual do design system do jogo. Cada peça abaixo é montada com o CSS que o jogo carrega (<code>game.css</code>, <code>ps2-ui.css</code>, <code>cine.css</code>) e com as classes reais. O texto completo, com regras e pendências, está em <code>docs/DESIGN_SYSTEM.md</code>.</p>
+  <nav aria-label="Seções">
+    <a href="#cor">Cor</a><a href="#regioes">Regiões</a><a href="#tipo">Tipografia</a><a href="#marca">Brasão e glifos</a><a href="#comp">Componentes</a><a href="#telas">Telas</a><a href="#contraste">Contraste</a><a href="#proibido">Proibido</a>
+  </nav>
+</header>
+
+<section id="cor">
+  <h2>Rampas</h2>
+  <p class="n">Nove rampas curtas, de <code>design/ps2/ps2.tokens.json</code>. Cada material escolhe uma rampa e vive nela. Espectro é exclusivo de inimigos e anomalias.</p>
+  <div id="rampas"></div>
+</section>
+
+<section id="regioes">
+  <h2>Assinatura das regiões</h2>
+  <p class="n">Bruma, luz fria e luz quente de cada região. Uma matiz fria por região, uma luz quente por foco.</p>
+  <div class="reg" id="reg"></div>
+</section>
+
+<section id="tipo">
+  <h2>Tipografia</h2>
+  <p class="n">Cinco papéis, quatro famílias no jogo. Fraktur existe uma vez só, no logotipo.</p>
+  <div class="tipo">
+    <div><span class="nm">Logotipo · 96 · UnifrakturCook</span><span style="font:700 48px/1 var(--ds-fonte-logotipo);color:var(--osso-6)">Interprete<i style="font-style:normal;color:var(--ds-brasa-ponto)">.</i></span></div>
+    <div><span class="nm">Região · 56 · Cinzel 500</span><span style="font:500 40px/1 var(--ds-fonte-titulo);letter-spacing:.12em;text-transform:uppercase;color:var(--osso-5);text-shadow:var(--ds-sombra-titulo)">Bosque do Viés</span></div>
+    <div><span class="nm">Título · 32 · Cinzel 700</span><span style="font:700 32px/1.15 var(--ds-fonte-titulo);letter-spacing:.06em;color:var(--osso-6)">Inventário</span></div>
+    <div><span class="nm">Subtítulo · 22 · Cinzel 700</span><span style="font:700 22px/1.15 var(--ds-fonte-titulo);letter-spacing:.06em">A Névoa ficou do tamanho certo.</span></div>
+    <div><span class="nm">Corpo · 17 · Source Serif 4</span><span style="max-width:62ch">A evidência sugere que o vento mudou antes da queda das folhas, mas não permite concluir que uma coisa causou a outra.</span></div>
+    <div><span class="nm">Manuscrito · 16+ · IM Fell</span><span style="font:italic 400 18px/1.45 var(--ds-fonte-manuscrito);color:var(--osso-5)">Anotado à margem, com tinta que já foi preta.</span></div>
+    <div><span class="nm">Dado · 12 · Plex Mono</span><span class="label">Evidência · 3 de 5 · 120 moedas</span></div>
+  </div>
+</section>
+
+<section id="marca">
+  <h2>Brasão, glifos e ícones</h2>
+  <p class="n">Glifos de método em grade 16 por 16 e traço de 2 px (<code>src/ui/ps2-glyphs.ts</code>); ícones de objeto em grade 24 por 24 e traço de 1,4 px (<code>src/ui/icons.ts</code>). Ambos herdam <code>currentColor</code>.</p>
+  <div class="glifos" id="glifos"></div>
+  <div class="glifos icones" id="icones" style="margin-top:12px"></div>
+</section>
+
+<section id="comp">
+  <h2>Componentes</h2>
+  <p class="n">Estados reais. Passe o mouse ou use Tab: foco e passagem do mouse são o mesmo estado, sem transição suave.</p>
+  <div class="grade">
+    <div class="amostra">
+      <div class="label">Botão</div>
+      <div class="linha"><button class="btn">Normal</button><button class="btn primary">Primário</button><button class="btn" disabled>Desabilitado</button></div>
+      <small style="color:var(--ds-texto-secundario)">Foco inverte para ouro-4 com texto breu-1 e anel marfim de 2 px.</small>
+    </div>
+    <div class="amostra">
+      <div class="label">Chip e amostra de cor</div>
+      <div class="linha"><button class="chip" aria-pressed="true">Detetive</button><button class="chip" aria-pressed="false">Cronista</button></div>
+      <div class="linha"><button class="swatch" aria-pressed="true" style="background:#d1a487" aria-label="Tom selecionado"></button><button class="swatch" aria-pressed="false" style="background:#7b5a47" aria-label="Tom"></button><button class="swatch" aria-pressed="false" style="background:#402a1d" aria-label="Tom"></button></div>
+    </div>
+    <div class="amostra">
+      <div class="label">Barras</div>
+      <div style="width:100%"><div class="meter"><b style="width:68%"></b></div><div class="meter vigor"><b style="width:45%"></b></div><div class="meter xp"><b style="width:30%"></b></div></div>
+      <div id="boss" style="position:static;transform:none;width:100%"><div class="nm">O Veredito</div><div class="meter"><b style="width:80%"></b></div></div>
+    </div>
+    <div class="amostra">
+      <div class="label">Casas de inventário</div>
+      <div class="grid" id="casas" style="width:100%"></div>
+    </div>
+    <div class="amostra">
+      <div class="label">Abas</div>
+      <div class="tabs" role="tablist" style="width:100%"><button role="tab" aria-selected="true">Protagonista</button><button role="tab" aria-selected="false">Crivo</button></div>
+      <div class="label">Nós de habilidade</div>
+      <div style="width:100%"><button class="node on"><b>Passo firme</b><small>ativa</small></button><button class="node can"><b>Olho de coletor</b><small>1 ponto</small></button></div>
+    </div>
+    <div class="amostra">
+      <div class="label">Lista de missão e loja</div>
+      <div style="width:100%"><button class="quest" aria-pressed="true"><small id="q1"></small><b>Focos Residuais</b></button><button class="quest done"><small>Paralela · concluída</small><b>Duas Versões do Vento</b></button></div>
+      <button class="shop-row" aria-pressed="true" id="loja1" style="width:100%"></button>
+    </div>
+    <div class="amostra">
+      <div class="label">Aviso e tecla</div>
+      <div class="toast"><span class="label">Exemplo de aviso</span>Texto curto, uma linha.</div>
+      <div class="linha"><span class="kbd">E</span><span>Examinar</span><span class="kbd">Esc</span><span>Pausa</span></div>
+    </div>
+    <div class="amostra">
+      <div class="label">Molduras 9-slice</div>
+      <div class="moldura-pedra" style="padding:6px 10px;background:var(--ds-fundo-painel);background-clip:padding-box">Pedra: mundo</div>
+      <div class="moldura-bronze" style="padding:6px 10px;background:var(--ds-fundo-painel);background-clip:padding-box">Bronze: diálogo e equipamento</div>
+      <div class="moldura-papel" style="padding:6px 10px;color:var(--ds-tinta-papel);font-family:var(--ds-fonte-manuscrito)">Papel: registro</div>
+    </div>
+  </div>
+</section>
+
+<section id="telas">
+  <h2>Telas</h2>
+  <p class="n">Textos tirados do jogo, salvo onde está escrito "exemplo". Menu principal, diálogo, peças do HUD e legenda de cena, com o CSS do jogo.</p>
+  <div class="grade" style="grid-template-columns:1fr">
+    <div class="palco-menu">
+      <div id="menu"><div class="coluna"><div class="brasao" id="brasao-menu"></div><h1>Interprete<i>.</i></h1>
+        <div class="botoes"><button class="mb">Novo jogo</button><button class="mb" disabled aria-disabled="true">Continuar jogo</button><p class="resumo apagado">Nenhum registro neste navegador</p><button class="mb">Configurações</button></div>
+        <button class="registros">Registros (1)</button><p class="rodape">Simulação fictícia. Nenhum caso é real.</p></div></div>
+    </div>
+    <div class="hud-demo"><div id="hud">
+      <div class="status"><div class="who"><span class="nm">Protagonista</span> <span class="lvl">NV 4</span></div><div class="meter"><b class="lag" style="width:74%"></b><b style="width:62%"></b></div><div class="meter vigor"><b style="width:80%"></b></div></div>
+      <div class="objective"><div class="q">Focos Residuais</div><div class="s">Apague os três grupos maiores de inimigos.</div></div>
+      <div class="coins" id="moedas"></div>
+      <div class="quick"><div class="slot" id="s1"></div><div class="slot big" id="s2"></div></div>
+      <div id="marker" style="left:50%;top:70%"><i></i><span>12 m</span></div>
+    </div></div>
+  </div>
+  <div class="palco" style="margin-top:18px">
+    <div id="dialogue"><div class="who"><span class="nm">Heloísa</span></div>
+      <div class="txt">Disse. Eu mesma tive certeza cedo demais, uma vez, sobre de que lado a névoa viria. Fechei o arco errado.</div>
+      <div class="choices"><button class="btn"><span class="n">1</span>O que é um Crivo?</button><button class="btn"><span class="n">2</span>Você disse "o que sobrou".<span class="tag">◆ Escuta atenta</span></button></div>
+      <div class="next">Continuar</div></div>
+  </div>
+  <div class="palco-cena" style="margin-top:18px">
+    <div id="cine" class="lb lb-instante"><div class="barra cima"></div><div class="barra baixo"><div class="legenda on"><span class="quem">Nome</span><span class="txt">Legenda de exemplo, em Source Serif sobre a barra preta.</span></div></div><div class="letreiro on">Capítulo 1 · A estrada</div></div>
+  </div>
+</section>
+
+<section id="contraste">
+  <h2>Contraste medido</h2>
+  <p class="n">Razões WCAG calculadas sobre os valores do código. Texto comum exige 4,5:1; abaixo disso, só peça grande ou estado desabilitado.</p>
+  <table class="contr"><thead><tr><th>Par</th><th>Razão</th><th>Uso permitido</th></tr></thead><tbody id="contr"></tbody></table>
+</section>
+
+<section id="proibido">
+  <h2>Proibido</h2>
+  <ul class="proib">
+    <li>Canto arredondado, desfoque de fundo, sombra difusa, gradiente decorativo.</li>
+    <li>Cor vibrante, neon, semáforo verde e vermelho para acerto e erro.</li>
+    <li>Transição em curva suave na interface; só degraus ou corte.</li>
+    <li>Inter, ou qualquer sans, dentro do jogo; fraktur fora do logotipo.</li>
+    <li>Espectro em texto ou fora de inimigos; vinho como cor de luz.</li>
+    <li>Classic crimson e debian red na mesma tela; crimson em texto corrido.</li>
+    <li>Emoji, "jornada", promessa, pessoa real como NPC, caso clínico real.</li>
+    <li>Opção de aparência, qualidade ou filtro de imagem nos Ajustes.</li>
+  </ul>
+</section>
+</div>
+<script type="module" src="/src/design-system-pagina.ts"></script>
+</body>
+</html>

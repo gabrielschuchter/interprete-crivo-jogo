@@ -5,7 +5,7 @@ export default defineConfig({
   build: {
     target: 'es2022',
     chunkSizeWarningLimit: 1500,
-    rollupOptions: { input: { main: 'index.html', arte: 'direcao-de-arte.html' } },
+    rollupOptions: { input: { main: 'index.html', arte: 'direcao-de-arte.html', sistema: 'design-system.html' } },
   },
   server: { port: 5173, strictPort: true },
   test: { include: ['tests/unit/**/*.test.ts'], environment: 'node' },

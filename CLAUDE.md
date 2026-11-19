@@ -4,7 +4,7 @@ Direção de arte (Gabriel, 12/11/2026, substitui a regra anterior de ultrarreal
 
 Documento completo da direção (identidade "Luz de estudo", leis visuais, paleta, tipografia, interface, som, técnica de render): `docs/game/DIRECAO_DE_ARTE_PS2.md`; tokens em `design/ps2/ps2.tokens.json`; a imagem é uma só, a PS2 tardia (God of War e RE4 como teto), sem opção de aparência nem `?arte=`, e a qualidade é automática (`src/core/quality.ts`). Ajustes é mínimo por decisão do Gabriel: ler `docs/game/AJUSTES.md` antes de acrescentar qualquer opção.
 
-Ler `DESIGN.md` antes de tocar em interface e `docs/game/DECISOES_TECNICAS.md` antes de tocar em arquitetura.
+Ler `docs/DESIGN_SYSTEM.md` (design system consolidado do jogo, com valores do código e pendências) e `DESIGN.md` antes de tocar em interface e `docs/game/DECISOES_TECNICAS.md` antes de tocar em arquitetura.
 
 Dificuldade: quatro níveis (História, Fácil, Médio, Difícil), com números por classe de inimigo (comuns, mini-chefes, chefes), todos em `src/domain/difficulty.ts`, escolhidos na criação e em Configurações e gravados no registro (versão 4; ids antigos `padrao` e `rigor` viram `medio` e `dificil`). O Médio é o jogo difícil de antes e vem marcado; o Difícil endurece também os comuns. Ler `docs/game/DIFICULDADE.md` antes de mexer em vida e dano de criaturas, XP, moedas, preços, curas ou janelas de desvio; `npm run e2e:dificuldade` mede mortes por nível.
 
