@@ -1,0 +1,127 @@
+[gd_resource type="Theme" load_steps=11 format=3 uid="uid://clr1hl8h7furl"]
+
+; Tema do Interprete (docs/DESIGN_SYSTEM.md): pedra de ardósia, fio de ouro, cantos retos, seleção
+; por ouro e brasa, Cinzel nos botões e títulos, Source Serif 4 no texto. Substitui o tema dourado
+; arredondado do modelo e vale para o projeto inteiro (project.godot, gui/theme/custom).
+
+[ext_resource type="FontFile" path="res://assets/interprete/fontes/cinzel-latin-700-normal.woff2" id="1"]
+[ext_resource type="FontFile" path="res://assets/interprete/fontes/SourceSerif4-normal-400_700-latin.woff2" id="2"]
+
+[sub_resource type="StyleBoxFlat" id="normal"]
+content_margin_left = 28.0
+content_margin_top = 12.0
+content_margin_right = 28.0
+content_margin_bottom = 12.0
+bg_color = Color(0.051, 0.067, 0.09, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.227, 0.18, 0.082, 1)
+expand_margin_left = 1.0
+expand_margin_top = 1.0
+expand_margin_right = 1.0
+expand_margin_bottom = 1.0
+
+[sub_resource type="StyleBoxFlat" id="hover"]
+content_margin_left = 28.0
+content_margin_top = 12.0
+content_margin_right = 28.0
+content_margin_bottom = 12.0
+bg_color = Color(0.09, 0.114, 0.153, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.561, 0.455, 0.22, 1)
+
+[sub_resource type="StyleBoxFlat" id="pressed"]
+content_margin_left = 29.0
+content_margin_top = 13.0
+content_margin_right = 27.0
+content_margin_bottom = 11.0
+bg_color = Color(0.051, 0.067, 0.09, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.741, 0.604, 0.38, 1)
+
+[sub_resource type="StyleBoxFlat" id="disabled"]
+content_margin_left = 28.0
+content_margin_top = 12.0
+content_margin_right = 28.0
+content_margin_bottom = 12.0
+bg_color = Color(0.051, 0.067, 0.09, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.227, 0.18, 0.082, 0.4)
+
+[sub_resource type="StyleBoxFlat" id="focus"]
+draw_center = false
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.941, 0.898, 0.827, 1)
+expand_margin_left = 3.0
+expand_margin_top = 3.0
+expand_margin_right = 3.0
+expand_margin_bottom = 3.0
+
+[sub_resource type="StyleBoxFlat" id="panel"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0.071, 0.035, 0.063, 0.97)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.561, 0.455, 0.22, 1)
+shadow_color = Color(0.043, 0.027, 0.035, 0.9)
+shadow_size = 4
+shadow_offset = Vector2(3, 3)
+
+[sub_resource type="StyleBoxFlat" id="trilho"]
+content_margin_top = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.09, 0.114, 0.153, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.227, 0.18, 0.082, 1)
+
+[sub_resource type="StyleBoxFlat" id="trilho_cheio"]
+content_margin_top = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.741, 0.604, 0.38, 1)
+
+[resource]
+default_font = ExtResource("2")
+default_font_size = 18
+Button/colors/font_color = Color(0.89, 0.835, 0.702, 1)
+Button/colors/font_disabled_color = Color(0.357, 0.404, 0.475, 1)
+Button/colors/font_focus_color = Color(0.851, 0.741, 0.51, 1)
+Button/colors/font_hover_color = Color(0.851, 0.741, 0.51, 1)
+Button/colors/font_outline_color = Color(0.043, 0.027, 0.035, 1)
+Button/colors/font_pressed_color = Color(0.898, 0.659, 0.373, 1)
+Button/constants/outline_size = 0
+Button/font_sizes/font_size = 22
+Button/fonts/font = ExtResource("1")
+Button/styles/disabled = SubResource("disabled")
+Button/styles/focus = SubResource("focus")
+Button/styles/hover = SubResource("hover")
+Button/styles/normal = SubResource("normal")
+Button/styles/pressed = SubResource("pressed")
+CheckButton/colors/font_color = Color(0.89, 0.835, 0.702, 1)
+HSlider/styles/grabber_area = SubResource("trilho_cheio")
+HSlider/styles/grabber_area_highlight = SubResource("trilho_cheio")
+HSlider/styles/slider = SubResource("trilho")
+Label/colors/font_color = Color(0.89, 0.835, 0.702, 1)
+Label/colors/font_outline_color = Color(0.043, 0.027, 0.035, 1)
+PanelContainer/styles/panel = SubResource("panel")

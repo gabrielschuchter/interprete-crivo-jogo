@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="WeaponDef" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapon_def.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/arrow.png" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = "arrows"
+fire_rate = 0.9
+targeting_mode = 1
+damage = 30.0
+projectile_speed = 350.0
+homing = false
+lifetime = 2.0
+projectile_texture = ExtResource("2")
+projectile_scale = 0.04
+projectile_rotation_offset_deg = 0.0
+dies_on_wall = true

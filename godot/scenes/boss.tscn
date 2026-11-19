@@ -1,0 +1,38 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/boss.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/boss_idle.png" id="2"]
+[ext_resource type="Shader" path="res://shaders/hit_flash.gdshader" id="3"]
+
+[sub_resource type="CircleShape2D" id="shape"]
+radius = 70.0
+
+[sub_resource type="ShaderMaterial" id="flashmat"]
+shader = ExtResource("3")
+shader_parameter/flash = 0.0
+
+[node name="Boss" type="CharacterBody2D"]
+collision_layer = 2
+collision_mask = 4
+script = ExtResource("1")
+speed = 55.0
+max_health = 3000.0
+contact_damage = 50.0
+rotates = false
+foot_offset = 145.0
+
+[node name="Visual" type="Sprite2D" parent="."]
+material = SubResource("flashmat")
+scale = Vector2(0.3, 0.3)
+texture = ExtResource("2")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, 130)
+shape = SubResource("shape")
+
+[node name="Hitbox" type="Area2D" parent="."]
+collision_layer = 32
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hitbox"]
+shape = SubResource("shape")

@@ -1,0 +1,23 @@
+# Interprete survivors
+
+Desde 19/11/2026 o jogo é uma cópia do modelo [2D Survivors Roguelike](https://github.com/SummerEngine/template-2d-vampire-survivor-roguelike) da Summer Engine (Godot 4.6, licença MIT, texto em `docs/licencas/summer-2d-survivors-MIT.txt`), por decisão do Gabriel: mecânica, números, tabelas e fluxo do modelo, com a identidade visual do Interprete e o menu principal minimalista de três botões. O jogo 3D anterior está inteiro na branch `legado-3d-v1` (o proxy do ambiente recusou criar uma tag; a branch aponta para o commit 54ca94a da main).
+
+Existem duas cópias. A web, em `src/jogo/`, é a que vai para produção na Vercel: TypeScript estrito, Canvas 2D para o mundo e um passe WebGL para a imagem PS2. A Godot, em `godot/` (e na pasta `Documents\interprete-jogo` do Gabriel), é o próprio projeto do modelo com a pele trocada.
+
+## Como a versão web está organizada
+
+`config.ts` guarda todos os números do original, cada bloco anotado com o arquivo GDScript de onde saiu. `regras.ts` tem as fórmulas puras (XP por nível, intervalo de geração, sorteio de inimigo, atributos do chefe, filtro e sorteio de melhorias), cobertas por `tests/unit/regras.test.ts`. `partida.ts` é a simulação inteira a 60 Hz fixos com colisão por círculos e profundidade pela coordenada dos pés, e desenha a cena. `telas.ts` monta carga, menu, seleção, HUD, subida de nível, pausa, derrota e configurações em DOM com o design system. `entrada.ts` junta teclado (WASD e setas) e o joystick flutuante de toque do original. `som.ts` toca os 23 sons do modelo em WebAudio com volume em dB, variação de altura e intervalo mínimo entre repetições, como `sfx.gd`. `chao.ts` assa o chão uma vez num canvas e espalha pedras e tufos. `pos.ts` aplica a imagem PS2 (saturação, contraste, pretos esmagados, 64 níveis com pontilhado Bayer e névoa de ardósia em volta do jogador) sobre o mundo desenhado em resolução interna baixa.
+
+Os sprites saem de `tools/survivors/preparar-assets.py`, que recorta, reduz para a escala de jogo e recolore cada quadro do modelo para `public/sv/`, com o manifesto `src/jogo/sprites.json`.
+
+Testes: `npm run test` (regras) e `npm run e2e` com `npm run preview` no ar; `TOQUE=1 npm run e2e` repete a partida num Pixel 7 emulado, com o joystick arrastado por eventos de toque. Atalhos de depuração na partida: L força uma subida de nível, B chama o chefe. O jogo fica exposto em `window.__jogo`.
+
+## Divergências em relação ao original
+
+Na web: o ruído do chão é um fBm de valor com distorção de domínio escrito no projeto, no lugar do FastNoiseLite do Godot, então o desenho das manchas difere, mas os limiares, faixas e borda de rocha são os mesmos. Continuar jogo retoma a partida deixada pelo menu de pausa; no original o botão não existe. Em toque há um botão de pausa no HUD, porque o celular não tem Esc. As cordas que prendem as serras ao jogador ficam numa camada única abaixo dos atores, e o rastro dos projéteis do chefe foi omitido. Cada som é um arquivo único, sem as variações aleatórias de arquivo que o Godot sorteava em dois deles. Os ícones das melhorias são glifos SVG do Interprete, no lugar das ilustrações coloridas. As texturas de chão são as PS2 do Interprete (terra com musgo, ardósia e estrada de ardósia). Os números de dano usam IBM Plex Mono 500.
+
+Na Godot: o menu principal foi refeito (preto, brasão, Novo jogo, Continuar jogo e Configurações, sem o botão Sair), e Continuar jogo fica sempre apagado, porque o modelo troca de cena ao sair da partida e não guarda estado. O tema da interface (`godot/resources/menu_theme.tres`) virou o do Interprete e vale para o projeto inteiro. Todo texto está em português. Os sprites foram recoloridos em tamanho cheio por `tools/survivors/preparar-godot.py`; os títulos com texto em inglês ("LEVEL UP", "YOU DIED", o logotipo) e os ícones foram refeitos com as fontes e glifos do Interprete por `tools/survivors/gerar-godot-textos.mjs`; flechas flamejantes ganhou ícone próprio (`img-chama.png`), porque no original dividia o ícone com flechas explosivas. Imagens que nenhuma cena usava (stone, fixed_*, enemy.png, scorpion.png, boss.png, um jpg e um ladrilho de areia) e as pastas de trabalho do modelo (_bleed_backup, downloads, docs, guias de passada) ficaram de fora.
+
+## O que ainda pesa
+
+O personagem e os inimigos são as ilustrações do modelo recoloridas: o mago, o cavaleiro, o morcego, o escorpião, o gigante e o chefe demoníaco não são do universo do Interprete (Crivo, a Academia). Trocar o elenco é o próximo passo natural se a identidade tiver de ir além da paleta. Boa parte de `docs/game/` descreve o jogo 3D legado e vale só como histórico.
