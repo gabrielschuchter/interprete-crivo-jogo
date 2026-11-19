@@ -2,6 +2,24 @@
 
 Todo asset do jogo, com origem e licença. Um asset que não está aqui não entra no repositório.
 
+## Survivors (19/11/2026, jogo atual)
+
+O jogo passou a ser a cópia do modelo 2D Survivors Roguelike da Summer Engine (ver `docs/game/SURVIVORS.md`). As tabelas mais abaixo descrevem o jogo 3D legado, guardado na branch `legado-3d-v1`; os arquivos delas saíram da main, exceto as texturas PS2, as fontes e as molduras.
+
+| Asset | Onde | Origem | Licença |
+| --- | --- | --- | --- |
+| Código, cenas, recursos e shaders do modelo | `godot/` (scripts, scenes, resources, shaders, tools, main.tscn) e, portados para TypeScript, `src/jogo/` | github.com/SummerEngine/template-2d-vampire-survivor-roguelike, Copyright (c) 2026 Summer - The AI Game Engine | MIT, texto em `docs/licencas/summer-2d-survivors-MIT.txt` e `godot/LICENSE` |
+| Sprites do mago, do cavaleiro, dos inimigos, do chefe, das armas, de XP, pedras, tufos, retratos e fundo da derrota | `public/sv/*.webp` (reduzidos e recoloridos por `tools/survivors/preparar-assets.py`) e `godot/assets/` (tamanho cheio, recoloridos por `tools/survivors/preparar-godot.py`) | Mesmo modelo, pasta `assets/` | MIT, idem |
+| Pergaminho das cartas e moldura de botão | `godot/assets/scroll.png`, `godot/assets/ui/button.png` | Mesmo modelo, recoloridos | MIT, idem |
+| 23 sons e 3 músicas (mp3) | `public/sv/sons/`, `godot/assets/sounds/` | Mesmo modelo, sem edição | MIT, idem |
+| Títulos (logotipo, "Subiu de nível", "A névoa fechou") e ícones das melhorias da versão Godot | `godot/assets/title_logo.png`, `levelup_title.png`, `death_title.png`, `images/img-*.png` | Gerados por `tools/survivors/gerar-godot-textos.mjs` com as fontes de `design/fonts/` e os glifos de `src/jogo/icones.ts` e `src/ui/ps2-glyphs.ts` | Autoral, do projeto (fontes em OFL 1.1) |
+| Chãos da versão Godot | `godot/assets/ground_*.png`, `sand_dark.png` | Texturas PS2 de `public/textures/ps2/` ampliadas | CC0 (derivadas) |
+| Fontes da versão Godot | `godot/assets/interprete/fontes/` | Cópias de `design/fonts/` | SIL Open Font License 1.1 |
+| Ícone do projeto Godot | `godot/icon.svg` | Brasão do Interprete redesenhado em SVG | Autoral, do projeto |
+| Glifos das melhorias (web) | `src/jogo/icones.ts` | Desenhados para este projeto | Autoral, do projeto |
+
+## Jogo 3D legado
+
 | Asset | Onde | Origem | Licença |
 | --- | --- | --- | --- |
 | Texturas de pedra, madeira, pergaminho, tecido, metal, vitral, chão e céu | `src/world/textures.ts` | Geradas em canvas por código escrito para este projeto | Autoral, do projeto |

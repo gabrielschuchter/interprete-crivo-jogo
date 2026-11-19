@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="WeaponDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapon_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "homing"
+fire_rate = 1.0
+targeting_mode = 0
+damage = 15.0
+projectile_speed = 300.0
+homing = true
+lifetime = 3.0
