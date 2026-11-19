@@ -1,0 +1,85 @@
+/*
+ * Interprete RPG · camada semântica do design system (docs/DESIGN_SYSTEM.md).
+ *
+ * Este arquivo NÃO cria cores novas. Cada alias aponta para uma primitiva que já existe em
+ * design/ps2/tokens-ps2.css (gerado de ps2.tokens.json) ou repete, com a origem anotada, um valor
+ * que hoje está escrito em src/ui/game.css, src/ui/ps2-ui.css, src/cine/cine.css ou src/domain/gear.ts.
+ * Serve para telas novas, páginas de apoio e assets; o jogo atual ainda usa as variáveis --g-* e as
+ * primitivas diretamente, e migrar o jogo para estes nomes é pendência (seção 13 do documento).
+ *
+ * Uso: importar depois de design/tokens.css e design/ps2/tokens-ps2.css.
+ */
+:root {
+  /* ---------- superfícies ---------- */
+  --ds-fundo-palco: #000;                      /* carga, menu e barras da cena (ps2-ui.css #loading, #menu; cine.css) */
+  --ds-fundo-painel: #140a12;                  /* --g-panel sob data-arte (ps2-ui.css) */
+  --ds-fundo-elevado: var(--breu-4);           /* --g-raise: hover de linha, item de navegação */
+  --ds-fundo-afundado: var(--breu-1);          /* casa vazia, calha de barra */
+  --ds-fundo-casa: var(--breu-2);              /* casa de inventário e atalho */
+  --ds-fundo-selecao: var(--vinho-1);          /* linha, aba e casa selecionadas */
+  --ds-fundo-botao-menu: var(--ardosia-1);     /* botões do menu principal, com grão */
+  --ds-veu-livro: rgba(11, 7, 9, 0.88);        /* fundo atrás do livro, da pausa e do dossiê */
+  --ds-veu-cena: rgba(0, 0, 0, 0.72);          /* pausa da cena (cine.css) */
+  --ds-papel: var(--osso-5);                   /* folha do dossiê, diário, cartas */
+  --ds-papel-mapa: var(--osso-6);              /* fundo do mapa em canvas (ui.ts, #f0e5d3) */
+
+  /* ---------- texto ---------- */
+  --ds-texto: var(--pink-essence);             /* --g-text: corpo sobre painel (16,4:1) */
+  --ds-texto-forte: var(--osso-6);             /* item selecionado, texto sobre vinho (15,6:1) */
+  --ds-texto-osso: var(--osso-5);              /* botões do menu, título de cena (13,3:1) */
+  --ds-texto-secundario: #b9a6ae;              /* --g-dim (8,4:1) */
+  --ds-texto-apagado: #7d6a74;                 /* --g-mute (3,9:1): só desabilitado e rodapé */
+  --ds-texto-rotulo: var(--ouro-4);            /* .label, rótulo mono em caixa alta (7,4:1) */
+  --ds-texto-legenda-cena: var(--osso-4);      /* legenda da cena sobre preto (9,6:1) */
+  --ds-texto-nome-cena: var(--ouro-3);         /* nome de quem fala na cena (4,7:1 sobre preto) */
+  --ds-tinta-papel: #3b2a1c;                   /* tinta ferrogálica sobre osso-5 (9,4:1) */
+  --ds-tinta-mapa: var(--crimson-violet);      /* traço do mapa (ui.ts lê --crimson-violet) */
+
+  /* ---------- fios, molduras, foco ---------- */
+  --ds-fio: var(--ouro-2);                     /* contorno de botão, campo, chip */
+  --ds-fio-fraco: var(--ouro-1);               /* separador de lista, botão do menu em repouso */
+  --ds-fio-forte: var(--ouro-3);               /* foco do menu, fio interno da moldura */
+  --ds-fio-ativo: var(--ouro-4);               /* nó ativo, casa em foco, tachas dos cantos */
+  --ds-filete-externo: var(--breu-1);          /* separa o painel da cena */
+  --ds-marcador: var(--brasa-3);               /* losango e barra de seleção */
+  --ds-anel-foco: var(--osso-6);               /* outline de 2 px, deslocamento de 2 px */
+  --ds-moldura: 0 0 0 2px var(--breu-1), inset 0 0 0 1px var(--ouro-3), inset 0 0 0 3px var(--breu-1), inset 0 0 0 4px rgba(189, 154, 97, 0.25); /* --ps2-frame */
+  --ds-chanfro: inset 1px 1px 0 var(--ouro-1), inset -1px -1px 0 var(--breu-1), 0 0 0 1px var(--breu-1);
+  --ds-chanfro-afundado: inset 1px 1px 0 var(--breu-1), inset -1px -1px 0 var(--breu-4);
+  --ds-sombra-titulo: 2px 2px 0 var(--breu-1); /* sombra dura, sem desfoque */
+
+  /* ---------- ação e estado ---------- */
+  --ds-acao-primaria: var(--vinho-3);          /* .btn.primary, um por tela */
+  --ds-acao-primaria-foco: var(--vinho-4);
+  --ds-acao-inversao: var(--ouro-4);           /* foco de .btn comum: fundo ouro, texto breu-1 (7,6:1) */
+  --ds-perigo: var(--classic-crimson);         /* dano, perigo, barra de chefe, alvo no mapa: só peças grandes (3,9:1) */
+  --ds-perigo-escuro: #b31f2f;                 /* degrau da barra de chefe */
+  --ds-brasa-ponto: var(--brasa-4);            /* o "." de Interprete. e o brilho do brasão */
+  --ds-portal-mapa: var(--dark-amaranth);      /* portais no mapa (#8c1535) */
+
+  /* ---------- barras ---------- */
+  --ds-barra-vida: var(--vinho-4);
+  --ds-barra-vida-degrau: var(--vinho-3);
+  --ds-barra-vigor: var(--ouro-4);
+  --ds-barra-vigor-degrau: var(--ouro-3);
+  --ds-barra-xp: #5fb39a;                      /* --g-emerald; diverge do musgo-5 previsto (pendência) */
+  --ds-barra-perda: var(--osso-6);             /* faixa .lag a 55% de opacidade */
+
+  /* ---------- raridade (game.css; cor gasta, nunca o único sinal) ---------- */
+  --ds-rar-incomum: #6f8a5a;
+  --ds-rar-rara: #5a7a9a;
+  --ds-rar-epica: #8a5a8f;
+  --ds-rar-lendaria: #b8933f;
+
+  /* ---------- tipografia (papéis) ---------- */
+  --ds-fonte-logotipo: var(--ps2-font-logotipo);
+  --ds-fonte-titulo: var(--ps2-font-titulo);
+  --ds-fonte-texto: var(--ps2-font-texto);
+  --ds-fonte-manuscrito: var(--ps2-font-manuscrito);
+  --ds-fonte-dado: var(--ps2-font-dado);
+
+  /* ---------- movimento ---------- */
+  --ds-passos-ui: steps(4, end);               /* --ps2-ease */
+  --ds-passos-veu: steps(6, end);              /* #fade, 0,48 s */
+  --ds-piscar: steps(2, end);                  /* cursor do diálogo, brasa do brasão */
+}
